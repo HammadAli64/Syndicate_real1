@@ -38,6 +38,15 @@
   letter-spacing: 0.01em;
 }
 
+/* Challenge detail: high legibility (sans, smoothing, comfortable line height) */
+.syndicate-detail-pane {
+  font-family: ui-sans-serif, system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+}
+
 html,
 body {
   height: 100%;
@@ -46,6 +55,55 @@ body {
 
 html {
   font-size: 22px;
+  /* Prefer dark native controls so <select> popups aren’t forced to light theme (Windows/Chrome). */
+  color-scheme: dark;
+}
+
+/* Syndicate: native <select> — dark surfaces, readable <option> text; variants use different tints. */
+.syndicate-select {
+  color-scheme: dark;
+  background-clip: padding-box;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.syndicate-select.syndicate-select--mood {
+  border: 1px solid rgba(160, 170, 255, 0.55);
+  background: linear-gradient(180deg, #1f1f32 0%, #12141f 100%);
+  color: #f0f2ff;
+}
+
+.syndicate-select.syndicate-select--mood option,
+.syndicate-select.syndicate-select--mood optgroup {
+  background-color: #1a1a2a;
+  color: #f3f4ff;
+}
+
+.syndicate-select.syndicate-select--category {
+  border: 1px solid rgba(255, 215, 0, 0.48);
+  background: linear-gradient(180deg, #1a1e14 0%, #0d100f 100%);
+  color: #fffbeb;
+}
+
+.syndicate-select.syndicate-select--category option,
+.syndicate-select.syndicate-select--category optgroup {
+  background-color: #1a1c12;
+  color: #fffbeb;
+}
+
+.syndicate-select.syndicate-select--status {
+  border: 1px solid rgba(72, 220, 180, 0.5);
+  background: linear-gradient(180deg, #0a1c18 0%, #0a1210 100%);
+  color: #e8fff8;
+}
+
+.syndicate-select.syndicate-select--status option,
+.syndicate-select.syndicate-select--status optgroup {
+  background-color: #0f1e1a;
+  color: #e8fff8;
+}
+
+.syndicate-date-input {
+  color-scheme: dark;
 }
 
 body {

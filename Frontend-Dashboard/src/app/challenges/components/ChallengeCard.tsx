@@ -2,41 +2,27 @@
 
 import type { ChallengeRow } from "../services/challengesApi";
 
-function cn(...parts: Array<string | false | null | undefined>) {
-  return parts.filter(Boolean).join(" ");
-}
-
-function difficultyStyle(d: string) {
-  const x = d.toLowerCase();
-  if (x === "easy") return "border-emerald-500/50 bg-emerald-500/10 text-emerald-200";
-  if (x === "hard") return "border-rose-500/50 bg-rose-500/10 text-rose-200";
-  return "border-[rgba(255,215,0,0.45)] bg-[rgba(255,215,0,0.08)] text-[color:var(--gold)]";
-}
-
 type Props = {
   row: ChallengeRow;
   onOpen?: (row: ChallengeRow) => void;
 };
 
 export function ChallengeCard({ row, onOpen }: Props) {
-  const title = row.payload?.challenge_title ?? "Challenge";
-  const diff = row.difficulty || row.payload?.difficulty || "medium";
-  const pts = row.points ?? row.payload?.points ?? 0;
+  const p = row.payload;
+  const title = p?.challenge_title ?? "Challenge";
+  const pts = row.points ?? p?.points ?? 0;
 
   return (
-    <article className="syndicate-readable flex min-h-[180px] flex-col justify-between rounded-lg border border-[rgba(255,215,0,0.35)] bg-black/55 p-4 [box-shadow:0_0_20px_rgba(0,0,0,0.4)]">
+    <article className="syndicate-readable flex min-h-[220px] flex-col justify-between rounded-lg border border-[rgba(255,215,0,0.35)] bg-black/55 p-4 [box-shadow:0_0_20px_rgba(0,0,0,0.4)] sm:min-h-[240px] sm:p-5">
       <div>
-        <div className="mb-2 flex flex-wrap items-center gap-2">
-          <span className={cn("rounded border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide", difficultyStyle(diff))}>
-            {diff} · {pts} pts
+        <div className="mb-3">
+          <span className="rounded border border-[rgba(255,215,0,0.45)] bg-[rgba(255,215,0,0.08)] px-2.5 py-0.5 text-[11px] font-bold tabular-nums uppercase tracking-wide text-[color:var(--gold)]">
+            {pts} pts
           </span>
-          {row.category ? (
-            <span className="rounded border border-white/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white/55">
-              {row.category}
-            </span>
-          ) : null}
         </div>
-        <h2 className="text-[16px] font-semibold leading-snug text-white md:text-[18px]">{title}</h2>
+        <h2 className="min-h-[4.5rem] text-[19px] font-semibold leading-[1.32] tracking-tight text-white sm:min-h-[5.25rem] sm:text-[21px] md:min-h-[5.75rem] md:text-[23px] lg:text-[24px]">
+          {title}
+        </h2>
       </div>
       {onOpen ? (
         <button

@@ -477,17 +477,6 @@ function SyndicateModeSection() {
         <div className="absolute inset-0 opacity-62 [background:radial-gradient(760px_220px_at_20%_0%,rgba(255,215,0,0.15),rgba(0,0,0,0)_65%)]" />
         <div className="absolute inset-0 opacity-30 [background:repeating-linear-gradient(0deg,rgba(255,255,255,0.015)_0px,rgba(255,255,255,0.015)_1px,transparent_8px,transparent_14px)]" />
         <div className="relative">
-          <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <div className="flex items-center gap-2 text-[12px] font-extrabold uppercase tracking-[0.22em] text-white/70">
-                <span className="inline-flex h-2.5 w-2.5 animate-pulse rounded-full bg-[#ff3b3b] shadow-[0_0_12px_rgba(255,59,59,0.9)]" />
-                System Status: ACTIVE
-              </div>
-              <h3 className="mt-2 text-[28px] font-black uppercase tracking-[0.1em] text-[color:var(--gold)] [text-shadow:0_0_10px_rgba(255,215,0,0.45)]">
-                Syndicate Mode: Challenges
-              </h3>
-            </div>
-          </div>
           <SyndicateAiChallengePanel />
         </div>
       </div>

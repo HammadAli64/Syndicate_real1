@@ -48,3 +48,36 @@ class ReferralRestore(models.Model):
 
     def __str__(self) -> str:
         return self.code
+
+
+class LeaderboardEntry(models.Model):
+    """Anonymous device-scoped scores for Syndicate leaderboard (top points)."""
+
+    device_id = models.CharField(max_length=128, unique=True, db_index=True)
+    display_name = models.CharField(max_length=64, default="Anonymous")
+    points_total = models.PositiveIntegerField(default=0)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        app_label = "challenges"
+        db_table = "api_leaderboardentry"
+        ordering = ["-points_total", "updated_at"]
+
+    def __str__(self) -> str:
+        return f"{self.display_name} ({self.points_total})"
+
+
+class AgentDailyQuote(models.Model):
+    """One AI-generated Syndicate dashboard quote per calendar day (no repeats vs past rows)."""
+
+    quote_date = models.DateField(unique=True, db_index=True)
+    text = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        app_label = "challenges"
+        db_table = "api_agentdailyquote"
+        ordering = ["-quote_date"]
+
+    def __str__(self) -> str:
+        return f"{self.quote_date}: {self.text[:48]}…"

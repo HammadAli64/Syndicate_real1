@@ -6,8 +6,10 @@ from .models import GeneratedChallenge
 class ChallengePayloadSerializer(serializers.Serializer):
     challenge_title = serializers.CharField()
     challenge_description = serializers.CharField()
-    example_task = serializers.CharField()
-    benefits = serializers.CharField()
+    example_task = serializers.CharField(required=False, allow_blank=True)
+    benefits = serializers.CharField(required=False, allow_blank=True)
+    example_tasks = serializers.ListField(child=serializers.CharField(), required=False)
+    benefits_list = serializers.ListField(child=serializers.CharField(), required=False)
     based_on_mindset = serializers.CharField()
     suitable_moods = serializers.ListField(child=serializers.CharField())
 

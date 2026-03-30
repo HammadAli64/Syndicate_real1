@@ -11,8 +11,14 @@ from rest_framework.response import Response
 
 from api.models import MindsetKnowledge
 
-from .models import GeneratedChallenge, ReferralRestore
-from .services import ensure_daily_challenges, run_generate, serialize_challenge_row
+from .models import GeneratedChallenge, LeaderboardEntry, ReferralRestore
+from .services import (
+    ensure_category_pair,
+    ensure_daily_challenges,
+    generate_challenges,
+    run_generate,
+    serialize_challenge_row,
+)
 
 
 @api_view(["GET", "POST"])
@@ -50,6 +56,36 @@ def generate_challenge(request):
     return Response(data)
 
 
+@api_view(["POST"])
+def generate_challenges_view(request):
+    """
+    Body: { "mood": "energetic"|"happy"|"sad"|"tired", "category": "business"|... }
+    Returns 2 validated challenges (title, description, mood, category).
+
+    If `category` is omitted or blank, delegates to legacy single-challenge generate (mood only).
+    """
+    category = (request.data.get("category") or "").strip()
+    if not category:
+        return generate_challenge(request)
+
+    mood = (request.data.get("mood") or "").strip()
+    if not mood:
+        return Response({"detail": "mood is required when category is provided"}, status=status.HTTP_400_BAD_REQUEST)
+
+    ok, results, err = generate_challenges(mood, category)
+    if not ok:
+        detail = err or "Failed"
+        if detail in ("Invalid mood. Use: energetic, happy, sad, tired.", "Invalid category.", "Ingest a document first."):
+            code = status.HTTP_400_BAD_REQUEST
+        elif detail and "OPENAI_API_KEY" in detail:
+            code = status.HTTP_503_SERVICE_UNAVAILABLE
+        else:
+            code = status.HTTP_502_BAD_GATEWAY
+        return Response({"detail": detail}, status=code)
+
+    return Response({"results": results})
+
+
 @api_view(["GET"])
 def challenge_history(request):
     qs = GeneratedChallenge.objects.order_by("-created_at")[:50]
@@ -79,7 +115,7 @@ def challenges_recent(request):
 
 @api_view(["GET"])
 def challenges_today(_request):
-    """Today's daily batch (10 challenges) or create if missing."""
+    """Today's daily batch (40 challenges: 5 categories × 4 moods × 2) or create if missing."""
     if not MindsetKnowledge.objects.exists():
         return Response({"results": [], "detail": "No mindsets loaded yet."})
     ok, rows, err = ensure_daily_challenges(force_regenerate=False)
@@ -89,8 +125,71 @@ def challenges_today(_request):
 
 
 @api_view(["POST"])
+def challenges_generate_pair(request):
+    """Replace today with 2 challenges for one category. Body: { category: string }."""
+    if not MindsetKnowledge.objects.exists():
+        return Response({"detail": "Ingest a document first."}, status=status.HTTP_400_BAD_REQUEST)
+    category = (request.data.get("category") or "").strip().lower()
+    ok, rows, err = ensure_category_pair(category)
+    if not ok:
+        code = status.HTTP_503_SERVICE_UNAVAILABLE if err and "OPENAI_API_KEY" in (err or "") else status.HTTP_400_BAD_REQUEST
+        if err == "Invalid category":
+            code = status.HTTP_400_BAD_REQUEST
+        elif err and err not in ("Invalid category", "Ingest a document first."):
+            code = status.HTTP_502_BAD_GATEWAY
+        return Response({"detail": err}, status=code)
+    return Response({"results": rows})
+
+
+@api_view(["GET"])
+def leaderboard_list(request):
+    """Top 10 by points_total."""
+    qs = LeaderboardEntry.objects.order_by("-points_total", "-updated_at")[:10]
+    return Response(
+        {
+            "results": [
+                {
+                    "rank": i + 1,
+                    "display_name": e.display_name,
+                    "points_total": e.points_total,
+                    "updated_at": e.updated_at.isoformat(),
+                }
+                for i, e in enumerate(qs)
+            ]
+        }
+    )
+
+
+@api_view(["POST"])
+def leaderboard_sync(request):
+    """Upsert this device's score for the public leaderboard."""
+    device = (request.data.get("device_id") or "").strip()
+    if not device:
+        return Response({"detail": "device_id required"}, status=status.HTTP_400_BAD_REQUEST)
+    try:
+        pts = int(request.data.get("points_total", 0))
+    except (TypeError, ValueError):
+        pts = 0
+    pts = max(0, min(pts, 2_000_000_000))
+    name = (request.data.get("display_name") or "").strip() or "Anonymous"
+    if len(name) > 64:
+        name = name[:64]
+    obj, _created = LeaderboardEntry.objects.update_or_create(
+        device_id=device,
+        defaults={"points_total": pts, "display_name": name},
+    )
+    return Response(
+        {
+            "ok": True,
+            "points_total": obj.points_total,
+            "display_name": obj.display_name,
+        }
+    )
+
+
+@api_view(["POST"])
 def challenges_generate_daily(request):
-    """Regenerate today's 10 challenges. Body: { force: true } to replace existing."""
+    """Regenerate today's 40 challenges (5 categories × 4 moods × 2). Body: { force: true } to replace existing."""
     if not MindsetKnowledge.objects.exists():
         return Response({"detail": "Ingest a document first."}, status=status.HTTP_400_BAD_REQUEST)
     force = bool(request.data.get("force", False))
