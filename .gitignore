@@ -1,0 +1,28 @@
+# Secrets — never commit
+.env
+.env.local
+**/.env
+!**/.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*.sqlite3
+.venv/
+venv/
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+
+# Large local uploads (keep folder via Backend .gitignore + .gitkeep)
+Syndicate/Backend/data/uploads/*
+!Syndicate/Backend/data/uploads/.gitkeep
+
+# IDE / OS
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db

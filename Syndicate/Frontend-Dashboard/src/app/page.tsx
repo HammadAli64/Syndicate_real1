@@ -1,0 +1,2158 @@
+"use client";
+
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import gsap from "gsap";
+import { AnimatePresence, motion } from "framer-motion";
+import ChromaGrid, { type ChromaItem } from "../components/ChromaGrid";
+import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import DashboardControlCenter from "../components/dashboard/DashboardControlCenter";
+import { SyndicateAiChallengePanel } from "../components/SyndicateAiChallengePanel";
+
+type NavItem = { label: string; key: string; active?: boolean };
+type Course = {
+  id: string;
+  title: string;
+  subtitle: string;
+  statusText: string;
+  progress: number; // 0..100
+  accent?: "gold" | "ice";
+  imageSrc?: string;
+  meta?: string;
+  detail?: string;
+};
+type MonkDifficulty = "Easy" | "Medium" | "Hard";
+type MonkChallenge = {
+  id: string;
+  key: "mind" | "body" | "freedom" | "money";
+  title: string;
+  description: string;
+  difficulty: MonkDifficulty;
+  duration: string;
+};
+type ThemeMode = "default" | "danger" | "cyberpunk";
+
+function cn(...parts: Array<string | false | null | undefined>) {
+  return parts.filter(Boolean).join(" ");
+}
+
+function IconToggle({ open }: { open: boolean }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4" aria-hidden="true">
+      {open ? (
+        <>
+          <path d="M6 7h12M6 12h9M6 17h12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+          <path d="M18.5 12l-2-2m2 2l-2 2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+        </>
+      ) : (
+        <>
+          <path d="M6 7h12M6 12h9M6 17h12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+          <path d="M15.5 12l2-2m-2 2l2 2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+        </>
+      )}
+    </svg>
+  );
+}
+
+function GoldButton({
+  children,
+  compact,
+  icon
+}: {
+  children: React.ReactNode;
+  compact?: boolean;
+  icon?: React.ReactNode;
+}) {
+  return (
+    <button
+      className={cn(
+        "cut-frame-sm cyber-frame gold-stroke hud-hover-glow glass-dark premium-gold-border premium-button relative inline-flex items-center gap-2 px-4 py-2 text-[11px] font-extrabold uppercase tracking-[0.18em] text-[color:var(--gold)]",
+        "border border-[rgba(255,215,0,0.3)] hover:border-[rgba(255,215,0,0.65)]",
+        "transition will-change-transform active:translate-y-0",
+        compact && "px-3"
+      )}
+      type="button"
+    >
+      <span className="absolute inset-0 -z-10 opacity-70 [background:linear-gradient(135deg,rgba(255,215,0,0.12),rgba(0,0,0,0)_55%)]" />
+      {icon ? <span className="grid h-4 w-4 place-items-center text-[color:var(--gold)]">{icon}</span> : null}
+      <span>{children}</span>
+    </button>
+  );
+}
+
+function CheckboxSlot({ active }: { active?: boolean }) {
+  return (
+    <div
+      className={cn(
+        "relative h-[22px] w-[22px] rounded-[6px] border",
+        active ? "border-[rgba(255,90,90,0.82)]" : "border-white/10"
+      )}
+    >
+      <span
+        className={cn(
+          "absolute left-1/2 top-1/2 h-[10px] w-[10px] -translate-x-1/2 -translate-y-1/2 rounded-[3px] opacity-0 transition",
+          active &&
+            "opacity-100 [background:linear-gradient(135deg,rgba(255,215,0,0.95),rgba(255,59,59,0.9))] [box-shadow:0_0_18px_rgba(255,59,59,0.28)]"
+        )}
+      />
+      <span
+        className={cn(
+          "absolute inset-0 rounded-[6px] opacity-0 transition",
+          active && "opacity-100 [box-shadow:0_0_0_1px_rgba(255,59,59,0.52),0_0_22px_rgba(255,59,59,0.22)]"
+        )}
+      />
+    </div>
+  );
+}
+
+function NavIcon({ k }: { k: string }) {
+  const base = "h-[18px] w-[18px]";
+  switch (k) {
+    case "dashboard":
+      return (
+        <svg className={base} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M4 12L12 4l8 8v8H4v-8Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+          <path d="M9.5 20v-6h5v6" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+        </svg>
+      );
+    case "programs":
+      return (
+        <svg className={base} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path
+            d="M7 4.75h10A2.25 2.25 0 0 1 19.25 7v10A2.25 2.25 0 0 1 17 19.25H7A2.25 2.25 0 0 1 4.75 17V7A2.25 2.25 0 0 1 7 4.75Z"
+            stroke="currentColor"
+            strokeWidth="1.8"
+          />
+          <path d="M8.2 9.2h7.6M8.2 12h5.5M8.2 14.8h8.4" stroke="currentColor" strokeWidth="1.8" />
+        </svg>
+      );
+    case "monk":
+      return (
+        <svg className={base} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path
+            d="M12 4.2c4.2 0 7.3 3.1 7.3 6.8 0 4-2.8 7-7.3 7s-7.3-3-7.3-7c0-3.7 3.1-6.8 7.3-6.8Z"
+            stroke="currentColor"
+            strokeWidth="1.8"
+          />
+          <path d="M9.2 11.2h5.6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+          <path d="M10 8.9c.6-.5 1.3-.8 2-.8.7 0 1.4.3 2 .8" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+        </svg>
+      );
+    case "resources":
+      return (
+        <svg className={base} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M6 4.8h12v14.4H6V4.8Z" stroke="currentColor" strokeWidth="1.8" />
+          <path d="M9 8h6M9 11h6M9 14h4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+        </svg>
+      );
+    case "affiliate":
+      return (
+        <svg className={base} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M8 8.5a4 4 0 1 0 8 0a4 4 0 1 0-8 0Z" stroke="currentColor" strokeWidth="1.8" />
+          <path d="M4.8 20c1.1-3.4 3.9-5.6 7.2-5.6S18.1 16.6 19.2 20" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+        </svg>
+      );
+    case "power":
+      return (
+        <svg className={base} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path
+            d="M12 4.2a7.8 7.8 0 1 1 0 15.6A7.8 7.8 0 0 1 12 4.2Z"
+            stroke="currentColor"
+            strokeWidth="1.8"
+          />
+          <path d="M12 8.2v4.2l3.2 1.8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      );
+    case "council":
+      return (
+        <svg className={base} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M7 11.2h10" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+          <path d="M9 7.6h6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+          <path d="M8 14.8h8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+          <path d="M6.6 19h10.8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+        </svg>
+      );
+    case "support":
+      return (
+        <svg className={base} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path
+            d="M12 4.8c3.9 0 7 3.2 7 7.2 0 4.1-3.1 7.2-7 7.2-3.9 0-7-3.1-7-7.2 0-4 3.1-7.2 7-7.2Z"
+            stroke="currentColor"
+            strokeWidth="1.8"
+          />
+          <path d="M9.2 12.5h5.6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+          <path d="M12 16.2h.01" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
+        </svg>
+      );
+    case "settings":
+      return (
+        <svg className={base} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path
+            d="M12 14.9a2.9 2.9 0 1 0 0-5.8a2.9 2.9 0 0 0 0 5.8Z"
+            stroke="currentColor"
+            strokeWidth="1.8"
+          />
+          <path
+            d="M19.6 12a7.7 7.7 0 0 0-.1-1l2-1.5-2-3.4-2.4 1a8.6 8.6 0 0 0-1.7-1l-.4-2.6H9.9l-.4 2.6a8.6 8.6 0 0 0-1.7 1l-2.4-1-2 3.4 2 1.5a7.7 7.7 0 0 0 0 2l-2 1.5 2 3.4 2.4-1a8.6 8.6 0 0 0 1.7 1l.4 2.6h4.2l.4-2.6a8.6 8.6 0 0 0 1.7-1l2.4 1 2-3.4-2-1.5c.1-.3.1-.7.1-1Z"
+            stroke="currentColor"
+            strokeWidth="1.4"
+            opacity="0.9"
+          />
+        </svg>
+      );
+    default:
+      return (
+        <svg className={base} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M6 12h12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+        </svg>
+      );
+  }
+}
+
+function CircuitSvg({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 640 640" fill="none" aria-hidden="true">
+      <g stroke="rgba(197,179,88,0.55)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" opacity="0.9">
+        <path d="M320 96v132m0 56v76m0 64v120" opacity="0.55" />
+        <path d="M180 170h110m60 0h110" opacity="0.5" />
+        <path d="M150 260h150m40 0h150" opacity="0.55" />
+        <path d="M210 410h90m80 0h90" opacity="0.52" />
+        <path d="M160 500h170m-30 0 30-30m160 30H450" opacity="0.5" />
+        <path d="M470 220v90m0 70v140" opacity="0.45" />
+        <circle cx="320" cy="228" r="7" fill="rgba(197,179,88,0.45)" />
+        <circle cx="470" cy="310" r="7" fill="rgba(197,179,88,0.35)" />
+        <circle cx="210" cy="410" r="7" fill="rgba(197,179,88,0.35)" />
+        <circle cx="290" cy="470" r="6" fill="rgba(197,179,88,0.28)" />
+        <path d="M290 470h40l22-22h70" opacity="0.45" />
+        <path d="M228 220v80m0 60v160" opacity="0.35" />
+        <path d="M228 300h72l20-20h72" opacity="0.38" />
+      </g>
+      <g opacity="0.55">
+        <circle cx="320" cy="320" r="250" stroke="rgba(197,179,88,0.18)" strokeWidth="2" />
+        <circle cx="320" cy="320" r="214" stroke="rgba(197,179,88,0.12)" strokeWidth="2" />
+        <path
+          d="M320 92a228 228 0 0 1 161 67"
+          stroke="rgba(197,179,88,0.22)"
+          strokeWidth="10"
+          strokeLinecap="round"
+        />
+        <path
+          d="M546 320a226 226 0 0 1-66 160"
+          stroke="rgba(197,179,88,0.18)"
+          strokeWidth="8"
+          strokeLinecap="round"
+        />
+      </g>
+    </svg>
+  );
+}
+
+function HudRingTicks({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 200 200" fill="none" aria-hidden="true">
+      <circle cx="100" cy="100" r="84" stroke="rgba(197,179,88,0.14)" strokeWidth="2" />
+      <circle cx="100" cy="100" r="70" stroke="rgba(197,179,88,0.10)" strokeWidth="2" />
+      <g stroke="rgba(197,179,88,0.35)" strokeWidth="2" strokeLinecap="round" opacity="0.85">
+        {Array.from({ length: 36 }).map((_, i) => {
+          const a = (i / 36) * Math.PI * 2;
+          const x1 = 100 + Math.cos(a) * 86;
+          const y1 = 100 + Math.sin(a) * 86;
+          const x2 = 100 + Math.cos(a) * (i % 3 === 0 ? 96 : 92);
+          const y2 = 100 + Math.sin(a) * (i % 3 === 0 ? 96 : 92);
+          return <path key={i} d={`M${x1.toFixed(2)} ${y1.toFixed(2)}L${x2.toFixed(2)} ${y2.toFixed(2)}`} />;
+        })}
+      </g>
+      <path
+        d="M100 16a84 84 0 0 1 64 30"
+        stroke="rgba(197,179,88,0.25)"
+        strokeWidth="10"
+        strokeLinecap="round"
+        opacity="0.9"
+      />
+    </svg>
+  );
+}
+
+function Metric({
+  label,
+  value,
+  strong
+}: {
+  label: string;
+  value: string;
+  strong?: boolean;
+}) {
+  return (
+    <div className="space-y-3">
+      <div className="text-[11px] font-extrabold uppercase tracking-[0.22em] text-white/55">{label}</div>
+      <div
+        className={cn(
+          "font-extrabold tracking-[0.06em] text-[color:var(--gold)]",
+          strong ? "text-[32px]" : "text-[28px]"
+        )}
+      >
+        {value}
+      </div>
+      <div className="h-px w-full bg-[linear-gradient(90deg,rgba(197,179,88,0),rgba(197,179,88,0.35),rgba(197,179,88,0))]" />
+    </div>
+  );
+}
+
+function CourseCard({
+  course,
+  selected,
+  onSelect
+}: {
+  course: Course;
+  selected: boolean;
+  onSelect: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      data-course-card
+      className={cn(
+        "cut-frame-sm cyber-frame gold-stroke hud-hover-glow relative overflow-hidden border bg-black/60 p-6 text-left transition",
+        "border-[rgba(255,255,255,0.10)] hover:border-[rgba(197,179,88,0.62)] hover:bg-black/70",
+        selected &&
+          "is-glitching glow-edge-strong border-[rgba(197,179,88,0.80)] bg-[rgba(197,179,88,0.08)]"
+      )}
+    >
+      <span className="absolute inset-0 opacity-70 [background:radial-gradient(520px_240px_at_25%_10%,rgba(197,179,88,0.12),rgba(0,0,0,0)_60%)]" />
+      <span className="beep-line" aria-hidden="true" />
+
+      <div className="relative">
+        {/* Visual (auto-shows if you provide an image) */}
+        <div className="cut-frame-sm relative mb-5 aspect-[16/7] overflow-hidden border border-[rgba(255,255,255,0.10)] bg-black/70">
+          <div className="absolute inset-0 opacity-60 [background:radial-gradient(420px_140px_at_20%_0%,rgba(197,179,88,0.10),rgba(0,0,0,0)_62%)]" />
+          {course.imageSrc ? (
+            <img
+              src={course.imageSrc}
+              alt=""
+              className="absolute inset-0 h-full w-full object-cover opacity-90"
+              onError={(e) => {
+                (e.currentTarget as HTMLImageElement).style.display = "none";
+              }}
+            />
+          ) : null}
+          <div className="absolute inset-0 opacity-90 [background:linear-gradient(90deg,rgba(0,0,0,0.72),rgba(0,0,0,0.18),rgba(0,0,0,0.72))]" />
+        </div>
+
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <div className="text-[12px] font-extrabold uppercase tracking-[0.18em] text-white/55">
+              {course.subtitle}
+            </div>
+            <div
+              className={cn(
+                "mt-3 text-[18px] font-black uppercase tracking-[0.10em] text-[color:var(--gold)]/90",
+                course.accent === "ice" && "text-white/90"
+              )}
+            >
+              <span className="glitch-text" data-glitch={course.title}>
+                {course.title}
+              </span>
+            </div>
+            {course.meta ? <div className="mt-2 text-[12px] font-semibold text-white/55">{course.meta}</div> : null}
+          </div>
+          <div className="mt-1 grid place-items-center rounded-md border border-[rgba(197,179,88,0.22)] bg-black/35 px-2 py-1 text-[10px] font-extrabold uppercase tracking-[0.18em] text-white/65">
+            {course.progress > 0 ? `${course.progress}%` : "--"}
+          </div>
+        </div>
+
+        <div className="mt-4 text-[12px] font-semibold text-white/60">{course.statusText}</div>
+
+        <div className="mt-3 h-[10px] w-full rounded-md border border-white/10 bg-black/35">
+          <div
+            className={cn(
+              "h-full rounded-md bg-[rgba(197,179,88,0.55)]",
+              course.progress === 0 && "bg-white/10",
+              course.accent === "ice" && "bg-white/55"
+            )}
+            style={{ width: `${course.progress}%` }}
+          />
+        </div>
+
+        {/* Inline details (expands under the selected card) */}
+        {selected ? (
+          <div className="mt-5 cut-frame-sm cyber-frame border border-[rgba(197,179,88,0.18)] bg-black/70 p-4">
+            <div className="text-[11px] font-extrabold uppercase tracking-[0.22em] text-white/55">Details</div>
+            <div className="mt-3 text-[13px] font-semibold leading-relaxed text-white/65">
+              {course.detail ?? "Details will appear here."}
+            </div>
+          </div>
+        ) : null}
+      </div>
+    </button>
+  );
+}
+
+function ActiveCoursePanel({ course, onContinue }: { course: Course; onContinue: () => void }) {
+  return (
+    <div
+      data-active-panel
+      className="cut-frame cyber-frame gold-stroke relative overflow-hidden border border-[rgba(197,179,88,0.22)] bg-[#060606]/70 p-5"
+    >
+      <div className="absolute inset-0 opacity-70 [background:radial-gradient(920px_360px_at_40%_0%,rgba(197,179,88,0.12),rgba(0,0,0,0)_62%)]" />
+      <div className="relative flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div className="min-w-0">
+          <div className="text-[11px] font-extrabold uppercase tracking-[0.22em] text-white/55">Active Course</div>
+          <div className="mt-2 text-[18px] font-black uppercase tracking-[0.12em] text-[color:var(--gold)]/90">
+            <span className="glitch-text" data-glitch={course.title}>
+              {course.title}
+            </span>
+          </div>
+          {course.meta ? <div className="mt-2 text-[12px] font-semibold text-white/55">{course.meta}</div> : null}
+          <div className="mt-2 text-[12px] font-semibold text-white/60">{course.statusText}</div>
+          {course.detail ? <div className="mt-3 text-[12px] font-semibold text-white/55">{course.detail}</div> : null}
+
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={onContinue}
+              className="cut-frame-sm cyber-frame gold-stroke premium-button relative inline-flex items-center gap-2 border border-[rgba(255,215,0,0.35)] bg-black/20 px-4 py-2 text-[11px] font-extrabold uppercase tracking-[0.18em] text-[color:var(--gold)] hover:border-[rgba(255,215,0,0.75)]"
+            >
+              Continue
+            </button>
+            <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-white/50">
+              Progress saves automatically
+            </div>
+          </div>
+        </div>
+
+        <div className="flex shrink-0 items-center gap-4">
+          <div className="grid place-items-center rounded-md border border-[rgba(197,179,88,0.26)] bg-black/35 px-3 py-2 text-[12px] font-extrabold uppercase tracking-[0.22em] text-[color:var(--gold)]">
+            {course.progress}%
+          </div>
+          <div className="w-[220px]">
+            <div className="h-[10px] w-full rounded-md border border-white/10 bg-black/35">
+              <div className="h-full rounded-md bg-[rgba(197,179,88,0.60)]" style={{ width: `${course.progress}%` }} />
+            </div>
+            <div className="mt-2 h-px w-full bg-[linear-gradient(90deg,rgba(197,179,88,0),rgba(197,179,88,0.35),rgba(197,179,88,0))]" />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function MonkIcon({ kind }: { kind: MonkChallenge["key"] }) {
+  const base = "h-6 w-6";
+  if (kind === "mind") {
+    return (
+      <svg className={base} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M8.4 6.6A4.3 4.3 0 0 1 12 4.8a4.3 4.3 0 0 1 3.6 1.8A4.7 4.7 0 0 1 19 11c0 2.5-1.6 4.2-3.2 5.8-.9.9-1.4 1.8-1.4 3H9.6c0-1.2-.5-2.1-1.4-3C6.6 15.2 5 13.5 5 11a4.7 4.7 0 0 1 3.4-4.4Z" stroke="currentColor" strokeWidth="1.8" />
+        <path d="M9.6 19.8h4.8M10.2 16.8h3.6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+      </svg>
+    );
+  }
+  if (kind === "body") {
+    return (
+      <svg className={base} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M3.8 10.2h4.4v3.6H3.8zM15.8 10.2h4.4v3.6h-4.4z" stroke="currentColor" strokeWidth="1.8" />
+        <path d="M8.2 12h7.6M11 9.2v5.6M13 9.2v5.6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+      </svg>
+    );
+  }
+  if (kind === "freedom") {
+    return (
+      <svg className={base} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M4.8 16.8c2.4-3.3 5.1-4.8 8.1-4.8 2.5 0 4.6 1.1 6.3 3.3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+        <path d="M5 8.8c2.8 1.4 5.4 1.5 7.8.2M12.8 9c2.1-1 4.1-2.4 6.2-4.2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+      </svg>
+    );
+  }
+  return (
+    <svg className={base} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M5 18.5h14M6.8 15.2h10.4M8 11.8h8M9.3 8.5h5.4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+      <path d="M12 4.8v3.1" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function SyndicateModeSection() {
+  return (
+    <section data-anim="in" className="mt-2 w-full min-w-0 shrink-0">
+      <div className="cut-frame cyber-frame relative min-h-[min(85vh,920px)] w-full overflow-hidden border border-[rgba(255,215,0,0.52)] bg-[#060606]/88 p-6 sm:p-7 [box-shadow:0_0_0_1px_rgba(255,215,0,0.30),0_0_18px_rgba(255,215,0,0.26),0_0_52px_rgba(255,215,0,0.14)]">
+        <div className="absolute inset-0 opacity-62 [background:radial-gradient(760px_220px_at_20%_0%,rgba(255,215,0,0.15),rgba(0,0,0,0)_65%)]" />
+        <div className="absolute inset-0 opacity-30 [background:repeating-linear-gradient(0deg,rgba(255,255,255,0.015)_0px,rgba(255,255,255,0.015)_1px,transparent_8px,transparent_14px)]" />
+        <div className="relative">
+          <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <div className="flex items-center gap-2 text-[12px] font-extrabold uppercase tracking-[0.22em] text-white/70">
+                <span className="inline-flex h-2.5 w-2.5 animate-pulse rounded-full bg-[#ff3b3b] shadow-[0_0_12px_rgba(255,59,59,0.9)]" />
+                System Status: ACTIVE
+              </div>
+              <h3 className="mt-2 text-[28px] font-black uppercase tracking-[0.1em] text-[color:var(--gold)] [text-shadow:0_0_10px_rgba(255,215,0,0.45)]">
+                Syndicate Mode: Challenges
+              </h3>
+            </div>
+          </div>
+          <SyndicateAiChallengePanel />
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function AffiliatePortalSection() {
+  return (
+    <section data-anim="in" className="mt-2 w-full">
+      <div className="cut-frame-sm border border-white/15 bg-black/35 p-6 text-center">
+        <div className="text-[14px] font-extrabold uppercase tracking-[0.18em] text-white/80">Affiliate Portal</div>
+        <div className="mt-2 text-[12px] text-white/62">Section intentionally cleared for merge with another branch.</div>
+      </div>
+    </section>
+  );
+}
+
+function AdminReviewPanel({ themeMode }: { themeMode: ThemeMode }) {
+  const themed = themeMode !== "default";
+  const accent =
+    themeMode === "danger"
+      ? "border-[rgba(255,92,92,0.42)]"
+      : themeMode === "cyberpunk"
+        ? "border-[rgba(196,126,255,0.44)]"
+        : "border-[rgba(255,215,0,0.28)]";
+  return (
+    <div className={cn("cut-frame-sm border bg-black/45 p-4 backdrop-blur-sm", accent)}>
+      <div className="mb-3 text-[14px] font-extrabold uppercase tracking-[0.18em] text-white/82">Admin Panel Overview</div>
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+        {[
+          ["Total Users", "1,284"],
+          ["Total Referrals", "146"],
+          ["Total Earnings", "$10,500"],
+          ["Active Users", "318"]
+        ].map(([k, v]) => (
+          <div key={k} className={cn("rounded-md border bg-black/40 px-3 py-2", accent)}>
+            <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-white/62">{k}</div>
+            <div className="mt-1 text-[22px] font-black text-[color:var(--gold)]">{v}</div>
+          </div>
+        ))}
+      </div>
+      <div className="mt-3 grid grid-cols-1 gap-3 xl:grid-cols-3">
+        <div className={cn("rounded-md border bg-black/40 p-2", accent)}><div className="mb-1 text-[10px] font-bold uppercase tracking-[0.14em] text-white/62">User Activity</div><div className="flex h-20 items-end gap-1">{[40, 62, 50, 76, 68].map((v, i) => <div key={i} className="flex-1 rounded-t-sm" style={{ height: `${v}%`, background: themeMode === "danger" ? "rgba(255,90,90,0.85)" : themeMode === "cyberpunk" ? "rgba(196,126,255,0.9)" : "rgba(255,215,0,0.85)" }} />)}</div></div>
+        <div className={cn("rounded-md border bg-black/40 p-2", accent)}><div className="mb-1 text-[10px] font-bold uppercase tracking-[0.14em] text-white/62">Growth Trend</div><svg viewBox="0 0 160 60" className="h-20 w-full"><polyline fill="none" stroke={themeMode === "danger" ? "rgba(255,150,90,0.9)" : themeMode === "cyberpunk" ? "rgba(0,255,255,0.9)" : "rgba(255,215,0,0.9)"} strokeWidth="3" points="8,46 36,34 64,30 92,22 122,16 152,10" /></svg></div>
+        <div className={cn("rounded-md border bg-black/40 p-2", accent)}><div className="mb-1 text-[10px] font-bold uppercase tracking-[0.14em] text-white/62">Earnings Split</div><div className="grid h-20 place-items-center"><div className="h-16 w-16 rounded-full border-8 border-t-[rgba(0,191,255,0.82)] border-r-[rgba(0,191,255,0.82)] border-b-[rgba(255,215,0,0.85)] border-l-[rgba(255,215,0,0.85)]" /></div></div>
+      </div>
+      <div className="mt-3 overflow-x-auto rounded-md border border-white/15 bg-black/35">
+        <table className="w-full min-w-[420px] text-left text-[12px]">
+          <thead className="text-[10px] uppercase tracking-[0.14em] text-white/62"><tr><th className="px-3 py-2">User</th><th className="px-3 py-2">Action</th><th className="px-3 py-2">Time</th></tr></thead>
+          <tbody>
+            {[
+              ["Aariz", "signup", "2m ago"],
+              ["Maya", "purchase", "7m ago"],
+              ["Nora", "referral", "11m ago"]
+            ].map((r) => (<tr key={r.join("-")} className="border-t border-white/10 text-white/82"><td className="px-3 py-2">{r[0]}</td><td className="px-3 py-2 uppercase">{r[1]}</td><td className="px-3 py-2">{r[2]}</td></tr>))}
+          </tbody>
+        </table>
+      </div>
+      <div className="mt-3 grid grid-cols-1 gap-2 md:grid-cols-3 text-[11px] font-bold text-white/82">
+        <div className={cn("rounded-md border bg-black/40 px-3 py-2", accent)}><span className="mr-2 inline-block h-2 w-2 rounded-full bg-[#00ff7a]" />System Status: Active</div>
+        <div className={cn("rounded-md border bg-black/40 px-3 py-2", accent)}><span className="mr-2 inline-block h-2 w-2 rounded-full bg-[#00bfff]" />Referral System: Operational</div>
+        <div className={cn("rounded-md border bg-black/40 px-3 py-2", accent)}><span className="mr-2 inline-block h-2 w-2 rounded-full bg-[color:var(--gold)]" />Payout System: Stable</div>
+      </div>
+      {themed ? <div className="mt-2 text-[10px] font-bold uppercase tracking-[0.14em] text-white/60">Theme-adaptive review mode active</div> : null}
+    </div>
+  );
+}
+
+type SyndicateCategoryKey = "money" | "power" | "freedom" | "fitness" | "skills";
+
+const syndicateCategoryLabel: Record<SyndicateCategoryKey, string> = {
+  money: "Money Mastery",
+  power: "Power",
+  freedom: "Freedom",
+  fitness: "Body & Mind Fitness",
+  skills: "Skills"
+};
+
+const missionTitleById: Record<string, string> = {
+  // money
+  "m-a": "Cashflow Lockdown",
+  "m-b": "Income Sprint",
+  "m-c": "Asset Accumulation",
+  "m-d": "Wealth Firewall",
+  // power
+  "p-a": "Command Presence",
+  "p-b": "Dominance Protocol",
+  "p-c": "Authority Buildout",
+  "p-d": "Pressure Immunity",
+  // freedom
+  "f-a": "No-Feed Purge",
+  "f-b": "Time Liberation",
+  "f-c": "Autonomy System",
+  "f-d": "Minimal Signal",
+  // fitness
+  "b-a": "Baseline Reset",
+  "b-b": "Combat Conditioning",
+  "b-c": "Iron Discipline",
+  "b-d": "Cold Resolve",
+  // skills
+  "s-a": "Skill Lock-In",
+  "s-b": "Execution Stack",
+  "s-c": "Mastery Pipeline",
+  "s-d": "Precision Craft"
+};
+
+const lackingCategoryByStrength: Record<SyndicateCategoryKey, SyndicateCategoryKey> = {
+  money: "freedom",
+  power: "skills",
+  freedom: "power",
+  fitness: "money",
+  skills: "fitness"
+};
+
+const recommendedMissionByCategory: Record<SyndicateCategoryKey, string> = {
+  money: "m-d",
+  power: "p-b",
+  freedom: "f-b",
+  fitness: "b-b",
+  skills: "s-b"
+};
+
+function getThemeToastStyle(themeMode: ThemeMode) {
+  if (themeMode === "danger") {
+    return {
+      border: "rgba(255,92,92,0.55)",
+      glow: "rgba(255,92,92,0.22)",
+      accent: "#ffd4d4"
+    };
+  }
+  if (themeMode === "cyberpunk") {
+    return {
+      border: "rgba(196,126,255,0.55)",
+      glow: "rgba(196,126,255,0.20)",
+      accent: "#e7d0ff"
+    };
+  }
+  return {
+    border: "rgba(255,215,0,0.50)",
+    glow: "rgba(255,215,0,0.20)",
+    accent: "#ffe79d"
+  };
+}
+
+type ToastTone = "info" | "success" | "warning";
+type ToastItem = {
+  id: string;
+  title: string;
+  message?: string;
+  tone: ToastTone;
+  durationMs: number;
+};
+
+function ToastQueueCenter({
+  themeMode,
+  toast,
+  onDismiss
+}: {
+  themeMode: ThemeMode;
+  toast: ToastItem | null;
+  onDismiss: (id: string) => void;
+}) {
+  const t = getThemeToastStyle(themeMode);
+  const toneColor = (tone: ToastTone) => {
+    if (tone === "success") return { dot: "rgba(0,255,122,0.9)", text: "#b4ffd8" };
+    if (tone === "warning") return { dot: "rgba(255,215,0,0.95)", text: "#ffe39f" };
+    return { dot: t.border, text: t.accent };
+  };
+
+  return (
+    <div className="pointer-events-none fixed right-3 top-[90px] z-[100] flex w-[min(360px,92vw)] flex-col gap-2">
+      <AnimatePresence>
+        {toast ? (
+          <motion.div
+            key={toast.id}
+            initial={{ opacity: 0, y: -10, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -10, scale: 0.98 }}
+            transition={{ duration: 0.22, ease: "easeOut" }}
+            className="pointer-events-auto cut-frame-sm border bg-black/75 backdrop-blur-sm px-3 py-3"
+            style={{
+              borderColor: t.border,
+              boxShadow: `0 0 0 1px ${t.glow}, 0 0 18px ${t.glow}`
+            }}
+            role="status"
+          >
+            {(() => {
+              const c = toneColor(toast.tone);
+              return (
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="inline-flex h-2.5 w-2.5 rounded-full" style={{ background: c.dot, boxShadow: `0 0 14px ${c.dot}` }} />
+                      <div className="text-[12px] font-extrabold uppercase tracking-[0.18em] text-white/78">{toast.title}</div>
+                    </div>
+                    {toast.message ? (
+                      <div className="mt-2 text-[12px] leading-relaxed text-white/65">{toast.message}</div>
+                    ) : null}
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => onDismiss(toast.id)}
+                    className="rounded-md border border-white/10 bg-black/20 px-2 py-1 text-[11px] font-extrabold uppercase tracking-[0.14em] text-white/60 hover:text-white/90"
+                    aria-label="Dismiss notification"
+                  >
+                    X
+                  </button>
+                </div>
+              );
+            })()}
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+function UserDashboardPanel({
+  themeMode,
+  userName,
+  courses,
+  onResumeCourse,
+  onGoSyndicate
+}: {
+  themeMode: ThemeMode;
+  userName: string;
+  courses: Course[];
+  onResumeCourse: (courseId: string) => void;
+  onGoSyndicate: (category: SyndicateCategoryKey, missionId: string) => void;
+}) {
+  const [resumeCourseId, setResumeCourseId] = useState<string | null>(null);
+  const [resumeProgress, setResumeProgress] = useState<number>(0);
+
+  const [syndicateCategory, setSyndicateCategory] = useState<SyndicateCategoryKey>("power");
+  const [syndicateDuration, setSyndicateDuration] = useState<7 | 14 | 30>(14);
+  const [syndicateLevel, setSyndicateLevel] = useState<number | null>(null);
+  const [activeMissionId, setActiveMissionId] = useState<string | null>(null);
+  const [syndicateCycleProgress, setSyndicateCycleProgress] = useState<number>(0);
+
+  const [toastQueue, setToastQueue] = useState<ToastItem[]>([]);
+  const [activeToast, setActiveToast] = useState<ToastItem | null>(null);
+  const toastTimerRef = useRef<number | null>(null);
+  const toastGapTimerRef = useRef<number | null>(null);
+
+  const enqueueToast = (toast: Omit<ToastItem, "id">) => {
+    const id = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    const item: ToastItem = { id, ...toast };
+    setToastQueue((prev) => [...prev, item]);
+  };
+
+  const dismissToast = (id: string) => {
+    setActiveToast((t) => (t?.id === id ? null : t));
+    setToastQueue((prev) => prev.filter((t) => t.id !== id));
+  };
+
+  useEffect(() => {
+    // Single-toast queue behavior: show one message, wait duration, wait 3s gap, then show next.
+    if (activeToast) return;
+    if (toastQueue.length === 0) return;
+
+    const next = toastQueue[0];
+    setActiveToast(next);
+
+    if (toastTimerRef.current) window.clearTimeout(toastTimerRef.current);
+    if (toastGapTimerRef.current) window.clearTimeout(toastGapTimerRef.current);
+
+    toastTimerRef.current = window.setTimeout(() => {
+      setActiveToast(null);
+      toastGapTimerRef.current = window.setTimeout(() => {
+        setToastQueue((prev) => prev.slice(1));
+      }, 3000);
+    }, next.durationMs);
+
+    return () => {
+      if (toastTimerRef.current) window.clearTimeout(toastTimerRef.current);
+      if (toastGapTimerRef.current) window.clearTimeout(toastGapTimerRef.current);
+    };
+  }, [toastQueue, activeToast]);
+
+  useEffect(() => {
+    // Hydrate resume + syndicate snapshot from localStorage (demo persistence).
+    const lastCourseId = window.localStorage.getItem("dashboarded:lastCourseId");
+    setResumeCourseId(lastCourseId);
+    const progressRaw = window.localStorage.getItem("dashboarded:course-progress");
+    if (lastCourseId && progressRaw) {
+      try {
+        const parsed = JSON.parse(progressRaw) as Record<string, number>;
+        setResumeProgress(typeof parsed[lastCourseId] === "number" ? parsed[lastCourseId] : 0);
+      } catch {
+        setResumeProgress(0);
+      }
+    } else {
+      setResumeProgress(0);
+    }
+
+    const cat = window.localStorage.getItem("dashboarded:syndicate-category") as SyndicateCategoryKey | null;
+    if (cat && cat in syndicateCategoryLabel) setSyndicateCategory(cat);
+
+    const durRaw = window.localStorage.getItem("dashboarded:syndicate-duration");
+    const durNum = durRaw ? Number(durRaw) : NaN;
+    if (durNum === 7 || durNum === 14 || durNum === 30) setSyndicateDuration(durNum);
+
+    const levelRaw = window.localStorage.getItem("dashboarded:syndicate-level");
+    const levelNum = levelRaw ? Number(levelRaw) : NaN;
+    if (Number.isFinite(levelNum)) setSyndicateLevel(Math.max(1, Math.floor(levelNum)));
+
+    const missionId = window.localStorage.getItem("dashboarded:syndicate-missionId");
+    setActiveMissionId(missionId || null);
+
+    const cycRaw = window.localStorage.getItem("dashboarded:syndicate-cycle-progress");
+    const cycNum = cycRaw ? Number(cycRaw) : NaN;
+    if (Number.isFinite(cycNum)) {
+      setSyndicateCycleProgress(Math.max(0, Math.min(100, cycNum)));
+    } else {
+      // Deterministic fallback so the UI doesn't look "stuck" on first load.
+      const seedSource = missionId || lastCourseId || "seed";
+      const seed = seedSource.split("").reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
+      const computed = Math.max(0, Math.min(100, (seed % 61) + 20)); // 20..80
+      window.localStorage.setItem("dashboarded:syndicate-cycle-progress", String(computed));
+      setSyndicateCycleProgress(computed);
+    }
+  }, []);
+
+  const resumeCourse = resumeCourseId ? courses.find((c) => c.id === resumeCourseId) ?? null : null;
+
+  const strengthKey = syndicateCategory;
+  const lackingKey = lackingCategoryByStrength[strengthKey];
+  const recommendedMissionId = recommendedMissionByCategory[lackingKey];
+  const activeMissionTitle = activeMissionId ? missionTitleById[activeMissionId] ?? activeMissionId : "No mission selected";
+  const recommendedMissionTitle = missionTitleById[recommendedMissionId] ?? recommendedMissionId;
+
+  const badgeLabel =
+    syndicateDuration === 7 ? "Gold Badge" : syndicateDuration === 14 ? "Diamond Badge" : "Danger Zone";
+  const fallbackBadgeLevel = syndicateDuration === 7 ? 6 : syndicateDuration === 14 ? 11 : 17;
+  const badgeLevel = syndicateLevel ?? fallbackBadgeLevel;
+
+  const unlockPercent = Math.max(0, Math.min(100, syndicateCycleProgress));
+
+  useEffect(() => {
+    // Push engaging “returning user” messages.
+    enqueueToast({
+      tone: "info",
+      title: `Welcome back, ${userName}!`,
+      message: "Your dashboard is synced. Check your next recommended actions.",
+      durationMs: 2300
+    });
+
+    if (resumeCourse) {
+      enqueueToast({
+        tone: "warning",
+        title: "Resume available",
+        message: `Continue “${resumeCourse.title}” from ${resumeProgress}% progress.`,
+        durationMs: 2400
+      });
+    }
+
+    enqueueToast({
+      tone: "success",
+      title: "Syndicate mission ongoing",
+      message: `Active mission: ${activeMissionTitle}. Level ${badgeLevel} • ${badgeLabel}.`,
+      durationMs: 2500
+    });
+
+    enqueueToast({
+      tone: "warning",
+      title: "What you need next",
+      message: `You’re strongest in ${syndicateCategoryLabel[strengthKey]}, but your next upgrade needs ${syndicateCategoryLabel[lackingKey]}.`,
+      durationMs: 2600
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resumeCourseId, syndicateDuration, syndicateCategory, activeMissionId]);
+
+  const themeAccent =
+    themeMode === "danger"
+      ? "rgba(255,92,92,0.45)"
+      : themeMode === "cyberpunk"
+        ? "rgba(196,126,255,0.42)"
+        : "rgba(255,215,0,0.35)";
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 14 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.28, ease: "easeOut" }}
+    >
+      <ToastQueueCenter
+        themeMode={themeMode}
+        toast={activeToast}
+        onDismiss={dismissToast}
+      />
+
+      <div className={cn("cut-frame-sm border bg-black/45 p-4 backdrop-blur-sm", themeMode === "danger" ? "border-[rgba(255,92,92,0.42)]" : themeMode === "cyberpunk" ? "border-[rgba(196,126,255,0.44)]" : "border-[rgba(255,215,0,0.28)]")}>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <div className="text-[14px] font-extrabold uppercase tracking-[0.18em] text-white/82">User Dashboard</div>
+            <div className="mt-2 text-[12px] font-semibold text-white/60">
+              Resume, syndicate progress, and personalized focus.
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <span
+              className="rounded-md border bg-black/35 px-3 py-2 text-[11px] font-extrabold uppercase tracking-[0.16em]"
+              style={{ borderColor: themeAccent, color: "rgba(255,255,255,0.85)" }}
+            >
+              {badgeLabel}
+            </span>
+            <span
+              className="rounded-md border bg-black/35 px-3 py-2 text-[11px] font-extrabold uppercase tracking-[0.16em]"
+              style={{ borderColor: themeAccent, color: "rgba(255,255,255,0.85)" }}
+            >
+              Level {badgeLevel}
+            </span>
+          </div>
+        </div>
+
+        <div className="mt-4 grid grid-cols-1 gap-4 xl:grid-cols-2">
+          <div className="rounded-md border border-white/10 bg-black/35 p-4">
+            <div className="flex items-center justify-between gap-3">
+              <div className="text-[12px] font-extrabold uppercase tracking-[0.2em] text-white/72">Continue Program</div>
+              {resumeCourse ? (
+                <div className="text-[11px] font-black uppercase tracking-[0.18em] text-[color:var(--gold)]/90">{resumeProgress}%</div>
+              ) : (
+                <div className="text-[11px] font-black uppercase tracking-[0.18em] text-white/45">None yet</div>
+              )}
+            </div>
+
+            {resumeCourse ? (
+              <>
+                <div className="mt-2 text-[22px] font-black uppercase tracking-[0.08em] text-white/80">
+                  {resumeCourse.title}
+                </div>
+                <div className="mt-3 h-2.5 w-full overflow-hidden rounded-full border border-white/10 bg-black/45">
+                  <div
+                    className="h-full rounded-full"
+                    style={{
+                      width: `${unlockPercent}%`,
+                      background: themeMode === "danger" ? "rgba(255,92,92,0.75)" : themeMode === "cyberpunk" ? "rgba(196,126,255,0.78)" : "rgba(255,215,0,0.75)"
+                    }}
+                  />
+                </div>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => onResumeCourse(resumeCourse.id)}
+                    className="cut-frame-sm cyber-frame gold-stroke premium-button relative inline-flex items-center gap-2 border border-[rgba(255,215,0,0.3)] bg-black/20 px-4 py-2 text-[11px] font-extrabold uppercase tracking-[0.18em] text-[color:var(--gold)] hover:border-[rgba(255,215,0,0.65)]"
+                  >
+                    Resume & Continue
+                  </button>
+                </div>
+              </>
+            ) : (
+              <div className="mt-3 text-[12px] leading-relaxed text-white/65">
+                You haven’t started a program yet. Hit resume when you pick one from the Courses section.
+              </div>
+            )}
+          </div>
+
+          <div className="rounded-md border border-white/10 bg-black/35 p-4">
+            <div className="flex items-center justify-between gap-3">
+              <div className="text-[12px] font-extrabold uppercase tracking-[0.2em] text-white/72">Syndicate Snapshot</div>
+              <div className="text-[11px] font-black uppercase tracking-[0.18em] text-white/55">Ongoing</div>
+            </div>
+
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <span className="rounded-md border border-white/10 bg-black/35 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.16em] text-white/70">
+                Active: {activeMissionTitle}
+              </span>
+            </div>
+
+            <div className="mt-3">
+              <div className="text-[11px] font-extrabold uppercase tracking-[0.18em] text-white/60">Cycle Progress</div>
+              <div className="mt-2 h-2.5 w-full overflow-hidden rounded-full border border-white/10 bg-black/45">
+                <div
+                  className="h-full rounded-full"
+                  style={{
+                    width: `${unlockPercent}%`,
+                    background: themeMode === "danger" ? "rgba(255,92,92,0.75)" : themeMode === "cyberpunk" ? "rgba(0,255,255,0.58)" : "rgba(255,215,0,0.75)"
+                  }}
+                />
+              </div>
+              <div className="mt-2 flex items-center justify-between text-[11px] font-semibold text-white/60">
+                <span>{unlockPercent}% toward next reward</span>
+                <span>{100 - unlockPercent}% remaining</span>
+              </div>
+            </div>
+
+            <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="rounded-md border border-white/10 bg-black/35 p-3">
+                <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-white/62">Your Strength</div>
+                <div className="mt-1 text-[13px] font-black uppercase tracking-[0.08em] text-[color:var(--gold)]/90">
+                  {syndicateCategoryLabel[strengthKey]}
+                </div>
+              </div>
+              <div className="rounded-md border border-white/10 bg-black/35 p-3">
+                <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-white/62">Need Focus</div>
+                <div className="mt-1 text-[13px] font-black uppercase tracking-[0.08em] text-[#bbffd0]">
+                  {syndicateCategoryLabel[lackingKey]}
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-4 rounded-md border bg-black/30 p-3">
+              <div className="text-[12px] font-extrabold uppercase tracking-[0.16em] text-white/80">
+                Next Recommended Mission
+              </div>
+              <div className="mt-2 text-[16px] font-black uppercase tracking-[0.08em] text-[color:var(--gold)]/92">
+                {recommendedMissionTitle}
+              </div>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => onGoSyndicate(lackingKey, recommendedMissionId)}
+                  className="rounded-md border border-[rgba(255,215,0,0.35)] bg-black/20 px-4 py-2 text-[11px] font-extrabold uppercase tracking-[0.18em] text-[color:var(--gold)] hover:border-[rgba(255,215,0,0.7)]"
+                >
+                  Start Focus Mission
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onGoSyndicate(strengthKey, activeMissionId ?? recommendedMissionId)}
+                  className="rounded-md border border-white/15 bg-black/20 px-4 py-2 text-[11px] font-extrabold uppercase tracking-[0.18em] text-white/70 hover:border-white/30"
+                >
+                  Open Syndicate Mode
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-4 rounded-md border border-white/10 bg-black/30 p-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <div className="text-[12px] font-extrabold uppercase tracking-[0.2em] text-white/72">Quick Alerts</div>
+              <div className="mt-2 text-[12px] leading-relaxed text-white/65">
+                Tap any action to trigger a toast and keep the loop moving.
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  enqueueToast({
+                    tone: "success",
+                    title: "Reward check",
+                    message: "You’re progressing. Keep focus on your next mission to unlock the next step.",
+                    durationMs: 2200
+                  });
+                }}
+                className="rounded-md border border-[rgba(0,255,122,0.35)] bg-[rgba(0,255,122,0.08)] px-4 py-2 text-[11px] font-extrabold uppercase tracking-[0.18em] text-[#b4ffd8] hover:border-[rgba(0,255,122,0.65)]"
+              >
+                Claim Reward Hint
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  enqueueToast({
+                    tone: "info",
+                    title: "Micro-task queued",
+                    message: "2-minute setup: open Syndicate Mode and pick your focus mission.",
+                    durationMs: 2200
+                  });
+                }}
+                className="rounded-md border border-[rgba(255,215,0,0.28)] bg-black/20 px-4 py-2 text-[11px] font-extrabold uppercase tracking-[0.18em] text-[color:var(--gold)]/90 hover:border-[rgba(255,215,0,0.65)]"
+              >
+                Queue Micro-task
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+function UserDashboardGate({
+  themeMode,
+  userName,
+  courses,
+  onResumeCourse,
+  onGoSyndicate
+}: {
+  themeMode: ThemeMode;
+  userName: string;
+  courses: Course[];
+  onResumeCourse: (courseId: string) => void;
+  onGoSyndicate: (category: SyndicateCategoryKey, missionId: string) => void;
+}) {
+  const [unlocked, setUnlocked] = useState(false);
+  const [showCode, setShowCode] = useState(false);
+  const [code, setCode] = useState("");
+
+  const requiredCode = (process.env.NEXT_PUBLIC_ADMIN_OVERVIEW_UNLOCK_CODE ?? "").trim();
+
+  const accent =
+    themeMode === "danger"
+      ? "border-[rgba(255,92,92,0.42)]"
+      : themeMode === "cyberpunk"
+        ? "border-[rgba(196,126,255,0.44)]"
+        : "border-[rgba(255,215,0,0.28)]";
+
+  if (unlocked) {
+    return (
+      <UserDashboardPanel
+        themeMode={themeMode}
+        userName={userName}
+        courses={courses}
+        onResumeCourse={onResumeCourse}
+        onGoSyndicate={onGoSyndicate}
+      />
+    );
+  }
+
+  const revealWithButton = requiredCode.length === 0;
+  const revealWithCode = requiredCode.length > 0 && code === requiredCode;
+
+  return (
+    <div className={cn("cut-frame-sm border bg-black/45 p-4 backdrop-blur-sm", accent)}>
+      <div className="flex items-center justify-between gap-3">
+        <div className="text-[14px] font-extrabold uppercase tracking-[0.18em] text-white/82">User Dashboard</div>
+        <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-white/55">
+          {requiredCode.length > 0 ? "Locked" : "Hidden"}
+        </div>
+      </div>
+
+      <div className="mt-2 rounded-md border border-white/10 bg-black/35 p-3 text-[12px] text-white/72">
+        Click the button below to view your user dashboard.
+      </div>
+
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          onClick={() => {
+            if (revealWithButton) setUnlocked(true);
+            else setShowCode(true);
+          }}
+          className="cut-frame-sm cyber-frame gold-stroke premium-button relative inline-flex items-center gap-2 border border-[rgba(255,215,0,0.3)] bg-black/20 px-4 py-2 text-[11px] font-extrabold uppercase tracking-[0.18em] text-[color:var(--gold)] hover:border-[rgba(255,215,0,0.65)]"
+        >
+          View User Dashboard
+        </button>
+
+        {showCode ? (
+          <>
+            <input
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
+              placeholder="Enter unlock code"
+              className="w-[220px] rounded-md border border-white/15 bg-black/30 px-3 py-2 text-[12px] text-white/85 placeholder:text-white/35 outline-none focus:border-[rgba(255,215,0,0.55)]"
+            />
+            <button
+              type="button"
+              onClick={() => {
+                if (revealWithCode) setUnlocked(true);
+              }}
+              disabled={!revealWithCode}
+              className={cn(
+                "rounded-md border px-3 py-2 text-[11px] font-extrabold uppercase tracking-[0.16em]",
+                revealWithCode
+                  ? "border-[rgba(0,255,122,0.55)] bg-[rgba(0,255,122,0.12)] text-[#b4ffd8]"
+                  : "border-white/15 bg-black/20 text-white/45"
+              )}
+            >
+              Unlock
+            </button>
+          </>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+function InstructorSlideshow() {
+  const wrapRef = useRef<HTMLDivElement | null>(null);
+  const [idx, setIdx] = useState(0);
+  const prevIdxRef = useRef(0);
+  const images = useMemo(
+    () => [
+      "/assets/instructor-images/a.jpg",
+      "/assets/instructor-images/b.png",
+      "/assets/instructor-images/c.png",
+      "/assets/instructor-images/d.png"
+    ],
+    []
+  );
+
+  useLayoutEffect(() => {
+    if (!wrapRef.current) return;
+    const el = wrapRef.current;
+    const slides = Array.from(el.querySelectorAll<HTMLElement>("[data-slide]"));
+    if (slides.length === 0) return;
+
+    // Initial state for all slides (only current visible)
+    slides.forEach((s, i) => {
+      gsap.set(s, {
+        opacity: i === idx ? 1 : 0,
+        x: i === idx ? 0 : 16,
+        scale: i === idx ? 1 : 1.02,
+        filter: i === idx ? "brightness(1)" : "brightness(0.9)"
+      });
+    });
+  }, [idx]);
+
+  useLayoutEffect(() => {
+    if (!wrapRef.current) return;
+    const el = wrapRef.current;
+    const slides = Array.from(el.querySelectorAll<HTMLElement>("[data-slide]"));
+    if (slides.length < 2) return;
+
+    const prev = prevIdxRef.current;
+    if (prev === idx) return;
+    prevIdxRef.current = idx;
+
+    const outEl = slides[prev];
+    const inEl = slides[idx];
+    if (!outEl || !inEl) return;
+
+    // Slower, smoother "cinematic" crossfade
+    const tl = gsap.timeline({ defaults: { ease: "power4.out" } });
+    tl.set(inEl, { opacity: 0, x: 22, scale: 1.035, filter: "brightness(0.90)" }, 0)
+      .to(outEl, { opacity: 0, x: -22, scale: 1.02, duration: 1.05 }, 0)
+      .to(inEl, { opacity: 1, x: 0, scale: 1, filter: "brightness(1)", duration: 1.2 }, 0.18);
+  }, [idx]);
+
+  useLayoutEffect(() => {
+    // Give each image time to "sit" before transitioning
+    const t = window.setInterval(() => setIdx((v) => (v + 1) % images.length), 4200);
+    return () => window.clearInterval(t);
+  }, [images.length]);
+
+  return (
+    <div
+      ref={wrapRef}
+      data-anim="in"
+      className="cut-frame cyber-frame gold-stroke glass-dark hero-gold-frame hero-pulse-soft relative overflow-hidden p-4"
+    >
+      <div className="hero-gold-overlay absolute inset-0 opacity-70" />
+      <div className="relative flex items-center justify-between gap-4">
+        <div>
+          <div className="text-[13px] font-extrabold uppercase tracking-[0.22em] text-white/60">Instructors</div>
+          <div className="mt-2 text-[16px] font-black uppercase tracking-[0.14em] text-[color:var(--gold)]/90">
+            Rotating Intel Feed
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          {images.map((_, i) => (
+            <span
+              key={i}
+              className={cn(
+                "h-[10px] w-[10px] rounded-[3px] border",
+                i === idx
+                  ? "border-[rgba(197,179,88,0.55)] bg-[rgba(197,179,88,0.18)] glow-edge"
+                  : "border-white/10 bg-black/30"
+              )}
+            />
+          ))}
+        </div>
+      </div>
+
+      <div className="relative mt-4 h-[320px] w-full overflow-hidden rounded-lg border border-white/10 bg-black/80 md:h-[360px]">
+        <div className="absolute inset-0 opacity-85 [background:linear-gradient(90deg,rgba(0,0,0,0.82),rgba(0,0,0,0.18),rgba(0,0,0,0.82))]" />
+        {images.map((src, i) => (
+          <div
+            key={src}
+            data-slide
+            className="absolute inset-0 will-change-transform"
+            style={{ opacity: i === idx ? 1 : 0 }}
+          >
+            {/* Backdrop blur (fills container) */}
+            <img
+              src={src}
+              alt=""
+              className="absolute inset-0 h-full w-full object-cover opacity-30 blur-[10px] scale-[1.08]"
+              onError={(e) => {
+                (e.currentTarget as HTMLImageElement).style.display = "none";
+              }}
+            />
+            {/* Foreground: full image visible (no crop) */}
+            <img
+              src={src}
+              alt=""
+              className="absolute inset-0 h-full w-full object-contain"
+              onError={(e) => {
+                (e.currentTarget as HTMLImageElement).style.display = "none";
+              }}
+            />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export default function Page() {
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  const ringOuterRef = useRef<HTMLDivElement | null>(null);
+  const ringInnerRef = useRef<HTMLDivElement | null>(null);
+  const glowPulseRef = useRef<HTMLDivElement | null>(null);
+  const glitchTimerRef = useRef<number | null>(null);
+  const navGlitchTickersRef = useRef(new Map<HTMLElement, gsap.TickerCallback>());
+  const navGlitchTimersRef = useRef(new Map<HTMLElement, number>());
+  const profileBtnRef = useRef<HTMLButtonElement | null>(null);
+  const profilePanelRef = useRef<HTMLDivElement | null>(null);
+  const logoWrapRef = useRef<HTMLDivElement | null>(null);
+  const sidebarRef = useRef<HTMLElement | null>(null);
+  const topDockRef = useRef<HTMLDivElement | null>(null);
+  const dockMouseY = useRef<number>(Infinity);
+  const topMouseX = useRef<number>(Infinity);
+  const topbarRef = useRef<HTMLDivElement | null>(null);
+
+  const nav: NavItem[] = useMemo(
+    () => [
+      { key: "dashboard", label: "Dashboard", active: true },
+      { key: "programs", label: "Programs" },
+      { key: "monk", label: "Syndicate Mode" },
+      { key: "resources", label: "Resources" },
+      { key: "affiliate", label: "Affiliate Portal" },
+      { key: "support", label: "Support" },
+      { key: "settings", label: "Settings" }
+    ],
+    []
+  );
+
+  const [selectedNavKey, setSelectedNavKey] = useState<string>("dashboard");
+  const [themeMode, setThemeMode] = useState<ThemeMode>("default");
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [profileAvatar, setProfileAvatar] = useState<string>("/assets/a.webp");
+  const profileName = "Subhan";
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+
+  const courses: Course[] = useMemo(
+    () => [
+      {
+        id: "a",
+        subtitle: "Course",
+        title: "Flutter Development",
+        meta: "Mobile apps • UI/State • Deploy",
+        statusText: "Beginner → Pro track",
+        progress: 0,
+        accent: "gold",
+        imageSrc: "/assets/course-images/a.jpg",
+        detail: "Build production-ready Flutter apps with modern architecture and smooth UI."
+      },
+      {
+        id: "b",
+        subtitle: "Course",
+        title: "Youtube Automations Using AI",
+        meta: "Script • Voice • Editing • Scale",
+        statusText: "Automation workflow",
+        progress: 0,
+        accent: "ice",
+        imageSrc: "/assets/course-images/b.jpg",
+        detail: "Create an AI-assisted pipeline for content planning, creation, and publishing."
+      },
+      {
+        id: "c",
+        subtitle: "Course",
+        title: "Block Chain Course",
+        meta: "Web3 • Smart contracts • Security",
+        statusText: "Foundations + projects",
+        progress: 0,
+        accent: "gold",
+        imageSrc: "/assets/course-images/c.jpg",
+        detail: "Understand blockchain fundamentals and build practical on-chain applications."
+      },
+      {
+        id: "d",
+        subtitle: "Course",
+        title: "Money Mastery Course",
+        meta: "Budgeting • Investing • Discipline",
+        statusText: "Wealth systems",
+        progress: 0,
+        accent: "ice",
+        imageSrc: "/assets/course-images/d.jpg",
+        detail: "Design personal finance systems for predictable growth and long-term control."
+      },
+      {
+        id: "e",
+        subtitle: "Course",
+        title: "Cyber Security",
+        meta: "Ops • Threats • Defense",
+        statusText: "Hands-on security",
+        progress: 0,
+        accent: "gold",
+        imageSrc: "/assets/course-images/e.jpg",
+        detail: "Learn practical security fundamentals, defensive tooling, and real workflows."
+      },
+      {
+        id: "f",
+        subtitle: "Course",
+        title: "Java Programming",
+        meta: "OOP • APIs • Backend",
+        statusText: "Core + advanced",
+        progress: 0,
+        accent: "ice",
+        imageSrc: "/assets/course-images/f.jpg",
+        detail: "Master Java fundamentals and build backend-ready skills with clean code."
+      },
+      {
+        id: "g",
+        subtitle: "Course",
+        title: "Mobile Repairing",
+        meta: "Hardware • Diagnostics • Tools",
+        statusText: "Repair workflows",
+        progress: 0,
+        accent: "gold",
+        imageSrc: "/assets/course-images/g.jpg",
+        detail: "Step-by-step repair processes: diagnostics, parts handling, and common fixes."
+      }
+    ],
+    []
+  );
+
+  const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null);
+  const selectedCourse = selectedCourseId ? courses.find((c) => c.id === selectedCourseId) ?? null : null;
+  const [courseProgress, setCourseProgress] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    const raw = window.localStorage.getItem("dashboarded:course-progress");
+    if (!raw) return;
+    try {
+      const parsed = JSON.parse(raw) as Record<string, number>;
+      setCourseProgress(parsed ?? {});
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  const selectedCourseWithProgress = useMemo(() => {
+    if (!selectedCourse) return null;
+    const p = Math.max(0, Math.min(100, courseProgress[selectedCourse.id] ?? 0));
+    return { ...selectedCourse, progress: p };
+  }, [courseProgress, selectedCourse]);
+
+  useEffect(() => {
+    // Persist last course so the Dashboard can show a "resume where you left off" card.
+    if (!selectedCourseId) return;
+    window.localStorage.setItem("dashboarded:lastCourseId", selectedCourseId);
+
+    const raw = window.localStorage.getItem("dashboarded:course-progress");
+    let parsed: Record<string, number> = {};
+    if (raw) {
+      try {
+        parsed = JSON.parse(raw) as Record<string, number>;
+      } catch {
+        parsed = {};
+      }
+    }
+
+    if (typeof parsed[selectedCourseId] !== "number") {
+      parsed[selectedCourseId] = 0;
+      window.localStorage.setItem("dashboarded:course-progress", JSON.stringify(parsed));
+      setCourseProgress(parsed);
+    }
+  }, [selectedCourseId]);
+
+  const chromaItems: ChromaItem[] = useMemo(
+    () =>
+      courses.map((c) => ({
+        id: c.id,
+        image: c.imageSrc ?? "",
+        title: c.title,
+        subtitle: c.meta ?? c.statusText,
+        handle: c.subtitle,
+        badge: "Premium",
+        rating: 4.8,
+        reviews:
+          c.id === "a" ? 1284 :
+          c.id === "b" ? 972 :
+          c.id === "c" ? 864 :
+          c.id === "d" ? 745 :
+          c.id === "e" ? 1198 :
+          c.id === "f" ? 1035 :
+          688,
+        lessons:
+          c.id === "a" ? 36 :
+          c.id === "b" ? 28 :
+          c.id === "c" ? 32 :
+          c.id === "d" ? 24 :
+          c.id === "e" ? 34 :
+          c.id === "f" ? 30 :
+          22,
+        price: 99,
+        borderColor: "rgba(255,215,0,0.55)",
+        gradient: "linear-gradient(165deg, rgba(255,215,0,0.16), rgba(255,195,0,0.08), rgba(0,0,0,0.93))"
+      })),
+    [courses]
+  );
+
+  useLayoutEffect(() => {
+    if (!rootRef.current) return;
+
+    const ctx = gsap.context(() => {
+      gsap.set("[data-anim='in']", { opacity: 0, y: 10 });
+      gsap.set("[data-anim='left']", { opacity: 0, x: -18 });
+      gsap.set("[data-anim='right']", { opacity: 0, x: 18 });
+
+      const tl = gsap.timeline({ defaults: { ease: "power3.out", duration: 0.9 } });
+      tl.to("[data-anim='in']", { opacity: 1, y: 0, stagger: 0.06 }, 0)
+        .to("[data-anim='left']", { opacity: 1, x: 0, stagger: 0.05 }, 0.05)
+        .to("[data-anim='right']", { opacity: 1, x: 0, stagger: 0.05 }, 0.12);
+
+      if (ringOuterRef.current) {
+        gsap.to(ringOuterRef.current, {
+          rotate: 360,
+          duration: 26,
+          ease: "none",
+          repeat: -1,
+          transformOrigin: "50% 50%"
+        });
+      }
+      if (ringInnerRef.current) {
+        gsap.to(ringInnerRef.current, {
+          rotate: -360,
+          duration: 40,
+          ease: "none",
+          repeat: -1,
+          transformOrigin: "50% 50%"
+        });
+      }
+      if (glowPulseRef.current) {
+        gsap.to(glowPulseRef.current, {
+          opacity: 0.85,
+          duration: 2.8,
+          yoyo: true,
+          repeat: -1,
+          ease: "sine.inOut"
+        });
+      }
+
+      // Floating logo (subtle, elegant)
+      if (logoWrapRef.current) {
+        gsap.to(logoWrapRef.current, {
+          y: -6,
+          duration: 3.4,
+          yoyo: true,
+          repeat: -1,
+          ease: "sine.inOut"
+        });
+        gsap.to(logoWrapRef.current, {
+          rotate: 0.6,
+          duration: 5.2,
+          yoyo: true,
+          repeat: -1,
+          ease: "sine.inOut",
+          transformOrigin: "50% 50%"
+        });
+      }
+
+      // GSAP "Dock" magnification for sidebar items (vertical)
+      const sidebarTick: gsap.TickerCallback = () => {
+        const root = sidebarRef.current;
+        if (!root) return;
+        const items = Array.from(root.querySelectorAll<HTMLElement>("[data-dock-item='sidebar']"));
+        if (items.length === 0) return;
+        const y = dockMouseY.current;
+        if (!Number.isFinite(y)) {
+          items.forEach((it) => gsap.to(it, { scale: 1, duration: 0.18, ease: "power2.out", overwrite: true }));
+          return;
+        }
+        const distance = 140;
+        const base = 1;
+        const mag = 1.18;
+        items.forEach((it) => {
+          const r = it.getBoundingClientRect();
+          const cy = r.top + r.height / 2;
+          const d = Math.min(distance, Math.abs(y - cy));
+          const t = 1 - d / distance;
+          const s = base + (mag - base) * t;
+          gsap.to(it, { scale: s, duration: 0.12, ease: "power2.out", overwrite: true, transformOrigin: "50% 50%" });
+        });
+      };
+      gsap.ticker.add(sidebarTick);
+
+      // GSAP "Dock" magnification for top elements (horizontal)
+      const topTick: gsap.TickerCallback = () => {
+        const root = topDockRef.current;
+        if (!root) return;
+        const items = Array.from(root.querySelectorAll<HTMLElement>("[data-dock-item='top']"));
+        if (items.length === 0) return;
+        const x = topMouseX.current;
+        if (!Number.isFinite(x)) {
+          items.forEach((it) => gsap.to(it, { scale: 1, duration: 0.18, ease: "power2.out", overwrite: true }));
+          return;
+        }
+        const distance = 220;
+        const base = 1;
+        const mag = 1.12;
+        items.forEach((it) => {
+          const r = it.getBoundingClientRect();
+          const cx = r.left + r.width / 2;
+          const d = Math.min(distance, Math.abs(x - cx));
+          const t = 1 - d / distance;
+          const s = base + (mag - base) * t;
+          gsap.to(it, { scale: s, duration: 0.12, ease: "power2.out", overwrite: true, transformOrigin: "50% 50%" });
+        });
+      };
+      gsap.ticker.add(topTick);
+
+      // Card hover lift/glow
+      const cards = gsap.utils.toArray<HTMLElement>("[data-course-card]");
+      // Premium reveal: fade/slide-in with stagger when the grid enters view
+      gsap.set(cards, { opacity: 0, y: 18 });
+      const wrap = document.querySelector<HTMLElement>("[data-cards-wrap]");
+      let revealed = false;
+      const io = new IntersectionObserver(
+        (entries) => {
+          if (revealed) return;
+          const hit = entries.some((e) => e.isIntersecting);
+          if (!hit) return;
+          revealed = true;
+          gsap.to(cards, { opacity: 1, y: 0, duration: 0.7, ease: "power3.out", stagger: 0.08 });
+          io.disconnect();
+        },
+        { root: null, threshold: 0.18 }
+      );
+      if (wrap) io.observe(wrap);
+
+      cards.forEach((card) => {
+        const onEnter = () => {
+          gsap.to(card, { y: -2, duration: 0.18, ease: "power2.out" });
+        };
+        const onLeave = () => {
+          gsap.to(card, { y: 0, duration: 0.2, ease: "power2.out" });
+        };
+        card.addEventListener("mouseenter", onEnter);
+        card.addEventListener("mouseleave", onLeave);
+        card.addEventListener("focus", onEnter);
+        card.addEventListener("blur", onLeave);
+      });
+
+      // Monk section cards: reveal on scroll with premium stagger
+      const monkCards = gsap.utils.toArray<HTMLElement>("[data-monk-card]");
+      if (monkCards.length) {
+        gsap.set(monkCards, { opacity: 0, y: 18 });
+        const monkWrap = document.querySelector<HTMLElement>("[data-monk-card]")?.parentElement ?? null;
+        let monkRevealed = false;
+        const monkIo = new IntersectionObserver(
+          (entries) => {
+            if (monkRevealed) return;
+            const hit = entries.some((e) => e.isIntersecting);
+            if (!hit) return;
+            monkRevealed = true;
+            gsap.to(monkCards, { opacity: 1, y: 0, duration: 0.65, ease: "power3.out", stagger: 0.08 });
+            monkIo.disconnect();
+          },
+          { root: null, threshold: 0.16 }
+        );
+        if (monkWrap) monkIo.observe(monkWrap);
+
+        const monkIcons = gsap.utils.toArray<HTMLElement>("[data-monk-icon]");
+        monkIcons.forEach((icon, i) => {
+          gsap.to(icon, {
+            y: i % 2 === 0 ? -4 : -3,
+            rotate: i % 2 === 0 ? 1.2 : -1.2,
+            duration: 1.9 + i * 0.18,
+            ease: "sine.inOut",
+            yoyo: true,
+            repeat: -1
+          });
+        });
+      }
+
+      // Sidebar nav hover glitch (character cycling, not marquee)
+      const randToken = () => {
+        const t = ["+", "-", "--", "++", "+-", "-+", "—", "_"];
+        return t[Math.floor(Math.random() * t.length)];
+      };
+      const buildGlitch = (targetLen: number) => {
+        let out = "";
+        while (out.length < targetLen) out += randToken();
+        return out.slice(0, targetLen);
+      };
+
+      const navItems = gsap.utils.toArray<HTMLElement>(".nav-item");
+      navItems.forEach((item) => {
+        const labelText = item.querySelector<HTMLElement>(".nav-label-text");
+        const glitch = item.querySelector<HTMLElement>(".nav-glitch");
+        if (!labelText || !glitch) return;
+
+        let last = 0;
+        const tick: gsap.TickerCallback = () => {
+          const now = performance.now();
+          if (now - last < 40) return; // faster hover glitch (~25fps)
+          last = now;
+          const len = Math.max(12, Math.min(22, (labelText.textContent ?? "").length + 8));
+          glitch.textContent = buildGlitch(len);
+          // micro jitter for glitch feel
+          gsap.set(glitch, { x: gsap.utils.random(-1.2, 1.2), filter: `brightness(${gsap.utils.random(1, 1.12)})` });
+        };
+
+        const stopNow = () => {
+          item.classList.remove("is-hover-glitch");
+          const t = navGlitchTickersRef.current.get(item);
+          if (t) gsap.ticker.remove(t);
+          navGlitchTickersRef.current.delete(item);
+          const timer = navGlitchTimersRef.current.get(item);
+          if (timer) window.clearTimeout(timer);
+          navGlitchTimersRef.current.delete(item);
+          gsap.set(glitch, { clearProps: "x,filter" });
+          glitch.textContent = "";
+        };
+
+        const start = () => {
+          stopNow(); // reset (so re-hover restarts from beginning)
+          item.classList.add("is-hover-glitch");
+          last = 0;
+          // Render first frame immediately so it's always visible.
+          const len = Math.max(12, Math.min(22, (labelText.textContent ?? "").length + 8));
+          glitch.textContent = buildGlitch(len);
+          gsap.set(glitch, { x: gsap.utils.random(-1.2, 1.2), filter: `brightness(${gsap.utils.random(1, 1.12)})` });
+          navGlitchTickersRef.current.set(item, tick);
+          gsap.ticker.add(tick);
+
+          // Run once for 0.4s then stop automatically
+          const timer = window.setTimeout(() => {
+            stopNow();
+          }, 400);
+          navGlitchTimersRef.current.set(item, timer);
+        };
+        const stop = () => stopNow();
+
+        item.addEventListener("mouseenter", start);
+        item.addEventListener("mouseleave", stop);
+        item.addEventListener("focus", start);
+        item.addEventListener("blur", stop);
+      });
+
+      // Click-outside to close profile panel
+      const onDocDown = (e: MouseEvent) => {
+        if (!profileOpen) return;
+        const t = e.target as Node | null;
+        const btn = profileBtnRef.current;
+        const panel = profilePanelRef.current;
+        if (!t || !btn || !panel) return;
+        if (btn.contains(t) || panel.contains(t)) return;
+        setProfileOpen(false);
+      };
+      document.addEventListener("mousedown", onDocDown);
+
+      return () => {
+        document.removeEventListener("mousedown", onDocDown);
+        gsap.ticker.remove(sidebarTick);
+        gsap.ticker.remove(topTick);
+        io.disconnect();
+      };
+    }, rootRef);
+
+    return () => ctx.revert();
+  }, [profileOpen]);
+
+  useLayoutEffect(() => {
+    const update = () => {
+      if (!rootRef.current || !topbarRef.current) return;
+      const h = Math.round(topbarRef.current.getBoundingClientRect().height);
+      rootRef.current.style.setProperty("--topbarH", `${h}px`);
+    };
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
+
+  useLayoutEffect(() => {
+    if (!rootRef.current) return;
+    const btn = profileBtnRef.current;
+    const panel = profilePanelRef.current;
+    if (!btn) return;
+
+    if (profileOpen) {
+      gsap.to(btn, { scale: 1.035, duration: 0.18, ease: "power2.out", transformOrigin: "100% 0%" });
+      if (panel) {
+        gsap.fromTo(panel, { opacity: 0, y: -8 }, { opacity: 1, y: 0, duration: 0.22, ease: "power2.out" });
+      }
+    } else {
+      gsap.to(btn, { scale: 1, duration: 0.18, ease: "power2.out", transformOrigin: "100% 0%" });
+    }
+  }, [profileOpen]);
+
+  useLayoutEffect(() => {
+    if (!rootRef.current) return;
+    if (glitchTimerRef.current) window.clearTimeout(glitchTimerRef.current);
+
+    // After 1s, do the "beep" glitch visual on the selected card title + line.
+    if (!selectedCourseId) return;
+
+    glitchTimerRef.current = window.setTimeout(() => {
+      const active = rootRef.current?.querySelector<HTMLElement>(`[data-course-card].is-glitching`) ?? null;
+      if (!active) return;
+
+      const beep = active.querySelector<HTMLElement>(".beep-line");
+      const title = active.querySelector<HTMLElement>(".glitch-text");
+      if (!title) return;
+
+      const tl = gsap.timeline({ defaults: { ease: "power2.out" } });
+      tl.set(active, { filter: "brightness(1.08)" })
+        .to(beep, { opacity: 0.9, scaleX: 1, duration: 0.06 }, 0)
+        .fromTo(beep, { scaleX: 0.2 }, { scaleX: 1.05, duration: 0.12 }, 0)
+        .to(beep, { opacity: 0, duration: 0.18 }, 0.16)
+        .to(title, { x: 1.2, duration: 0.04 }, 0)
+        .to(title, { x: -1.4, duration: 0.05 }, 0.05)
+        .to(title, { x: 0.6, duration: 0.04 }, 0.11)
+        .to(title, { x: 0, duration: 0.06 }, 0.16)
+        .to(active, { filter: "brightness(1)", duration: 0.2 }, 0.22);
+    }, 1000);
+
+    return () => {
+      if (glitchTimerRef.current) window.clearTimeout(glitchTimerRef.current);
+    };
+    }, [selectedCourseId]);
+
+  useLayoutEffect(() => {
+    if (!rootRef.current) return;
+    gsap.fromTo(rootRef.current, { opacity: 0.9 }, { opacity: 1, duration: 0.22, ease: "power2.out" });
+  }, [themeMode]);
+
+  return (
+    <div
+      ref={rootRef}
+      className={cn(
+        "relative min-h-screen w-screen hud-void hud-scanlines hud-noise overflow-x-hidden overflow-y-auto lg:h-screen lg:overflow-hidden",
+        themeMode === "danger" && "theme-danger",
+        themeMode === "cyberpunk" && "theme-cyberpunk",
+        !sidebarOpen && "focus-mode"
+      )}
+    >
+      <div className="bg-video" aria-hidden="true">
+        <video autoPlay muted loop playsInline preload="metadata">
+          <source src="/assets/bg-video.mp4" type="video/mp4" />
+        </video>
+      </div>
+      <div className="hud-ambient-glow" aria-hidden="true" />
+      <div className="relative flex min-h-screen w-full flex-col px-2 pb-2 sm:px-3 md:px-4 md:pb-3 lg:h-full">
+        {/* Top title bar */}
+        <div
+          ref={topbarRef}
+          data-anim="in"
+          className={cn(
+            "cut-frame cyber-frame gold-stroke-strong premium-navbar sticky top-0 z-50 relative shrink-0 overflow-visible lg:overflow-hidden border border-[rgba(255,215,0,0.5)] bg-[#070707]/80 px-3 py-3 sm:px-4 md:px-5 md:py-4",
+            "flex flex-wrap items-center gap-3 md:gap-6 max-sm:flex-col max-sm:items-stretch"
+          )}
+        >
+          <div className="absolute inset-0 opacity-80 [background:radial-gradient(900px_280px_at_30%_0%,rgba(197,179,88,0.16),rgba(0,0,0,0)_55%)]" />
+          <div
+            ref={topDockRef}
+            onMouseMove={(e) => {
+              topMouseX.current = e.clientX;
+            }}
+            onMouseLeave={() => {
+              topMouseX.current = Infinity;
+            }}
+            className="relative flex min-w-0 items-end gap-2 sm:gap-3 md:gap-4"
+          >
+            <button
+              type="button"
+              onClick={() => setSidebarOpen((v) => !v)}
+              className="cut-frame-sm cyber-frame gold-stroke hud-hover-glow grid h-9 w-9 place-items-center border border-[rgba(197,179,88,0.28)] bg-black/70 text-[color:var(--gold)]/90 sm:h-10 sm:w-10"
+              aria-label={sidebarOpen ? "Hide sidebar" : "Show sidebar"}
+            >
+              <IconToggle open={sidebarOpen} />
+            </button>
+            {/* Logo placeholder (you'll provide in public/images) */}
+            <div
+              ref={logoWrapRef}
+              data-dock-item="top"
+              className="relative mr-1 grid h-[62px] w-[150px] place-items-center overflow-hidden rounded-lg border border-[rgba(197,179,88,0.52)] bg-black/20 glow-edge-strong sm:h-[78px] sm:w-[200px] md:mr-2 md:h-[92px] md:w-[260px] lg:h-[104px] lg:w-[290px]"
+            >
+              <div className="absolute inset-0 opacity-95 [background:radial-gradient(300px_160px_at_50%_50%,rgba(197,179,88,0.22),rgba(0,0,0,0)_70%)]" />
+              <div className="absolute inset-0 opacity-70 [background:linear-gradient(90deg,rgba(0,0,0,0.85),rgba(0,0,0,0.15),rgba(0,0,0,0.85))]" />
+              <img
+                src="/assets/logo.png"
+                alt="Syndicate"
+                className="relative h-[54px] w-[138px] object-contain opacity-95 [filter:drop-shadow(0_0_44px_rgba(197,179,88,0.26))] sm:h-[66px] sm:w-[186px] md:h-[84px] md:w-[238px] lg:h-[92px] lg:w-[268px]"
+                onError={(e) => {
+                  (e.currentTarget as HTMLImageElement).style.display = "none";
+                }}
+              />
+            </div>
+            <div className="h-7 w-[3px] bg-[color:var(--gold)]/70 [box-shadow:0_0_22px_rgba(197,179,88,0.16)] sm:h-8 md:h-10 md:w-[4px]" />
+            <div className="space-y-1">
+              <div className="heading-glow text-[26px] font-black italic tracking-[0.02em] text-[color:var(--gold)] sm:text-[34px] lg:text-[44px]">
+                THE SYNDICATE
+              </div>
+            </div>
+          </div>
+          <div className="relative ml-auto flex items-center gap-2 sm:gap-3 max-sm:ml-0 max-sm:w-full max-sm:flex-col max-sm:items-stretch">
+            <div className="relative self-end">
+              {/* Profile / Avatar button */}
+              <div className="relative">
+                <button
+                  ref={profileBtnRef}
+                  data-dock-item="top"
+                  type="button"
+                  onClick={() => setProfileOpen((v) => !v)}
+                  className={cn(
+                    "cut-frame-sm cyber-frame gold-stroke hud-hover-glow glass-dark premium-gold-border premium-button inline-flex items-center gap-2 px-2.5 py-2.5 sm:gap-3 sm:px-4 sm:py-3 transition will-change-transform",
+                    "hover:border-[rgba(255,215,0,0.62)]",
+                    profileOpen && "hud-selected-glow"
+                  )}
+                  aria-haspopup="menu"
+                  aria-expanded={profileOpen}
+                >
+                  <img
+                    src={profileAvatar}
+                    alt="Profile avatar"
+                    className={cn(
+                      "h-12 w-12 rounded-md border border-[rgba(197,179,88,0.22)] bg-black/30 object-contain p-0.5",
+                      profileOpen && "border-[rgba(255,215,0,0.55)]"
+                    )}
+                    onError={(e) => {
+                      (e.currentTarget as HTMLImageElement).style.display = "none";
+                    }}
+                  />
+                  <div className="hidden text-left min-[380px]:block">
+                    <div className="text-[18px] font-black uppercase tracking-[0.14em] text-[color:var(--gold)]/90">
+                      {profileName}
+                    </div>
+                    <div className="mt-1 text-[9px] font-extrabold uppercase tracking-[0.18em] text-white/45 sm:text-[10px] sm:tracking-[0.22em]">
+                      Profile
+                    </div>
+                  </div>
+                </button>
+
+                {profileOpen ? (
+                  <div
+                    ref={profilePanelRef}
+                    className="cut-frame cyber-frame gold-stroke glass-dark premium-gold-border absolute left-1/2 top-[54px] z-50 w-[min(92vw,360px)] -translate-x-1/2 overflow-hidden p-3 sm:left-auto sm:right-0 sm:translate-x-0 sm:p-4"
+                    role="menu"
+                  >
+                    <div className="absolute inset-0 opacity-70 [background:radial-gradient(620px_260px_at_20%_0%,rgba(0,255,255,0.10),rgba(0,0,0,0)_62%)]" />
+                    <div className="relative">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="text-[11px] font-extrabold uppercase tracking-[0.22em] text-white/55">
+                          Choose Avatar
+                        </div>
+                        <div className="text-[10px] font-extrabold uppercase tracking-[0.22em] text-white/40">
+                          a.webp → f.webp
+                        </div>
+                      </div>
+
+                      <div className="mt-4 grid grid-cols-3 gap-3">
+                        {["a", "b", "c", "d", "e", "f"].map((k) => {
+                          const src = `/assets/${k}.webp`;
+                          const isOn = profileAvatar === src;
+                          return (
+                            <button
+                              key={k}
+                              type="button"
+                              onClick={() => setProfileAvatar(src)}
+                              className={cn(
+                                "cut-frame-sm cyber-frame gold-stroke hud-hover-glow glass-dark premium-gold-border relative aspect-square overflow-hidden transition",
+                                "hover:border-[rgba(255,215,0,0.62)]",
+                                isOn && "hud-selected-glow border-[rgba(255,215,0,0.82)]"
+                              )}
+                              aria-label={`Select avatar ${k}`}
+                            >
+                              <img
+                                src={src}
+                                alt=""
+                                className="h-full w-full object-cover opacity-90"
+                                onError={(e) => {
+                                  (e.currentTarget as HTMLImageElement).style.display = "none";
+                                }}
+                              />
+                              {isOn ? (
+                                <span className="absolute left-2 top-2 rounded-md border border-[rgba(0,255,255,0.35)] bg-black/60 px-2 py-1 text-[10px] font-black uppercase tracking-[0.22em] text-[rgba(0,255,255,0.9)]">
+                                  On
+                                </span>
+                              ) : null}
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      <div className="mt-4 flex items-center justify-between gap-3">
+                        <button
+                          type="button"
+                          className="cut-frame-sm cyber-frame gold-stroke hud-hover-glow glass-dark premium-gold-border premium-button inline-flex items-center justify-center px-4 py-3 text-[11px] font-black uppercase tracking-[0.22em] text-[color:var(--gold)]/92 transition hover:border-[rgba(255,215,0,0.62)] hover:text-[rgba(255,215,0,0.95)]"
+                        >
+                          Change Image
+                        </button>
+                        <button
+                          type="button"
+                          className="cut-frame-sm cyber-frame gold-stroke hud-hover-glow inline-flex items-center justify-center border border-[rgba(255,255,255,0.14)] bg-black/35 px-4 py-3 text-[11px] font-black uppercase tracking-[0.22em] text-white/70 transition hover:border-[rgba(255,0,0,0.34)] hover:text-[rgba(255,0,0,0.88)] hover:[box-shadow:0_0_0_1px_rgba(255,0,0,0.20),0_0_44px_rgba(255,0,0,0.12)]"
+                        >
+                          Logout
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            </div>
+            <div className="cut-frame-sm border border-white/15 bg-black/45 p-1 max-sm:mt-2">
+              <div className="flex items-center gap-1">
+                {(["default", "danger", "cyberpunk"] as const).map((m) => (
+                  <button
+                    key={m}
+                    type="button"
+                    onClick={() => setThemeMode(m)}
+                    className={cn(
+                      "rounded-md px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.14em] transition",
+                      themeMode === m
+                        ? "bg-white/90 text-black"
+                        : "text-white/65 hover:text-white"
+                    )}
+                  >
+                    {m}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Main frame */}
+        <div className="mt-0 grid min-h-0 flex-1 grid-cols-12 gap-2 pt-2 sm:gap-3 sm:pt-3 md:gap-4">
+          {/* Sidebar */}
+          {sidebarOpen ? (
+            <aside
+              data-anim="left"
+              ref={sidebarRef as unknown as React.RefObject<HTMLElement>}
+              onMouseMove={(e) => {
+                dockMouseY.current = e.clientY;
+              }}
+              onMouseLeave={() => {
+                dockMouseY.current = Infinity;
+              }}
+              className={cn(
+                "cut-frame cyber-frame gold-stroke relative col-span-12 overflow-hidden border border-[rgba(197,179,88,0.22)] bg-[#060606]/70 p-2.5 sm:p-3 md:col-span-3 lg:col-span-2",
+                "h-auto max-h-none overflow-visible lg:sticky lg:top-0 lg:h-full lg:max-h-none lg:overflow-auto no-scrollbar"
+              )}
+            >
+              <div className="absolute inset-0 opacity-70 [background:radial-gradient(680px_320px_at_20%_10%,rgba(197,179,88,0.11),rgba(0,0,0,0)_62%)]" />
+              <div className="relative pb-6">
+                <div className="mb-3 flex items-center justify-between">
+                  <div className="text-[13px] font-extrabold uppercase tracking-[0.22em] text-white/60">Navigation</div>
+                </div>
+                <div className="space-y-1.5">
+                {nav.map((item, i) => (
+                  <button
+                    key={item.label}
+                    onClick={() => setSelectedNavKey(item.key)}
+                    data-dock-item="sidebar"
+                    className={cn(
+                      "nav-item group relative flex w-full items-center gap-3 px-3 py-2 text-left",
+                      "cut-frame-sm hud-hover-glow glass-dark premium-gold-border gold-glow-hover transition",
+                      "hover:bg-black/45",
+                      selectedNavKey === item.key &&
+                        "is-selected glow-edge-strong hud-selected-glow border-[rgba(197,179,88,0.85)] bg-[rgba(197,179,88,0.12)]"
+                    )}
+                    type="button"
+                  >
+                    <CheckboxSlot active={selectedNavKey === item.key} />
+                    <span className="grid h-7 w-7 place-items-center rounded-md border border-[rgba(197,179,88,0.14)] bg-black/25 text-[color:var(--gold)]/80 group-hover:text-[color:var(--gold)]">
+                      <NavIcon k={item.key} />
+                    </span>
+                    <span className="nav-label text-[13px] font-extrabold uppercase tracking-[0.12em] text-[color:var(--gold)]/90 group-hover:text-[color:var(--gold)] sm:text-[14px] sm:tracking-[0.14em]">
+                      <span className="nav-label-text">{item.label}</span>
+                      <span className="nav-glitch" aria-hidden="true" />
+                    </span>
+                    <span className="ml-auto h-px w-[40px] bg-[linear-gradient(90deg,rgba(197,179,88,0.0),rgba(197,179,88,0.35))] opacity-0 transition group-hover:opacity-100" />
+                  </button>
+                ))}
+                </div>
+              </div>
+            </aside>
+          ) : null}
+
+          {/* Courses grid */}
+          <section
+            data-anim="in"
+            className={cn(
+              "cut-frame cyber-frame gold-stroke relative col-span-12 min-h-0 overflow-hidden border border-[rgba(197,179,88,0.22)] bg-[#060606]/70 p-3 sm:p-4 md:p-5",
+              sidebarOpen ? "md:col-span-9 lg:col-span-10" : "md:col-span-12 lg:col-span-12",
+              "flex flex-col"
+            )}
+          >
+            <div className="absolute inset-0 opacity-70 [background:radial-gradient(820px_520px_at_40%_0%,rgba(197,179,88,0.10),rgba(0,0,0,0)_64%)]" />
+            <div className={cn("relative flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden pr-1 no-scrollbar", !sidebarOpen && "md:pl-14")}>
+              {selectedNavKey === "monk" ? (
+                <SyndicateModeSection />
+              ) : selectedNavKey === "affiliate" ? (
+                <AffiliatePortalSection />
+              ) : selectedNavKey === "programs" ? (
+                <>
+                  <div className="mb-5">
+                    <InstructorSlideshow />
+                  </div>
+                  <div className="mb-4 flex items-center justify-between gap-3">
+                    <div className="text-[14px] font-extrabold uppercase tracking-[0.22em] text-white/65">
+                      Courses
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="text-[10px] font-extrabold uppercase tracking-[0.22em] text-white/40">
+                        Hover / Select
+                      </div>
+                    </div>
+                  </div>
+                  <div className="pr-1" data-cards-wrap>
+                    <div className={cn("relative", sidebarOpen ? "min-h-[420px] sm:min-h-[520px]" : "min-h-[500px] sm:min-h-[620px]")}>
+                      <ChromaGrid
+                        items={chromaItems}
+                        selectedId={selectedCourseId}
+                        onSelect={(id) => setSelectedCourseId(id)}
+                        columns={sidebarOpen ? 2 : 3}
+                        radius={sidebarOpen ? 340 : 420}
+                        damping={0.45}
+                        fadeOut={0.6}
+                        ease="power3.out"
+                        className={cn(sidebarOpen ? "py-2" : "py-4")}
+                      />
+                    </div>
+
+                    {selectedCourseWithProgress ? (
+                      <div className="mt-6">
+                        <ActiveCoursePanel
+                          course={selectedCourseWithProgress}
+                          onContinue={() => {
+                            const id = selectedCourseWithProgress.id;
+                            const next = Math.max(0, Math.min(100, (courseProgress[id] ?? 0) + 8));
+                            const updated = { ...courseProgress, [id]: next };
+                            setCourseProgress(updated);
+                            window.localStorage.setItem("dashboarded:course-progress", JSON.stringify(updated));
+                            window.localStorage.setItem("dashboarded:lastCourseId", id);
+                          }}
+                        />
+                      </div>
+                    ) : null}
+                  </div>
+                </>
+              ) : selectedNavKey === "dashboard" ? (
+                <>
+                  <div className="mb-5">
+                    <InstructorSlideshow />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <DashboardControlCenter
+                      themeMode={themeMode}
+                      userName={profileName}
+                      userRole="Operator"
+                      profileAvatar={profileAvatar}
+                      courses={courses.map((c) => ({ id: c.id, title: c.title, meta: c.meta, statusText: c.statusText, imageSrc: c.imageSrc }))}
+                      onNavigate={(nav) => {
+                        if (nav === "programs") setSelectedNavKey("programs");
+                        else if (nav === "monk") setSelectedNavKey("monk");
+                        else if (nav === "affiliate") setSelectedNavKey("affiliate");
+                        else if (nav === "resources") setSelectedNavKey("resources");
+                        else if (nav === "support") setSelectedNavKey("support");
+                        else if (nav === "settings") setSelectedNavKey("settings");
+                        else setSelectedNavKey("dashboard");
+                      }}
+                    />
+                  </div>
+                </>
+              ) : (
+                <div className="rounded-md border border-white/15 bg-black/35 p-4 text-[12px] text-white/72">Section available soon.</div>
+              )}
+            </div>
+          </section>
+
+          {/* Details now live inside the courses panel (scrollable). */}
+        </div>
+      </div>
+    </div>
+  );
+}
+
