@@ -307,9 +307,13 @@ export type AdminTaskRow = {
   title: string;
   description: string;
   points_target: number;
+  /** Visibility duration set by admin in Django admin panel. */
+  visibility_hours?: number;
+  /** Short admin hint shown near countdown on frontend. */
+  admin_note?: string;
   image_url?: string;
   active: boolean;
-  /** ISO datetime — task is listed for 5 hours from creation (see expires_at). */
+  /** ISO datetime — task expires based on admin-set visibility hours. */
   created_at?: string;
   expires_at?: string;
   submission?: {

@@ -1,6 +1,7 @@
 import uuid
 
 from django.conf import settings
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
 
@@ -13,6 +14,8 @@ class SyndicateUserProgress(models.Model):
         related_name="syndicate_progress",
     )
     state = models.JSONField(default=dict, blank=True)
+    points_total = models.PositiveIntegerField(default=0)
+    level = models.PositiveIntegerField(default=0)
     streak_count = models.PositiveIntegerField(default=0)
     last_activity_date = models.DateField(null=True, blank=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -157,6 +160,12 @@ class AdminAssignedTask(models.Model):
     title = models.CharField(max_length=220)
     description = models.TextField(blank=True, default="")
     points_target = models.PositiveIntegerField(default=50)
+    visibility_hours = models.PositiveSmallIntegerField(
+        default=24,
+        validators=[MinValueValidator(1), MaxValueValidator(168)],
+        help_text="How many hours this task stays visible after creation (1-168).",
+    )
+    admin_note = models.CharField(max_length=280, blank=True, default="")
     image_url = models.CharField(max_length=500, blank=True, default="")
     active = models.BooleanField(default=True, db_index=True)
     created_at = models.DateTimeField(auto_now_add=True)

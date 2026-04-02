@@ -40,9 +40,10 @@ class ReferralRestoreAdmin(admin.ModelAdmin):
 
 @admin.register(AdminAssignedTask)
 class AdminAssignedTaskAdmin(admin.ModelAdmin):
-    list_display = ["id", "title", "points_target", "active", "created_at"]
+    list_display = ["id", "title", "points_target", "visibility_hours", "active", "created_at"]
     list_filter = ["active", "created_at"]
     search_fields = ["title", "description"]
+    fields = ["title", "description", "admin_note", "points_target", "visibility_hours", "active"]
 
 
 @admin.register(AdminTaskSubmission)

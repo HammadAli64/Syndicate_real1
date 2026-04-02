@@ -31,16 +31,27 @@
   font-style: normal;
 }
 
-/* Readable body text for Syndicate challenge cards (overrides Thryon for these blocks) */
+/* Same display type as the top bar (“Syndicate Mode: Missions”) — Thryon + gold glow */
+.syndicate-nav-headline {
+  font-family: "Thryon", "Thyron", var(--hud-font);
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  line-height: 1.1;
+  color: var(--gold);
+  text-shadow:
+    0 0 18px rgba(255, 215, 0, 0.45),
+    0 0 34px rgba(0, 255, 255, 0.18);
+}
+
+/* Syndicate UI blocks: inherit Thryon from body; keep comfortable weight/tracking */
 .syndicate-readable {
-  font-family: ui-sans-serif, system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   font-weight: 500;
   letter-spacing: 0.01em;
 }
 
-/* Challenge detail: high legibility (sans, smoothing, comfortable line height) */
+/* Challenge detail: smoothing + line rhythm (font matches page / navbar) */
 .syndicate-detail-pane {
-  font-family: ui-sans-serif, system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   font-weight: 500;
@@ -334,6 +345,35 @@ body {
 
 .heading-glow {
   text-shadow: 0 0 8px rgba(255, 215, 0, 0.28);
+}
+
+/* Main missions shell: warm arcade HUD — not flat corporate blue */
+.syndicate-dash-outer {
+  border-color: rgba(255, 215, 0, 0.2);
+  background:
+    radial-gradient(circle at 10% 0%, rgba(255, 200, 90, 0.09), transparent 34%),
+    radial-gradient(circle at 95% 4%, rgba(160, 80, 255, 0.11), transparent 30%),
+    linear-gradient(168deg, #050508 0%, #0d0818 44%, #0a0610 100%);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 215, 0, 0.12),
+    0 0 50px rgba(90, 40, 120, 0.12);
+}
+
+.syndicate-dash-scanlines {
+  opacity: 0.42;
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(255, 215, 0, 0.022) 0,
+    rgba(255, 215, 0, 0.022) 1px,
+    transparent 1px,
+    transparent 14px
+  );
+}
+
+.syndicate-dash-header {
+  border-color: rgba(255, 215, 0, 0.22);
+  background: linear-gradient(180deg, rgba(38, 28, 10, 0.9) 0%, rgba(10, 8, 4, 0.94) 100%);
+  box-shadow: inset 0 0 42px rgba(255, 200, 80, 0.05);
 }
 
 .card-hover-scale {

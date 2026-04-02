@@ -137,6 +137,37 @@ function challengeMatchesStatsMood(row: ChallengeRow, mood: string): boolean {
   return inferStatsMoodForRow(row) === m;
 }
 
+/**
+ * Daily system batch stores 2 missions per (category, mood). Completing one fulfills that pair for the day —
+ * hide the other incomplete row so the dashboard does not ask for a duplicate in the same mood slot.
+ */
+function applyMoodCategoryPairHide(rows: ChallengeRow[], doneIds: Set<number>): ChallengeRow[] {
+  const key = (r: ChallengeRow): string | null => {
+    if (r.user_created) return null;
+    const cat = (r.category || r.payload?.category || "").toLowerCase();
+    const mood = (r.mood || "").toLowerCase();
+    if (!cat || !mood || mood === "custom" || mood === "daily") return null;
+    return `${cat}|${mood}`;
+  };
+  const byKey = new Map<string, ChallengeRow[]>();
+  for (const r of rows) {
+    const k = key(r);
+    if (!k) continue;
+    if (!byKey.has(k)) byKey.set(k, []);
+    byKey.get(k)!.push(r);
+  }
+  const hide = new Set<number>();
+  for (const group of byKey.values()) {
+    if (group.length < 2) continue;
+    const done = group.filter((x) => doneIds.has(x.id));
+    const undone = group.filter((x) => !doneIds.has(x.id));
+    if (done.length >= 1 && undone.length >= 1) {
+      for (const x of undone) hide.add(x.id);
+    }
+  }
+  return rows.filter((r) => !hide.has(r.id));
+}
+
 /** Distinct slices for pie (categories). */
 const PIE_COLORS = ["#ffd54a", "#4fd1b8", "#7b9cff", "#ff7ab8", "#c792ea", "#ff9f43", "#00e5ff", "#69f0ae"];
 
@@ -184,16 +215,15 @@ function avatarFromSavedProfileImage(saved: string, fallback: string): string {
   return t;
 }
 
-const HUD_SECTION =
-  "rounded-2xl border border-[#4bc3ff]/70 bg-[linear-gradient(180deg,rgba(8,22,52,0.95),rgba(6,14,36,0.92))] [box-shadow:inset_0_1px_0_rgba(180,230,255,0.5),inset_0_-1px_0_rgba(8,45,88,0.9),0_0_0_1px_rgba(66,166,255,0.45),0_0_20px_rgba(33,156,255,0.22)]";
-const HUD_CARD =
-  "rounded-xl border border-[#5ab8ff]/60 bg-[linear-gradient(180deg,rgba(14,42,94,0.32),rgba(10,22,56,0.2))] px-2 py-2 [box-shadow:inset_0_1px_0_rgba(205,235,255,0.26),inset_0_-1px_0_rgba(15,35,78,0.95),0_0_14px_rgba(47,168,255,0.16)]";
+/** Nav / secondary: dark gold frame — reads “arcade HUD”, not corporate blue chrome */
 const GAME_BTN =
-  "rounded-md border border-[#5ebdff]/70 bg-[linear-gradient(180deg,#1f73d8_0%,#1657b5_48%,#11479d_100%)] text-[#e9f6ff] [box-shadow:inset_0_1px_0_rgba(210,238,255,0.6),inset_0_-2px_0_rgba(8,36,92,0.95),0_0_12px_rgba(66,166,255,0.28)] hover:brightness-110";
+  "rounded-md border border-[rgba(255,215,0,0.42)] bg-[linear-gradient(180deg,rgba(42,32,12,0.96)_0%,rgba(14,10,6,0.98)_100%)] text-[#f5e6a8] [box-shadow:inset_0_1px_0_rgba(255,220,140,0.24),0_0_16px_rgba(255,160,0,0.1)] transition hover:brightness-110";
+const GAME_BTN_NAV_IDLE =
+  "border-white/18 text-white/62 [box-shadow:inset_0_1px_0_rgba(255,255,255,0.05)] hover:border-[rgba(255,215,0,0.35)] hover:text-white/88";
 const CTA_BTN =
   "rounded-md border border-[#fede00] bg-[linear-gradient(180deg,#fff06a_0%,#fede00_45%,#d5b900_100%)] text-black [box-shadow:inset_0_1px_0_rgba(255,250,180,0.92),inset_0_-2px_0_rgba(120,104,0,0.72),0_0_16px_rgba(254,222,0,0.48)] hover:brightness-110";
-const HUD_LABEL = "text-[10px] font-black uppercase tracking-[0.14em] text-white/55";
-const HUD_VALUE = "mt-1 font-mono font-black text-white/92";
+const HUD_LABEL = "text-[10px] font-black uppercase tracking-[0.1em] text-[color:var(--gold)]/48";
+const HUD_VALUE = "mt-1 font-mono font-black text-[#fefce8]/94";
 const REWARD_MILESTONES = [
   { id: "rw-20", unlock_points: 20, bonus_points: 5, title: "Bronze coin", image: "/assets/rewards/bronze.png" },
   { id: "rw-50", unlock_points: 50, bonus_points: 8, title: "Silver coin", image: "/assets/rewards/silver.png" },
@@ -566,6 +596,18 @@ function withinRestoreWindow(): boolean {
   return new Date() <= deadline;
 }
 
+function restoreDaysLeft(): number {
+  if (typeof window === "undefined") return 0;
+  const br = window.localStorage.getItem(ls("streak_break_date"));
+  if (!br) return 0;
+  const start = new Date(br + "T12:00:00");
+  const deadline = new Date(start);
+  deadline.setDate(deadline.getDate() + 7);
+  const ms = deadline.getTime() - Date.now();
+  if (ms <= 0) return 0;
+  return Math.max(1, Math.ceil(ms / 86400000));
+}
+
 function difficultyStyle(d: string) {
   const x = d.toLowerCase();
   if (x === "easy") return "border-emerald-500/50 bg-emerald-500/10 text-emerald-200";
@@ -705,39 +747,49 @@ function DetailPane({
         ) : null}
       </div>
       <div className="rounded-lg border border-[rgba(0,255,255,0.3)] bg-[linear-gradient(165deg,rgba(5,14,24,0.94),rgba(0,0,0,0.84)_52%,rgba(46,10,58,0.64))] p-4 [box-shadow:0_0_0_1px_rgba(255,215,0,0.2),0_0_28px_rgba(0,255,255,0.1)] sm:p-6 md:p-7">
-        <div className="mb-4 flex flex-wrap gap-2">
-          <span className="rounded border border-white/20 px-2 py-0.5 text-[11px] font-semibold uppercase text-white/75">
+        <div className="mb-3 flex flex-wrap items-center gap-1.5">
+          <span className="rounded border border-white/25 px-1.5 py-0.5 text-[9px] font-semibold uppercase leading-tight tracking-wide text-white/80 sm:text-[10px]">
             {row.category}
           </span>
-          <span className={cn("rounded border px-2 py-0.5 text-[11px] font-semibold uppercase", difficultyStyle(row.difficulty))}>
+          <span
+            className={cn(
+              "rounded border px-1.5 py-0.5 text-[9px] font-semibold uppercase leading-tight tracking-wide sm:text-[10px]",
+              difficultyStyle(row.difficulty)
+            )}
+          >
             {row.difficulty} · {row.points} pts
           </span>
           {!done ? (
             <span
-              className="rounded border border-cyan-400/40 bg-cyan-500/15 px-2 py-0.5 font-mono text-[11px] font-semibold uppercase tracking-wide text-cyan-200"
+              className="rounded border border-cyan-400/40 bg-cyan-500/12 px-1.5 py-0.5 font-mono text-[9px] font-semibold tabular-nums tracking-wide text-cyan-200/95 sm:text-[10px]"
               title="Time until local midnight (daily mission window)"
             >
               {formatCountdown(remainingSec)}
             </span>
           ) : null}
-          {!done && taskTimerStartMs != null ? (
-            <span
-              className="max-w-[min(100%,22rem)] rounded border border-[rgba(255,215,0,0.55)] bg-[rgba(255,215,0,0.12)] px-2 py-0.5 text-[10px] font-semibold leading-snug text-[color:var(--gold)] sm:text-[11px]"
-              title="Your time since you first opened this mission (not a clock). Shown as hours, minutes, seconds — e.g. 0h 4m 12s. Not reset if you go back and open again. Used for scoring."
-            >
-              <span className="font-bold uppercase tracking-wide text-[color:var(--gold)]/95">Your time since open</span>
-              <span className="mx-1 font-normal text-[color:var(--gold)]/80">·</span>
-              <span className="font-mono tabular-nums text-[color:var(--gold)]">{formatDurationReadable(missionElapsedSec)}</span>
-            </span>
-          ) : null}
         </div>
         {!done && taskTimerStartMs != null ? (
-          <p className="mb-3 text-[12px] font-semibold leading-snug text-white/65">
-            This counts time <span className="text-white/80">since you first opened</span> this mission (hours / minutes / seconds — not the time of day). Going back
-            and opening again does not reset it. Faster completion can improve your score.
+          <div
+            className="mb-3 w-full max-w-[min(24rem,100%)] rounded-md border border-[rgba(255,215,0,0.5)] bg-[rgba(255,215,0,0.08)] px-2.5 py-2 sm:px-3 sm:py-2"
+            title="Mission and daily window timers"
+          >
+            <p className="syndicate-nav-headline text-[clamp(0.82rem,2.9vw,1.05rem)] leading-tight sm:text-[clamp(0.88rem,2.4vw,1.15rem)] md:text-[clamp(0.95rem,2vw,1.2rem)]">
+              Your mission has started
+            </p>
+            <div className="mt-1.5 flex flex-wrap items-baseline gap-x-2 gap-y-0.5 font-mono text-[clamp(0.95rem,2.8vw,1.35rem)] font-black tabular-nums leading-none text-[color:var(--gold)] sm:text-[clamp(1.05rem,2.2vw,1.5rem)]">
+              <span className="text-[color:var(--gold)]/95" title="Elapsed since you first opened this mission (used for scoring)">
+                {formatDurationReadable(missionElapsedSec)}
+              </span>
+            </div>
+          </div>
+        ) : null}
+        {!done && taskTimerStartMs != null ? (
+          <p className="mb-3 text-[11px] font-medium leading-snug text-white/60 sm:text-[12px]">
+            Time counts <span className="text-white/75">since you first opened</span> this mission (not the time of day). Going back and opening again does not reset it.
+            Faster completion can improve your score.
           </p>
         ) : null}
-        <h3 className="text-[22px] font-bold leading-[1.2] tracking-tight text-white sm:text-[26px] md:text-[32px] md:leading-[1.15]">
+        <h3 className="text-[19px] font-bold leading-[1.2] tracking-tight text-white sm:text-[23px] md:text-[27px] md:leading-[1.15]">
           {p.challenge_title}
         </h3>
 
@@ -859,6 +911,7 @@ export function SyndicateAiChallengePanel() {
   const [rows, setRows] = useState<ChallengeRow[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>("load");
+  const [loadMessageIndex, setLoadMessageIndex] = useState(0);
   const [selected, setSelected] = useState<ChallengeRow | null>(null);
   const [pointsTotal, setPointsTotal] = useState(0);
   const [doneIds, setDoneIds] = useState<Set<number>>(() => new Set());
@@ -902,6 +955,7 @@ export function SyndicateAiChallengePanel() {
   const [adminTasks, setAdminTasks] = useState<AdminTaskRow[]>([]);
   const [adminTaskDrafts, setAdminTaskDrafts] = useState<Record<number, string>>({});
   const [adminTaskFiles, setAdminTaskFiles] = useState<Record<number, File | null>>({});
+  const [adminTaskRecording, setAdminTaskRecording] = useState<Record<number, boolean>>({});
   const [adminTaskBusyId, setAdminTaskBusyId] = useState<number | null>(null);
   const [adminTaskMsg, setAdminTaskMsg] = useState<string | null>(null);
   /** Client start time (ms) when a bonus task becomes available — sent as `started_at_ms` so admin sees elapsed time. */
@@ -912,6 +966,10 @@ export function SyndicateAiChallengePanel() {
   const lastSeenDayRef = useRef<string>(todayLocalISO());
   const bonusMissionSectionRef = useRef<HTMLElement | null>(null);
   const streakRestoreSectionRef = useRef<HTMLDivElement | null>(null);
+  const initialLoadOnceRef = useRef(false);
+  const adminTaskRecorderRef = useRef<Record<number, MediaRecorder | null>>({});
+  const adminTaskStreamRef = useRef<Record<number, MediaStream | null>>({});
+  const adminTaskChunksRef = useRef<Record<number, BlobPart[]>>({});
 
   const handleSyndicateLogout = useCallback(() => {
     void fetch(`${API_BASE}/auth/logout/`, {
@@ -1035,6 +1093,38 @@ export function SyndicateAiChallengePanel() {
     return () => window.clearInterval(t);
   }, []);
 
+  useEffect(() => {
+    if (busy !== "load") {
+      setLoadMessageIndex(0);
+      return;
+    }
+    const t = window.setInterval(() => {
+      setLoadMessageIndex((prev) => (prev + 1) % 4);
+    }, 1300);
+    return () => window.clearInterval(t);
+  }, [busy]);
+
+  useEffect(() => {
+    return () => {
+      const recs = adminTaskRecorderRef.current;
+      const streams = adminTaskStreamRef.current;
+      for (const rec of Object.values(recs)) {
+        try {
+          rec?.state !== "inactive" && rec?.stop();
+        } catch {
+          /* ignore */
+        }
+      }
+      for (const stream of Object.values(streams)) {
+        try {
+          stream?.getTracks().forEach((tr) => tr.stop());
+        } catch {
+          /* ignore */
+        }
+      }
+    };
+  }, []);
+
   const visibleAdminTasks = useMemo(() => {
     return adminTasks.filter((t) => {
       if (!t.expires_at) return true;
@@ -1071,7 +1161,6 @@ export function SyndicateAiChallengePanel() {
   );
 
   const goToBonusMissions = useCallback(() => {
-    setShowStatsProfile(false);
     setSyndicateView("dashboard");
     window.setTimeout(() => {
       bonusMissionSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -1211,7 +1300,7 @@ export function SyndicateAiChallengePanel() {
   }, [streak, pollReferral]);
 
   const filteredRows = useMemo(() => {
-    return rows.filter((r) => {
+    const base = rows.filter((r) => {
       if (!challengeMatchesStatsMood(r, statsMood)) return false;
       const k = (r.category || r.payload?.category || "").toLowerCase();
       if (catFilter !== "all" && k !== catFilter) return false;
@@ -1220,7 +1309,14 @@ export function SyndicateAiChallengePanel() {
       if (doneFilter === "incomplete" && done) return false;
       return true;
     });
+    return applyMoodCategoryPairHide(base, doneIds);
   }, [rows, catFilter, doneFilter, doneIds, statsMood]);
+
+  useEffect(() => {
+    if (!selected) return;
+    if (filteredRows.some((r) => r.id === selected.id)) return;
+    setSelected(null);
+  }, [filteredRows, selected]);
 
   const byCategoryFiltered = useMemo(() => {
     const m: Record<string, ChallengeRow[]> = {};
@@ -1464,8 +1560,36 @@ export function SyndicateAiChallengePanel() {
   }, []);
 
   useEffect(() => {
+    if (initialLoadOnceRef.current) return;
+    initialLoadOnceRef.current = true;
     void loadFast();
   }, [loadFast]);
+
+  // Keep bonus tasks fresh with lightweight polling; only while dashboard is visible.
+  useEffect(() => {
+    if (!mounted || syndicateView !== "dashboard") return;
+    let cancelled = false;
+    const run = async () => {
+      if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
+      try {
+        const out = await fetchAdminTasksActive(getDeviceId());
+        if (!cancelled) setAdminTasks(out.results ?? []);
+      } catch {
+        /* ignore intermittent network errors */
+      }
+    };
+    void run();
+    const onVisible = () => {
+      if (document.visibilityState === "visible") void run();
+    };
+    window.addEventListener("visibilitychange", onVisible);
+    const t = window.setInterval(() => void run(), 30000);
+    return () => {
+      cancelled = true;
+      window.removeEventListener("visibilitychange", onVisible);
+      window.clearInterval(t);
+    };
+  }, [mounted, syndicateView]);
 
   useEffect(() => {
     if (!mounted || !rows.length) return;
@@ -1535,11 +1659,11 @@ export function SyndicateAiChallengePanel() {
         window.localStorage.removeItem(ls("completed_challenge_ids"));
         window.localStorage.removeItem(ls("challenge_responses"));
         window.localStorage.removeItem(ls("mission_started_at_v1"));
-        window.localStorage.setItem(ls("points_total"), "0");
         resetChallengeDayForDate(todayLocalISO());
         onSyndicatePersist();
       }
-      setPointsTotal(0);
+      // Keep lifetime points; only reset per-day completion state.
+      setPointsTotal(loadTotalPoints());
       setDoneIds(new Set());
       setMissionStartMap({});
       try {
@@ -1683,16 +1807,75 @@ export function SyndicateAiChallengePanel() {
       const refreshed = await fetchAdminTasksActive(device);
       setAdminTasks(refreshed.results ?? []);
       setAdminTaskFiles((prev) => ({ ...prev, [taskId]: null }));
+      setAdminTaskRecording((prev) => ({ ...prev, [taskId]: false }));
       setAdminTaskStartedAtMs((prev) => {
         const next = { ...prev };
         delete next[taskId];
         return next;
       });
+      const today = todayLocalISO();
+      if (lastActivityIso !== today) {
+        try {
+          const sr = await postSyndicateStreakRecord(today);
+          setStreak(sr.streak_count);
+          setLastActivityIso(sr.last_activity_date);
+        } catch {
+          /* keep UI stale until next progress fetch */
+        }
+      }
       setAdminTaskMsg("Saved. We will give you points later after analysis.");
     } catch (e) {
       setAdminTaskMsg(friendlyAdminTaskError(e));
     } finally {
       setAdminTaskBusyId(null);
+    }
+  }
+
+  async function startAdminTaskVideoRecord(taskId: number) {
+    if (typeof navigator === "undefined" || !navigator.mediaDevices?.getUserMedia) {
+      setAdminTaskMsg("Camera recording is not supported in this browser.");
+      return;
+    }
+    if (adminTaskRecording[taskId]) return;
+    setAdminTaskMsg(null);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      const rec = new MediaRecorder(stream);
+      adminTaskChunksRef.current[taskId] = [];
+      rec.ondataavailable = (e: BlobEvent) => {
+        if (e.data && e.data.size > 0) adminTaskChunksRef.current[taskId].push(e.data);
+      };
+      rec.onstop = () => {
+        const chunks = adminTaskChunksRef.current[taskId] || [];
+        const blob = new Blob(chunks, { type: rec.mimeType || "video/webm" });
+        if (blob.size > 0) {
+          const ext = rec.mimeType.includes("mp4") ? "mp4" : "webm";
+          const file = new File([blob], `admin-task-${taskId}-${Date.now()}.${ext}`, { type: blob.type || "video/webm" });
+          setAdminTaskFiles((prev) => ({ ...prev, [taskId]: file }));
+        }
+        stream.getTracks().forEach((tr) => tr.stop());
+        adminTaskRecorderRef.current[taskId] = null;
+        adminTaskStreamRef.current[taskId] = null;
+        setAdminTaskRecording((prev) => ({ ...prev, [taskId]: false }));
+      };
+      adminTaskRecorderRef.current[taskId] = rec;
+      adminTaskStreamRef.current[taskId] = stream;
+      rec.start();
+      setAdminTaskRecording((prev) => ({ ...prev, [taskId]: true }));
+      setAdminTaskMsg("Recording started. Press Stop to attach video.");
+    } catch {
+      setAdminTaskMsg("Camera access was blocked or unavailable.");
+    }
+  }
+
+  function stopAdminTaskVideoRecord(taskId: number) {
+    const rec = adminTaskRecorderRef.current[taskId];
+    if (!rec) return;
+    try {
+      rec.state !== "inactive" && rec.stop();
+      setAdminTaskMsg("Video captured and attached.");
+    } catch {
+      setAdminTaskMsg("Could not stop recording.");
     }
   }
 
@@ -1836,6 +2019,7 @@ export function SyndicateAiChallengePanel() {
         : null;
 
   const showRestore = mounted && streak === 0 && withinRestoreWindow();
+  const restoreDaysLeftCount = useMemo(() => (showRestore ? restoreDaysLeft() : 0), [showRestore, nowTick]);
   const openStreakRestoreSection = useCallback(() => {
     setShowStatsProfile(true);
     window.setTimeout(() => {
@@ -1946,41 +2130,47 @@ export function SyndicateAiChallengePanel() {
   return (
     <>
       {completionToast}
-      <div className="relative w-full min-w-0 space-y-5 border border-[rgba(0,240,255,0.35)] bg-[radial-gradient(circle_at_10%_0%,rgba(0,240,255,0.12),transparent_32%),radial-gradient(circle_at_95%_5%,rgba(255,0,180,0.14),transparent_28%),linear-gradient(168deg,#05070f_0%,#090b18_44%,#0a0616_100%)] px-0 py-3 sm:py-5 [box-shadow:inset_0_0_0_1px_rgba(0,240,255,0.14),0_0_50px_rgba(255,0,190,0.1)] max-md:space-y-4 max-md:border-0 max-md:bg-[linear-gradient(168deg,#05070f_0%,#090b18_44%,#0a0616_100%)] max-md:px-0 max-md:pb-3 max-md:pt-0 max-md:shadow-none">
-      <div className="pointer-events-none absolute inset-0 -z-10 opacity-60 [background:repeating-linear-gradient(0deg,rgba(0,255,255,0.03)_0,rgba(0,255,255,0.03)_1px,transparent_1px,transparent_14px)] max-md:opacity-40" />
-      <div className="mb-2 flex w-full min-w-0 flex-col gap-4 rounded-2xl border border-[rgba(115,195,255,0.32)] bg-[linear-gradient(180deg,rgba(12,18,38,0.94),rgba(3,7,18,0.88))] px-3 py-4 [box-shadow:inset_0_0_38px_rgba(0,255,255,0.08)] sm:flex-row sm:items-center sm:justify-between sm:px-4 max-md:mb-0 max-md:rounded-none max-md:border-x-0 max-md:border-t-0 max-md:border-b-[rgba(115,195,255,0.22)] max-md:bg-[linear-gradient(180deg,rgba(12,18,38,0.88),rgba(3,7,18,0.82))] max-md:px-2 max-md:py-3">
+      <div className="syndicate-dash-outer relative w-full min-w-0 space-y-5 border px-0 py-3 sm:py-5 max-md:space-y-4 max-md:border-0 max-md:bg-[linear-gradient(168deg,#050508_0%,#0d0818_44%,#0a0610_100%)] max-md:px-0 max-md:pb-3 max-md:pt-0 max-md:shadow-none">
+      <div className="pointer-events-none absolute inset-0 -z-10 syndicate-dash-scanlines max-md:opacity-35" />
+      <div className="syndicate-dash-header mb-2 flex w-full min-w-0 flex-col gap-4 rounded-2xl border px-3 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-4 max-md:mb-0 max-md:rounded-none max-md:border-x-0 max-md:border-t-0 max-md:border-b-[rgba(255,215,0,0.24)] max-md:px-2 max-md:py-3">
         <div className="min-w-0 flex flex-col gap-2">
-          <div className="flex items-center gap-2.5 text-[13px] font-extrabold uppercase tracking-[0.2em] text-cyan-100/85 sm:text-[14px]">
-            <span className="inline-flex h-3 w-3 shrink-0 animate-pulse rounded-full bg-[#ff3b3b] shadow-[0_0_14px_rgba(255,59,59,0.9)]" />
-            System Status: ACTIVE
+          <div className="flex items-center gap-2.5 text-[13px] font-extrabold uppercase tracking-[0.18em] text-[color:var(--gold)]/88 sm:text-[14px]">
+            <span className="inline-flex h-3 w-3 shrink-0 animate-pulse rounded-full bg-[color:var(--gold)] shadow-[0_0_14px_rgba(255,215,0,0.85)]" />
+            On the board
           </div>
-          <h3 className="text-[22px] font-black uppercase leading-tight tracking-[0.08em] text-[color:var(--gold)] [text-shadow:0_0_18px_rgba(255,215,0,0.45),0_0_34px_rgba(0,255,255,0.18)] sm:text-[28px] md:text-[34px] lg:text-[38px]">
+          <h3 className="syndicate-nav-headline text-[22px] sm:text-[28px] md:text-[34px] lg:text-[38px]">
             Syndicate Mode: Missions
           </h3>
         </div>
         <div className="grid w-full min-w-0 grid-cols-2 gap-2 sm:flex sm:max-w-none sm:flex-wrap sm:items-center sm:justify-end sm:gap-2">
           <button
             type="button"
-            onClick={() => setSyndicateView("dashboard")}
+            onClick={() => {
+              setSyndicateView("dashboard");
+              setShowStatsProfile(false);
+            }}
             className={cn(
-              "min-h-[44px] min-w-0 touch-manipulation px-3 py-2.5 text-[11px] font-bold uppercase tracking-[0.06em] transition [text-shadow:0_0_10px_rgba(255,255,255,0.18)] sm:min-w-[140px] sm:px-4 sm:py-3 sm:text-[12px] sm:tracking-[0.08em]",
+              "min-h-[44px] min-w-0 touch-manipulation px-3 py-2.5 text-[11px] font-bold uppercase tracking-[0.06em] transition sm:min-w-[140px] sm:px-4 sm:py-3 sm:text-[12px] sm:tracking-[0.08em]",
               GAME_BTN,
               syndicateView === "dashboard"
-                ? "border-[rgba(0,255,180,0.7)] text-[#baffdd]"
-                : "border-white/40 text-white/85"
+                ? "border-[rgba(255,215,0,0.78)] text-[color:var(--gold)] [text-shadow:0_0_14px_rgba(255,215,0,0.28)]"
+                : GAME_BTN_NAV_IDLE
             )}
           >
             Dashboard
           </button>
           <button
             type="button"
-            onClick={() => setSyndicateView("challenges")}
+            onClick={() => {
+              setSyndicateView("challenges");
+              setShowStatsProfile(false);
+            }}
             className={cn(
-              "min-h-[44px] min-w-0 touch-manipulation px-3 py-2.5 text-[11px] font-bold uppercase tracking-[0.06em] transition [text-shadow:0_0_10px_rgba(255,255,255,0.18)] sm:min-w-[140px] sm:px-4 sm:py-3 sm:text-[12px] sm:tracking-[0.08em]",
+              "min-h-[44px] min-w-0 touch-manipulation px-3 py-2.5 text-[11px] font-bold uppercase tracking-[0.06em] transition sm:min-w-[140px] sm:px-4 sm:py-3 sm:text-[12px] sm:tracking-[0.08em]",
               GAME_BTN,
               syndicateView === "challenges"
-                ? "border-[rgba(255,215,0,0.75)] text-[color:var(--gold)]"
-                : "border-white/40 text-white/85"
+                ? "border-[rgba(244,114,182,0.65)] text-[#fce7f3] [text-shadow:0_0_14px_rgba(244,114,182,0.35)]"
+                : GAME_BTN_NAV_IDLE
             )}
           >
             Missions
@@ -1989,16 +2179,16 @@ export function SyndicateAiChallengePanel() {
             type="button"
             aria-expanded={showStatsProfile}
             aria-controls="syndicate-stats-profile"
-            onClick={() => setShowStatsProfile((s) => !s)}
+            onClick={() => setShowStatsProfile(true)}
             className={cn(
-              "min-h-[44px] min-w-0 touch-manipulation px-3 py-2.5 text-[11px] font-bold uppercase tracking-[0.06em] transition [text-shadow:0_0_10px_rgba(255,255,255,0.18)] sm:min-w-[140px] sm:px-4 sm:py-3 sm:text-[12px] sm:tracking-[0.08em]",
+              "min-h-[44px] min-w-0 touch-manipulation px-3 py-2.5 text-[11px] font-bold uppercase tracking-[0.06em] transition sm:min-w-[140px] sm:px-4 sm:py-3 sm:text-[12px] sm:tracking-[0.08em]",
               GAME_BTN,
               showStatsProfile
-                ? "border-[rgba(0,255,180,0.7)] text-[#baffdd]"
-                : "border-[rgba(255,215,0,0.72)] text-[color:var(--gold)]"
+                ? "border-[rgba(168,85,247,0.72)] text-[#ede9fe] [text-shadow:0_0_14px_rgba(167,139,250,0.35)]"
+                : GAME_BTN_NAV_IDLE
             )}
           >
-            {showStatsProfile ? "Hide stats & profile" : "Stats & profile"}
+            Stats & profile
           </button>
           <button
             type="button"
@@ -2045,8 +2235,22 @@ export function SyndicateAiChallengePanel() {
 
             <div className="min-w-0 space-y-7 lg:border-l lg:border-white/10 lg:pl-10">
               <div className="rounded-2xl border border-white/14 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(0,0,0,0.28))] p-5 sm:p-6 [box-shadow:inset_0_0_0_1px_rgba(255,255,255,0.06)]">
-                <div className="text-[13px] font-bold uppercase tracking-[0.14em] text-white/60">Total points</div>
-                <div className="mt-2 text-[36px] font-black tabular-nums leading-none text-[color:var(--gold)] sm:text-[42px]">{pointsTotal}</div>
+                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-6">
+                  <div className="min-w-0 border-b border-white/10 pb-5 sm:border-b-0 sm:border-r sm:pb-0 sm:pr-6">
+                    <div className="text-[13px] font-bold uppercase tracking-[0.14em] text-cyan-200/75">Day ends</div>
+                    <div
+                      className="mt-2 font-mono text-[clamp(1.75rem,5vw,2.5rem)] font-black tabular-nums leading-none tracking-tight text-cyan-200 [text-shadow:0_0_16px_rgba(34,211,238,0.4),0_1px_0_rgba(0,0,0,0.85)] sm:text-[clamp(2rem,4vw,2.75rem)]"
+                      title="Time until local midnight (daily mission window)"
+                    >
+                      {formatCountdown(dayCountdownSec)}
+                    </div>
+                    <p className="mt-2 text-[11px] font-medium leading-snug text-white/45">Resets with the local day.</p>
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-[13px] font-bold uppercase tracking-[0.14em] text-white/60">Total points</div>
+                    <div className="mt-2 text-[36px] font-black tabular-nums leading-none text-[color:var(--gold)] sm:text-[42px]">{pointsTotal}</div>
+                  </div>
+                </div>
               </div>
 
               <div
@@ -2062,26 +2266,11 @@ export function SyndicateAiChallengePanel() {
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
                   <div className="mx-auto shrink-0 sm:mx-0">
                     <div className="text-[12px] font-semibold text-white/55">Photo preview</div>
-                    <div className="mt-2 h-24 w-24 overflow-hidden rounded-full border-2 border-cyan-300/70 bg-black/40">
+                    <div className="mt-2 h-28 w-24 overflow-hidden rounded-md border-2 border-cyan-300/70 bg-black/40 sm:h-32 sm:w-28">
                       <img src={profilePreviewAvatarUrl} alt="" className="h-full w-full object-cover" />
                     </div>
                   </div>
                   <div className="min-w-0 flex-1 space-y-3">
-                    <div>
-                      <label className="text-[14px] font-semibold text-white/70" htmlFor="syndicate-profile-image-url">
-                        Profile image URL
-                      </label>
-                      <input
-                        id="syndicate-profile-image-url"
-                        value={profileImageDraft}
-                        onChange={(e) => {
-                          setProfileSettingsMsg(null);
-                          setProfileImageDraft(e.target.value);
-                        }}
-                        placeholder="https://… or upload below"
-                        className="syndicate-readable mt-2 w-full rounded-lg border border-white/25 bg-black/50 px-3 py-2.5 text-[15px] text-white placeholder:text-white/35"
-                      />
-                    </div>
                     <div className="flex flex-wrap items-center gap-3">
                       <label className="cursor-pointer rounded-lg border border-white/25 bg-white/5 px-4 py-2 text-[13px] font-semibold text-white/85 hover:bg-white/10">
                         Upload photo
@@ -2153,6 +2342,11 @@ export function SyndicateAiChallengePanel() {
                 <p className="mt-2 text-[15px] leading-relaxed text-white/65">
                   After a streak break (7-day window), share a code or redeem a friend&apos;s code.
                 </p>
+                {showRestore ? (
+                  <p className="mt-2 text-[14px] font-semibold text-amber-200/95">
+                    {restoreDaysLeftCount} day{restoreDaysLeftCount === 1 ? "" : "s"} left to restore your streak.
+                  </p>
+                ) : null}
                 <div className="mt-4 flex flex-wrap gap-2">
                   <button
                     type="button"
@@ -2333,11 +2527,11 @@ export function SyndicateAiChallengePanel() {
             <div className="border-b border-fuchsia-300/45 p-2 sm:p-3">
               <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-start sm:justify-between">
                 <div className="flex w-full min-w-0 flex-col items-center gap-3 text-center sm:flex-row sm:items-start sm:text-left">
-                  <div className="h-24 w-24 shrink-0 overflow-hidden rounded-full border-2 border-cyan-300/80 bg-black/30 shadow-[0_0_40px_rgba(103,232,249,0.55)] sm:h-28 sm:w-28">
+                  <div className="h-28 w-24 shrink-0 overflow-hidden rounded-md border-2 border-cyan-300/80 bg-black/30 shadow-[0_0_30px_rgba(103,232,249,0.45)] sm:h-32 sm:w-28">
                     <img src={dashboardAvatarUrl} alt="" className="h-full w-full object-cover" />
                   </div>
                   <div className="min-w-0">
-                    <div className="text-[11px] font-black uppercase tracking-[0.14em] text-cyan-100/75">Player profile</div>
+                    <div className="text-[11px] font-black uppercase tracking-[0.14em] text-[color:var(--gold)]/70">Your profile</div>
                     <div className="mt-1 break-words text-[24px] font-black leading-none text-white sm:text-[28px]">
                       {profileName.trim() || getSyndicateUser()?.email || DEFAULT_PROFILE_NAME}
                     </div>
@@ -2353,16 +2547,16 @@ export function SyndicateAiChallengePanel() {
                     >
                       Edit name &amp; photo
                     </button>
-                    <div className="mt-2 text-[12px] text-white/70">Ranked operative in Syndicate network</div>
-                    <p className="mt-2 w-full min-w-0 text-[15px] font-semibold leading-relaxed text-cyan-100/90 sm:text-[16px]">
-                      Stay focused. Complete your missions and rise in rank.
+                    <div className="mt-2 text-[12px] text-white/70">Your streak, your name, your run.</div>
+                    <p className="mt-2 w-full min-w-0 text-[15px] font-semibold leading-relaxed text-[#f5e6c8]/90 sm:text-[16px]">
+                      Chip away at missions — heat builds with every day you show up.
                     </p>
                   </div>
                 </div>
                 <div className="hidden sm:block" aria-hidden />
               </div>
-              <div className="mt-4 grid grid-cols-1 items-stretch gap-2.5 min-[420px]:grid-cols-3">
-                <div className="flex min-h-[140px] flex-col border border-sky-300/70 bg-[linear-gradient(135deg,rgba(56,189,248,0.38),rgba(59,130,246,0.28)_45%,rgba(10,20,60,0.92)_100%)] px-3 py-3 text-center [clip-path:polygon(8%_0,100%_0,92%_100%,0_100%)] [box-shadow:0_0_16px_rgba(56,189,248,0.3),inset_0_1px_0_rgba(210,240,255,0.45)] min-[420px]:min-h-[168px] sm:px-2.5 sm:py-2">
+              <div className="mt-4 grid grid-cols-1 items-stretch gap-3 min-[420px]:grid-cols-3">
+                <div className="flex min-h-[150px] flex-col border border-sky-300/70 bg-[linear-gradient(135deg,rgba(56,189,248,0.38),rgba(59,130,246,0.28)_45%,rgba(10,20,60,0.92)_100%)] px-3 py-3 text-center [clip-path:polygon(8%_0,100%_0,92%_100%,0_100%)] [box-shadow:0_0_16px_rgba(56,189,248,0.3),inset_0_1px_0_rgba(210,240,255,0.45)] min-[420px]:min-h-[182px] sm:px-3 sm:py-3">
                   <div className={cn(HUD_LABEL, "text-[11px] text-sky-100/90 sm:text-[12px]")}>Level</div>
                   <div className="mt-0.5 text-[28px] font-black tabular-nums leading-none text-sky-50 sm:text-[34px]">
                     {syndicateProgressHud.syndicateLevel}
@@ -2395,7 +2589,7 @@ export function SyndicateAiChallengePanel() {
                     ) : null}
                   </div>
                 </div>
-                <div className="flex min-h-[140px] flex-col border border-amber-300/75 bg-[linear-gradient(135deg,rgba(251,191,36,0.38),rgba(245,158,11,0.3)_45%,rgba(66,32,2,0.92)_100%)] px-3 py-3 text-center [clip-path:polygon(8%_0,100%_0,92%_100%,0_100%)] [box-shadow:0_0_16px_rgba(245,158,11,0.32),inset_0_1px_0_rgba(255,237,170,0.45)] min-[420px]:min-h-[168px]">
+                <div className="flex min-h-[150px] flex-col border border-amber-300/75 bg-[linear-gradient(135deg,rgba(251,191,36,0.38),rgba(245,158,11,0.3)_45%,rgba(66,32,2,0.92)_100%)] px-3 py-3 text-center [clip-path:polygon(8%_0,100%_0,92%_100%,0_100%)] [box-shadow:0_0_16px_rgba(245,158,11,0.32),inset_0_1px_0_rgba(255,237,170,0.45)] min-[420px]:min-h-[182px]">
                   <div className={cn(HUD_LABEL, "text-amber-100/85")}>Points</div>
                   <div className="mt-1 text-[22px] font-black tabular-nums text-amber-50 sm:text-[24px]">{pointsTotal}</div>
                   <div className="mt-2 text-[10px] font-bold uppercase tracking-[0.08em] text-amber-200/85 sm:text-[11px]">Total earned</div>
@@ -2406,7 +2600,7 @@ export function SyndicateAiChallengePanel() {
                     <p className="mt-1 text-[10px] leading-snug text-amber-200/70">Spend milestones in Unlock &amp; rewards.</p>
                   </div>
                 </div>
-                <div className="flex min-h-[140px] flex-col border border-fuchsia-300/70 bg-[linear-gradient(135deg,rgba(244,114,182,0.36),rgba(168,85,247,0.28)_45%,rgba(48,11,62,0.9)_100%)] px-3 py-3 text-center [clip-path:polygon(8%_0,100%_0,92%_100%,0_100%)] [box-shadow:0_0_16px_rgba(217,70,239,0.28),inset_0_1px_0_rgba(245,208,254,0.4)] min-[420px]:min-h-[168px]">
+                <div className="flex min-h-[150px] flex-col border border-fuchsia-300/70 bg-[linear-gradient(135deg,rgba(244,114,182,0.36),rgba(168,85,247,0.28)_45%,rgba(48,11,62,0.9)_100%)] px-3 py-3 text-center [clip-path:polygon(8%_0,100%_0,92%_100%,0_100%)] [box-shadow:0_0_16px_rgba(217,70,239,0.28),inset_0_1px_0_rgba(245,208,254,0.4)] min-[420px]:min-h-[182px]">
                   <div className={cn(HUD_LABEL, "text-fuchsia-100/85")}>Streak 🔥</div>
                   <div className="mt-1 text-[20px] font-black text-fuchsia-100">🔥 {streak}d</div>
                   <div className="mt-1.5 text-[10px] font-bold uppercase tracking-[0.08em] text-fuchsia-200/80">Consecutive days</div>
@@ -2419,7 +2613,7 @@ export function SyndicateAiChallengePanel() {
                       onClick={openStreakRestoreSection}
                       className="mx-auto text-[10px] font-bold uppercase tracking-[0.12em] text-fuchsia-200 underline decoration-fuchsia-400/50 underline-offset-2 transition hover:text-white hover:decoration-white"
                     >
-                      Restore streak
+                      {showRestore ? `Restore streak (${restoreDaysLeftCount}d left)` : "Restore streak"}
                     </button>
                   </div>
                 </div>
@@ -2439,7 +2633,7 @@ export function SyndicateAiChallengePanel() {
             </div>
 
             <div className="grid grid-cols-1 gap-4">
-              <div className={cn("border-b border-[rgba(120,200,255,0.45)] pb-3", "bg-transparent")}>
+              <div className={cn("border-b border-[rgba(255,215,0,0.28)] pb-3", "bg-transparent")}>
                 <div className={HUD_LABEL}>Mission stats</div>
                 <div className="mt-3 grid grid-cols-2 gap-2">
                   <div className="border border-cyan-300/45 bg-cyan-500/10 p-2 [box-shadow:0_0_14px_rgba(34,211,238,0.18)]">
@@ -2455,7 +2649,13 @@ export function SyndicateAiChallengePanel() {
                   Daily: {completedAgentTodayCount}/{MAX_AGENT_COMPLETIONS_PER_DAY} · Custom: {completedCustomTodayCount}/
                   {rows.some((r) => !!r.user_created) ? MAX_CUSTOM_COMPLETIONS_PER_DAY : 0}
                 </p>
-                <div className="mt-3 h-[180px] w-full">
+                <div className="mt-3 flex items-center justify-between gap-2 rounded-lg border border-white/12 bg-black/25 px-3 py-2">
+                  <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-cyan-100/85">Best category</span>
+                  <span className="text-[13px] font-black uppercase tracking-[0.06em] text-[color:var(--gold)]">
+                    {dashboardBestCategoryLabel}
+                  </span>
+                </div>
+                <div className="mt-3 h-[250px] w-full sm:h-[280px]">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
@@ -2467,8 +2667,8 @@ export function SyndicateAiChallengePanel() {
                         nameKey="name"
                         cx="50%"
                         cy="50%"
-                        innerRadius={38}
-                        outerRadius={62}
+                        innerRadius={52}
+                        outerRadius={92}
                         paddingAngle={2}
                         labelLine={false}
                         label={({ name, value }) => `${name}: ${value}`}
@@ -2493,7 +2693,7 @@ export function SyndicateAiChallengePanel() {
           </div>
 
           <div className="mt-4 grid grid-cols-1 gap-4 xl:grid-cols-[1.6fr_1fr]">
-            <div className={cn("border-b border-[rgba(0,255,180,0.4)] pb-3", "bg-transparent")}>
+            <div className={cn("border-b border-[rgba(255,215,0,0.28)] pb-3", "bg-transparent")}>
               <div className={HUD_LABEL}>Daily mission</div>
               <div className="mt-1 text-[26px] font-black leading-tight text-white">{rows[0]?.payload?.challenge_title ?? "No mission loaded"}</div>
               <div className="mt-2 flex items-center gap-2 text-[12px] text-white/75">
@@ -2518,7 +2718,7 @@ export function SyndicateAiChallengePanel() {
               </div>
             </div>
 
-            <div className={cn("border-b border-[rgba(80,230,180,0.42)] pb-3", "bg-transparent")}>
+            <div className={cn("border-b border-[rgba(244,114,182,0.32)] pb-3", "bg-transparent")}>
               <div className={HUD_LABEL}>Quick actions</div>
               <div className="mt-2 grid gap-2">
                 <button
@@ -2541,10 +2741,9 @@ export function SyndicateAiChallengePanel() {
         </section>
       ) : null}
 
-      {!showStatsProfile ? (
-        <>
-          {syndicateView === "dashboard" ? (
-          <section className="syndicate-readable mt-5 w-full min-w-0 rounded-2xl border border-[rgba(120,200,255,0.38)] bg-[linear-gradient(180deg,rgba(0,220,255,0.06),rgba(0,0,0,0.1))] px-2 py-4 sm:mt-6 sm:px-3 sm:py-5 [box-shadow:inset_0_0_0_1px_rgba(180,240,255,0.06)] max-md:mt-4 max-md:rounded-none max-md:border-0 max-md:bg-transparent max-md:px-2 max-md:shadow-none">
+      <>
+          {!showStatsProfile && syndicateView === "dashboard" ? (
+          <section className="syndicate-readable mt-5 w-full min-w-0 rounded-2xl border border-[rgba(255,215,0,0.28)] bg-[linear-gradient(180deg,rgba(255,200,80,0.06),rgba(20,12,8,0.35))] px-2 py-4 sm:mt-6 sm:px-3 sm:py-5 [box-shadow:inset_0_0_0_1px_rgba(255,215,0,0.08)] max-md:mt-4 max-md:rounded-none max-md:border-0 max-md:bg-transparent max-md:px-2 max-md:shadow-none">
             <div className="text-center">
               <h3 className="text-[20px] font-black uppercase tracking-[0.14em] text-[color:var(--gold)] sm:text-[24px]">Unlock & redeem rewards</h3>
               <p className="mt-1 text-[14px] font-semibold text-white/70 sm:text-[15px]">
@@ -2567,12 +2766,12 @@ export function SyndicateAiChallengePanel() {
                   <div
                     key={rw.id}
                     className={cn(
-                      "flex min-h-[240px] flex-col rounded-xl border px-3 pb-3 pt-3 text-center [box-shadow:0_0_0_1px_rgba(120,200,255,0.12),0_0_12px_rgba(0,220,255,0.14)] sm:min-h-[280px] md:min-h-[300px]",
+                      "flex min-h-[240px] flex-col rounded-xl border px-3 pb-3 pt-3 text-center [box-shadow:0_0_0_1px_rgba(255,215,0,0.12),0_0_12px_rgba(255,180,0,0.1)] sm:min-h-[280px] md:min-h-[300px]",
                       redeemed
                         ? "border-emerald-300/70 bg-emerald-500/10 [box-shadow:0_0_14px_rgba(52,211,153,0.38)]"
                         : readyToRedeem
                           ? "border-[rgba(255,215,0,0.8)] bg-[rgba(255,215,0,0.09)] [box-shadow:0_0_14px_rgba(255,215,0,0.38)]"
-                          : "border-cyan-300/45 bg-black/40 [box-shadow:0_0_12px_rgba(34,211,238,0.16)]",
+                          : "border-[rgba(255,215,0,0.32)] bg-black/45 [box-shadow:0_0_12px_rgba(255,200,80,0.12)]",
                       sequentialBlocked && "opacity-[0.82] [filter:grayscale(0.45)]"
                     )}
                   >
@@ -2636,7 +2835,7 @@ export function SyndicateAiChallengePanel() {
           </section>
           ) : null}
 
-          {syndicateView === "dashboard" ? (
+          {!showStatsProfile && syndicateView === "dashboard" ? (
           <section
             id="syndicate-bonus-missions"
             ref={bonusMissionSectionRef}
@@ -2651,12 +2850,12 @@ export function SyndicateAiChallengePanel() {
               </p>
             </header>
 
-            <div className="flex flex-col overflow-hidden rounded-2xl border border-cyan-300/35 bg-[linear-gradient(165deg,rgba(6,28,48,0.92),rgba(4,10,22,0.88))] [box-shadow:0_0_0_1px_rgba(120,200,255,0.1),0_12px_40px_rgba(0,0,0,0.4)] max-md:rounded-xl max-md:border max-md:shadow-[0_0_0_1px_rgba(120,200,255,0.08)] lg:flex-row">
+            <div className="flex flex-col overflow-hidden rounded-2xl border border-[rgba(255,215,0,0.28)] bg-[linear-gradient(165deg,rgba(32,24,10,0.94),rgba(10,8,6,0.92))] [box-shadow:0_0_0_1px_rgba(255,215,0,0.1),0_12px_40px_rgba(0,0,0,0.45)] max-md:rounded-xl max-md:border max-md:shadow-[0_0_0_1px_rgba(255,215,0,0.08)] lg:flex-row">
               <div className="min-w-0 flex-1 border-b border-white/10 p-4 sm:p-5 lg:border-b-0 lg:border-r lg:py-6 lg:pl-6 lg:pr-8">
-                <p className="text-center text-[13px] font-bold uppercase tracking-[0.18em] text-cyan-100/90 sm:text-[14px] lg:text-left">
+                <p className="text-center text-[13px] font-bold uppercase tracking-[0.18em] text-[color:var(--gold)]/85 sm:text-[14px] lg:text-left">
                   Bonus missions
                 </p>
-                <h3 className="mt-2 text-center text-[26px] font-black uppercase tracking-[0.07em] text-[#a8d8ff] [text-shadow:0_0_24px_rgba(56,189,248,0.2)] sm:text-[28px] lg:text-left lg:text-[32px]">
+                <h3 className="mt-2 text-center text-[26px] font-black uppercase tracking-[0.07em] text-[#fde68a] [text-shadow:0_0_24px_rgba(255,215,0,0.22)] sm:text-[28px] lg:text-left lg:text-[32px]">
                   Admin review
                 </h3>
                 <p className="mt-4 text-[17px] font-medium leading-[1.65] text-white/90 sm:text-[18px] lg:text-left">
@@ -2670,35 +2869,24 @@ export function SyndicateAiChallengePanel() {
                   </li>
                   <li className="flex gap-3">
                     <span className="mt-0.5 shrink-0 text-[20px] font-bold leading-none text-amber-300">·</span>
-                    <span className="text-amber-50/95">Task visible for 5 hours from post time — submit before the countdown ends.</span>
+                    <span className="text-amber-50/95">Task visibility uses admin-set hours from post time — submit before the countdown ends.</span>
                   </li>
                 </ul>
               </div>
               <div className="flex shrink-0 flex-col justify-center gap-2 border-t border-white/5 bg-black/20 p-4 sm:p-5 lg:w-[min(100%,280px)] lg:border-l lg:border-t-0 lg:px-5">
                 <p className="text-center text-[13px] font-bold uppercase tracking-[0.12em] text-white/75 sm:text-left">After review</p>
-                <button
-                  type="button"
-                  onClick={() => void claimReviewedAdminPoints()}
-                  className={cn("w-full px-4 py-3.5 text-[15px] font-bold uppercase tracking-[0.08em]", CTA_BTN)}
-                >
-                  Claim reviewed points
-                </button>
+                <p className="text-center text-[13px] leading-snug text-cyan-100/85 sm:text-left">
+                  Claim buttons appear under each reviewed result.
+                </p>
                 {adminTaskMsg ? <p className="text-center text-[14px] leading-snug text-cyan-100 sm:text-left">{adminTaskMsg}</p> : null}
               </div>
             </div>
 
-            {adminTasks.length === 0 ? (
-              <div className="rounded-2xl border border-cyan-300/30 bg-[linear-gradient(180deg,rgba(0,220,255,0.04),rgba(0,0,0,0.12))] px-5 py-8 text-center [box-shadow:0_0_20px_rgba(0,220,255,0.12)]">
-                <p className="text-[17px] font-semibold text-cyan-100/95">No bonus tasks right now</p>
+            {visibleAdminTasks.length === 0 ? (
+              <div className="rounded-2xl border border-[rgba(255,215,0,0.28)] bg-[linear-gradient(180deg,rgba(255,200,80,0.05),rgba(0,0,0,0.2))] px-5 py-8 text-center [box-shadow:0_0_20px_rgba(255,200,80,0.1)]">
+                <p className="text-[17px] font-semibold text-[#fef3c7]/95">No bonus tasks right now</p>
                 <p className="mt-2 w-full min-w-0 text-[15px] leading-relaxed text-white/70">
                   When an admin creates a task, it will show here. Complete daily missions and check back.
-                </p>
-              </div>
-            ) : visibleAdminTasks.length === 0 ? (
-              <div className="rounded-2xl border border-cyan-300/30 bg-[linear-gradient(180deg,rgba(0,220,255,0.04),rgba(0,0,0,0.12))] px-5 py-8 text-center [box-shadow:0_0_20px_rgba(0,220,255,0.12)]">
-                <p className="text-[17px] font-semibold text-cyan-100/95">This task window has closed</p>
-                <p className="mt-2 w-full min-w-0 text-[15px] leading-relaxed text-white/70">
-                  The 5-hour visibility period ended. If you submitted, staff can still review. Use Claim reviewed points when approved.
                 </p>
               </div>
             ) : (
@@ -2721,6 +2909,7 @@ export function SyndicateAiChallengePanel() {
                         })()
                       : null;
                   const fileName = adminTaskFiles[t.id]?.name;
+                  const isRecording = !!adminTaskRecording[t.id];
                   return (
                     <article
                       key={t.id}
@@ -2735,6 +2924,12 @@ export function SyndicateAiChallengePanel() {
                                 <span className="font-mono text-[16px] font-black tabular-nums text-amber-50 sm:text-lg">
                                   {formatCountdown(leftSec)}
                                 </span>
+                              </div>
+                            ) : null}
+                            {t.admin_note ? (
+                              <div className="max-w-[100%] rounded-lg border border-fuchsia-300/50 bg-fuchsia-500/15 px-2.5 py-1.5">
+                                <span className="text-[10px] font-bold uppercase tracking-wider text-fuchsia-100/90">Admin note</span>
+                                <p className="mt-0.5 text-[12px] font-semibold leading-snug text-fuchsia-50">{t.admin_note}</p>
                               </div>
                             ) : null}
                             <span className="rounded border border-[rgba(255,215,0,0.5)] bg-[rgba(255,215,0,0.1)] px-2 py-0.5 text-[11px] font-black text-[color:var(--gold)]">
@@ -2784,9 +2979,18 @@ export function SyndicateAiChallengePanel() {
                                   : sub.status === "reviewed"
                                     ? sub.points_claimed
                                       ? `Approved: +${sub.awarded_points} points claimed.`
-                                      : `Approved: +${sub.awarded_points} points — use Claim reviewed points.`
+                                      : `Approved: +${sub.awarded_points} points.`
                                     : "Reviewed: no points awarded."}
                               </p>
+                              {sub.status === "reviewed" && !sub.points_claimed && (sub.awarded_points || 0) > 0 ? (
+                                <button
+                                  type="button"
+                                  onClick={() => void claimReviewedAdminPoints()}
+                                  className={cn("mt-2 w-full px-3 py-2.5 text-[13px] font-bold uppercase tracking-[0.08em]", CTA_BTN)}
+                                >
+                                  Claim +{sub.awarded_points} points
+                                </button>
+                              ) : null}
                               {sub.status !== "pending" && sub.reviewed_at ? (
                                 <p className="mt-1 text-[12px] text-cyan-100/72">
                                   Reviewed at{" "}
@@ -2812,7 +3016,7 @@ export function SyndicateAiChallengePanel() {
                             <div className="space-y-4">
                               <div>
                                 <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-emerald-200/85">Your response</p>
-                                <p className="mt-1 text-[12px] text-white/55">Required text. Add a file below if the task needs a screenshot, doc, or link evidence (max 5MB).</p>
+                                <p className="mt-1 text-[12px] text-white/55">Required text. Add file evidence below (upload or live camera recording, max 50MB).</p>
                               </div>
                               <div>
                                 <label className="sr-only" htmlFor={`admin-task-response-${t.id}`}>
@@ -2837,13 +3041,36 @@ export function SyndicateAiChallengePanel() {
                                   className="mt-2 block w-full cursor-pointer text-[13px] text-white/85 file:mr-3 file:cursor-pointer file:rounded-lg file:border-0 file:bg-cyan-500/30 file:px-4 file:py-2 file:text-[13px] file:font-semibold file:text-cyan-50 hover:file:bg-cyan-500/40"
                                   onChange={(e) => {
                                     const f = e.target.files?.[0] ?? null;
+                                    if (isRecording) stopAdminTaskVideoRecord(t.id);
                                     setAdminTaskFiles((prev) => ({ ...prev, [t.id]: f }));
                                   }}
                                 />
+                                <div className="mt-3 flex flex-wrap items-center gap-2">
+                                  {!isRecording ? (
+                                    <button
+                                      type="button"
+                                      onClick={() => void startAdminTaskVideoRecord(t.id)}
+                                      className="rounded-lg border border-cyan-300/55 bg-cyan-500/18 px-3 py-2 text-[12px] font-bold uppercase tracking-[0.08em] text-cyan-100 hover:bg-cyan-500/28"
+                                    >
+                                      Record video
+                                    </button>
+                                  ) : (
+                                    <button
+                                      type="button"
+                                      onClick={() => stopAdminTaskVideoRecord(t.id)}
+                                      className="rounded-lg border border-rose-300/60 bg-rose-500/20 px-3 py-2 text-[12px] font-bold uppercase tracking-[0.08em] text-rose-100 hover:bg-rose-500/30"
+                                    >
+                                      Stop recording
+                                    </button>
+                                  )}
+                                  {isRecording ? (
+                                    <span className="text-[12px] font-semibold text-rose-200">Recording… camera is live</span>
+                                  ) : null}
+                                </div>
                                 {fileName ? (
                                   <p className="mt-2 text-[12px] text-cyan-200/90">Selected: {fileName}</p>
                                 ) : (
-                                  <p className="mt-2 text-[11px] text-white/40">PDF, images, zip, etc. Shown to admin with your text.</p>
+                                  <p className="mt-2 text-[11px] text-white/40">PDF, images, zip, or recorded video. Shown to admin with your text.</p>
                                 )}
                               </div>
                               <button
@@ -2869,10 +3096,10 @@ export function SyndicateAiChallengePanel() {
           </section>
           ) : null}
 
-          {syndicateView === "dashboard" ? (
-          <section className="syndicate-readable mt-10 w-full min-w-0 border-t border-cyan-300/35 px-2 py-6 sm:px-3 sm:py-7">
+          {!showStatsProfile && syndicateView === "dashboard" ? (
+          <section className="syndicate-readable mt-10 w-full min-w-0 border-t border-[rgba(255,215,0,0.28)] px-2 py-6 sm:px-3 sm:py-7">
             <div className="text-center">
-              <h3 className="text-[24px] font-black uppercase tracking-[0.1em] text-[#baffdd] [text-shadow:0_0_20px_rgba(52,211,153,0.15)] sm:text-[28px] md:text-[32px]">
+              <h3 className="text-[24px] font-black uppercase tracking-[0.1em] text-[color:var(--gold)] [text-shadow:0_0_22px_rgba(255,215,0,0.18)] sm:text-[28px] md:text-[32px]">
                 Points to pounds
               </h3>
               <div className="mt-1 text-[17px] font-bold tabular-nums text-white/88 sm:mt-2 sm:text-[18px]">
@@ -2882,7 +3109,19 @@ export function SyndicateAiChallengePanel() {
             <p className="mx-auto mt-4 max-w-3xl text-center text-[17px] font-medium leading-[1.65] text-white/88 sm:text-[18px] sm:leading-relaxed">
               Convert your mission points into cash value. Enter any points amount you want to convert, and your pounds balance updates instantly using the current rate.
             </p>
-            <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="border border-cyan-400/65 bg-[linear-gradient(135deg,rgba(34,211,238,0.28),rgba(6,182,212,0.2)_45%,rgba(6,28,42,0.94)_100%)] px-3 py-3 text-center [clip-path:polygon(8%_0,100%_0,92%_100%,0_100%)] [box-shadow:0_0_16px_rgba(34,211,238,0.3),inset_0_1px_0_rgba(200,250,255,0.35)]">
+                <div className={cn(HUD_LABEL, "text-cyan-100/80")}>Day ends</div>
+                <div
+                  className={cn(
+                    HUD_VALUE,
+                    "text-[22px] text-cyan-100 [text-shadow:0_0_14px_rgba(34,211,238,0.35),0_1px_0_rgba(0,0,0,0.8)] sm:text-[26px]"
+                  )}
+                  title="Time until local midnight (daily mission window)"
+                >
+                  {formatCountdown(dayCountdownSec)}
+                </div>
+              </div>
               <div className="border border-sky-300/70 bg-[linear-gradient(135deg,rgba(56,189,248,0.34),rgba(59,130,246,0.24)_45%,rgba(10,20,60,0.92)_100%)] px-3 py-3 text-center [clip-path:polygon(8%_0,100%_0,92%_100%,0_100%)] [box-shadow:0_0_14px_rgba(56,189,248,0.28),inset_0_1px_0_rgba(210,240,255,0.42)]">
                 <div className={HUD_LABEL}>Available points</div>
                 <div className={cn(HUD_VALUE, "text-[24px] text-sky-100")}>{pointsTotal}</div>
@@ -2910,7 +3149,7 @@ export function SyndicateAiChallengePanel() {
                   step={1}
                   value={convertPointsInput}
                   onChange={(e) => setConvertPointsInput(e.target.value)}
-                  className="mt-1.5 block min-h-[44px] w-full min-w-[160px] max-w-[220px] rounded-md border border-[#5ab8ff]/65 bg-[linear-gradient(180deg,rgba(10,30,66,0.35),rgba(8,20,48,0.25))] px-3 py-2.5 text-[16px] tabular-nums text-white [box-shadow:inset_0_1px_0_rgba(205,235,255,0.2)] sm:text-[15px]"
+                  className="mt-1.5 block min-h-[44px] w-full min-w-[160px] max-w-[220px] rounded-md border border-[rgba(255,215,0,0.45)] bg-[linear-gradient(180deg,rgba(28,22,12,0.92),rgba(10,8,6,0.96))] px-3 py-2.5 text-[16px] tabular-nums text-[#fefce8] [box-shadow:inset_0_1px_0_rgba(255,220,160,0.12)] sm:text-[15px]"
                 />
               </div>
               <button
@@ -3072,7 +3311,14 @@ export function SyndicateAiChallengePanel() {
                 className="h-11 w-11 animate-spin rounded-full border-2 border-[rgba(255,215,0,0.35)] border-t-[color:var(--gold)]"
                 aria-hidden
               />
-              <p className="text-[14px] text-white/50">Loading missions…</p>
+              <p className="text-center text-[14px] font-semibold text-[#fef3c7]/85">
+                {[
+                  "Wait — your today challenges are generating...",
+                  "Preparing your daily missions...",
+                  "Building mood and category tasks for today...",
+                  "Almost ready. Loading your missions now..."
+                ][loadMessageIndex]}
+              </p>
             </div>
           ) : null}
 
@@ -3129,7 +3375,7 @@ export function SyndicateAiChallengePanel() {
           </>
           ) : null}
         </>
-      ) : null}
+      
     </div>
     </>
   );

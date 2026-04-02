@@ -3,10 +3,12 @@ from __future__ import annotations
 
 import re
 import secrets
+import time
 from datetime import timedelta, datetime
 from urllib.parse import quote
 
 from django.contrib.auth import get_user_model
+from django.db.utils import OperationalError
 from django.utils import timezone
 from django.db import transaction
 from rest_framework import status
@@ -24,8 +26,7 @@ from .models import (
     SyndicateUserProgress,
 )
 
-ADMIN_TASK_VISIBILITY_HOURS = 5
-ADMIN_TASK_MAX_ATTACHMENT_BYTES = 5 * 1024 * 1024
+ADMIN_TASK_MAX_ATTACHMENT_BYTES = 50 * 1024 * 1024
 from .services import (
     create_user_custom_challenge,
     ensure_category_pair,
@@ -90,10 +91,11 @@ SYNDICATE_ALLOWED_STATE_KEYS = frozenset(
 
 @api_view(["GET", "PATCH"])
 def syndicate_progress(request):
-    """GET: dashboard JSON state plus server-backed streak fields. PATCH: merge `state` (streak lives in DB columns)."""
+    """GET/PATCH user progress with DB-backed streak, points_total, and level."""
     if request.method == "GET":
         obj, _ = SyndicateUserProgress.objects.get_or_create(
-            user=request.user, defaults={"state": {}, "streak_count": 0, "last_activity_date": None}
+            user=request.user,
+            defaults={"state": {}, "points_total": 0, "level": 0, "streak_count": 0, "last_activity_date": None},
         )
         today = timezone.localdate()
         _normalize_streak_on_read(obj, today)
@@ -101,6 +103,8 @@ def syndicate_progress(request):
         return Response(
             {
                 "state": obj.state or {},
+                "points_total": int(obj.points_total or 0),
+                "level": int(obj.level or 0),
                 "streak_count": obj.streak_count,
                 "last_activity_date": obj.last_activity_date.isoformat() if obj.last_activity_date else None,
             }
@@ -111,7 +115,8 @@ def syndicate_progress(request):
         return Response({"detail": "state must be an object"}, status=status.HTTP_400_BAD_REQUEST)
 
     obj, _ = SyndicateUserProgress.objects.get_or_create(
-        user=request.user, defaults={"state": {}, "streak_count": 0, "last_activity_date": None}
+        user=request.user,
+        defaults={"state": {}, "points_total": 0, "level": 0, "streak_count": 0, "last_activity_date": None},
     )
     cur = dict(obj.state or {})
     for k, v in incoming.items():
@@ -123,11 +128,23 @@ def syndicate_progress(request):
             cur[k] = v
         else:
             cur[k] = str(v)
+    pts_raw = cur.get("points_total", "0")
+    try:
+        points_total = max(0, min(int(str(pts_raw)), 2_000_000_000))
+    except (TypeError, ValueError):
+        points_total = 0
+    # Backend-safe level persistence derived from points. (Frontend can still render richer tier labels.)
+    level = max(0, points_total // 20)
+
     obj.state = cur
-    obj.save(update_fields=["state", "updated_at"])
+    obj.points_total = points_total
+    obj.level = level
+    obj.save(update_fields=["state", "points_total", "level", "updated_at"])
     return Response(
         {
             "state": obj.state,
+            "points_total": int(obj.points_total or 0),
+            "level": int(obj.level or 0),
             "streak_count": obj.streak_count,
             "last_activity_date": obj.last_activity_date.isoformat() if obj.last_activity_date else None,
         }
@@ -428,10 +445,22 @@ def leaderboard_sync(request):
         name = raw.split("@")[0] if raw else "Anonymous"
     if len(name) > 64:
         name = name[:64]
-    obj, _created = LeaderboardEntry.objects.update_or_create(
-        device_id=device,
-        defaults={"points_total": pts, "display_name": name},
-    )
+    # SQLite can briefly lock under overlapping writes (progress sync + leaderboard sync).
+    # Retry a few short times so frontend doesn't receive a noisy 500.
+    obj = None
+    for attempt in range(3):
+        try:
+            obj, _created = LeaderboardEntry.objects.update_or_create(
+                device_id=device,
+                defaults={"points_total": pts, "display_name": name},
+            )
+            break
+        except OperationalError as exc:
+            if "database is locked" not in str(exc).lower() or attempt == 2:
+                return Response({"detail": "Temporary DB lock. Retry shortly."}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+            time.sleep(0.15 * (attempt + 1))
+    if obj is None:
+        return Response({"detail": "Temporary DB lock. Retry shortly."}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
     return Response(
         {
             "ok": True,
@@ -574,10 +603,12 @@ def admin_tasks_active(request):
     """List active admin-created tasks with this device's submission status."""
     device = _user_device_key(request)
     now = timezone.now()
-    window_start = now - timedelta(hours=ADMIN_TASK_VISIBILITY_HOURS)
-    tasks = list(
-        AdminAssignedTask.objects.filter(active=True, created_at__gte=window_start).order_by("-created_at")
-    )
+    tasks_all = list(AdminAssignedTask.objects.filter(active=True).order_by("-created_at"))
+    tasks: list[AdminAssignedTask] = []
+    for t in tasks_all:
+        expires_at = t.created_at + timedelta(hours=max(1, int(t.visibility_hours or 1)))
+        if expires_at >= now:
+            tasks.append(t)
     task_ids = [t.id for t in tasks]
     subs = {
         s.task_id: s
@@ -586,13 +617,16 @@ def admin_tasks_active(request):
     rows = []
     for t in tasks:
         s = subs.get(t.id)
-        expires_at = t.created_at + timedelta(hours=ADMIN_TASK_VISIBILITY_HOURS)
+        vis_hours = max(1, int(t.visibility_hours or 1))
+        expires_at = t.created_at + timedelta(hours=vis_hours)
         rows.append(
             {
                 "id": t.id,
                 "title": t.title,
                 "description": t.description,
                 "points_target": t.points_target,
+                "visibility_hours": vis_hours,
+                "admin_note": t.admin_note or "",
                 "image_url": t.image_url,
                 "active": t.active,
                 "created_at": t.created_at.isoformat(),
@@ -633,7 +667,8 @@ def admin_task_submit(request):
         return Response({"detail": "Task not found"}, status=status.HTTP_404_NOT_FOUND)
 
     now = timezone.now()
-    if task.created_at + timedelta(hours=ADMIN_TASK_VISIBILITY_HOURS) < now:
+    vis_hours = max(1, int(task.visibility_hours or 1))
+    if task.created_at + timedelta(hours=vis_hours) < now:
         return Response({"detail": "This task is no longer available."}, status=status.HTTP_400_BAD_REQUEST)
 
     if AdminTaskSubmission.objects.filter(task=task, device_id=device).exists():
@@ -644,7 +679,7 @@ def admin_task_submit(request):
         upload = None
     if upload is not None:
         if upload.size > ADMIN_TASK_MAX_ATTACHMENT_BYTES:
-            return Response({"detail": "Attachment too large (max 5MB)."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"detail": "Attachment too large (max 50MB)."}, status=status.HTTP_400_BAD_REQUEST)
 
     # Authoritative duration: from when the admin posted the bonus until this submit (server clock).
     elapsed_from_challenge_start = max(0, int((now - task.created_at).total_seconds()))

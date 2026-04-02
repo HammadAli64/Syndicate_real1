@@ -501,6 +501,7 @@ def generate_agent_daily_quote(
     mindsets_payload: dict[str, Any],
     avoid_quotes: list[str],
     calendar_date_iso: str,
+    user_key: str = "",
 ) -> str:
     """Single JSON quote line for the Syndicate dashboard; avoids past lines."""
     from .prompts import AGENT_QUOTE_SYSTEM
@@ -510,6 +511,7 @@ def generate_agent_daily_quote(
             "stored_mindsets": mindsets_payload,
             "quotes_to_avoid": avoid_quotes[:60],
             "calendar_date": calendar_date_iso,
+            "user_key": (user_key or "").strip(),
         },
         ensure_ascii=False,
     )

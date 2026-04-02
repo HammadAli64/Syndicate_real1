@@ -12,7 +12,6 @@ from api.models import MindsetKnowledge, UploadedDocument
 from django.db import IntegrityError
 
 from api.services.openai_client import (
-    POINTS_BY_DIFFICULTY,
     enrich_user_custom_challenge_payload,
     generate_agent_daily_quote,
     generate_category_pair_batch,
@@ -68,6 +67,21 @@ MOOD_BEHAVIOR: dict[str, str] = {
     "happy": "Very positive, joyful, celebratory framing; lean into optimism and gratitude.",
     "tired": "Relaxing, low-effort, restorative micro-steps; conserve energy.",
 }
+
+
+def _points_from_difficulty(diff: str) -> int:
+    """
+    Difficulty-aware random points in the range 1..10.
+    - easy:   1..4
+    - medium: 4..7
+    - hard:   7..10
+    """
+    d = (diff or "medium").strip().lower()
+    if d == "easy":
+        return 1 + secrets.randbelow(4)  # 1..4
+    if d == "hard":
+        return 7 + secrets.randbelow(4)  # 7..10
+    return 4 + secrets.randbelow(4)  # medium: 4..7
 
 
 def validate_mood_challenge_item(item: dict, mood: str, category: str) -> tuple[bool, str | None]:
@@ -312,7 +326,7 @@ def create_user_custom_challenge(device_id: str, title: str, difficulty: str) ->
     except Exception as e:
         return False, None, str(e)
 
-    points = secrets.randbelow(10)
+    points = _points_from_difficulty(diff)
     one_line = (payload.get("based_on_mindset") or "").strip()[:240] or (payload.get("challenge_description") or "")[:200]
 
     try:
@@ -452,9 +466,9 @@ def ensure_daily_challenges(force_regenerate: bool = False) -> tuple[bool, list[
     rows: list[dict] = []
     for item in accumulated:
         diff = str(item.get("difficulty") or "medium").lower().strip()
-        if diff not in POINTS_BY_DIFFICULTY:
+        if diff not in ("easy", "medium", "hard"):
             diff = "medium"
-        pts = POINTS_BY_DIFFICULTY[diff]
+        pts = _points_from_difficulty(diff)
         cat = str(item.get("category") or "").lower().strip()
         if cat not in CATEGORIES:
             cat = "business"
@@ -561,9 +575,9 @@ def ensure_daily_challenges_for_device(device_id: str, force_regenerate: bool = 
     rows: list[dict] = []
     for item in accumulated:
         diff = str(item.get("difficulty") or "medium").lower().strip()
-        if diff not in POINTS_BY_DIFFICULTY:
+        if diff not in ("easy", "medium", "hard"):
             diff = "medium"
-        pts = POINTS_BY_DIFFICULTY[diff]
+        pts = _points_from_difficulty(diff)
         cat = str(item.get("category") or "").lower().strip()
         if cat not in CATEGORIES:
             cat = "business"
@@ -629,9 +643,9 @@ def ensure_category_pair(category: str, device_batch_device_id: str | None = Non
     rows: list[dict] = []
     for item in items:
         diff = str(item.get("difficulty") or "medium").lower().strip()
-        if diff not in POINTS_BY_DIFFICULTY:
+        if diff not in ("easy", "medium", "hard"):
             diff = "medium"
-        pts = POINTS_BY_DIFFICULTY[diff]
+        pts = _points_from_difficulty(diff)
         slot = int(item.get("slot") or 1)
         if slot not in (1, 2):
             slot = 1
@@ -669,10 +683,32 @@ def ensure_agent_quote_for_user(user) -> tuple[bool, str | None, str | None]:
         for t in UserAgentDailyQuote.objects.filter(user=user).order_by("-quote_date")[:50].values_list("text", flat=True)
         if t and str(t).strip()
     ]
+    # Also avoid today's lines already assigned to other users to keep quotes unique per day.
+    today_taken = {
+        t.strip()
+        for t in UserAgentDailyQuote.objects.filter(quote_date=today).values_list("text", flat=True)
+        if t and str(t).strip()
+    }
+    avoid.extend(list(today_taken))
+    # Stable user key nudges model toward per-user variation even on same day/data.
+    user_key = f"user:{getattr(user, 'id', '')}:{getattr(user, 'email', '') or getattr(user, 'username', '')}"
     try:
-        text = generate_agent_daily_quote(latest.payload, avoid, today.isoformat())
+        text = generate_agent_daily_quote(latest.payload, avoid, today.isoformat(), user_key=user_key)
     except Exception as e:
         return False, None, str(e)
+
+    # Hard guard: if model still returns a duplicate taken today, retry with expanded avoid-list.
+    if text in today_taken:
+        for _ in range(3):
+            avoid.append(text)
+            try:
+                text = generate_agent_daily_quote(latest.payload, avoid, today.isoformat(), user_key=user_key)
+            except Exception as e:
+                return False, None, str(e)
+            if text not in today_taken:
+                break
+        if text in today_taken:
+            return False, None, "Could not generate a unique quote for today. Retry shortly."
 
     try:
         UserAgentDailyQuote.objects.create(user=user, quote_date=today, text=text)
