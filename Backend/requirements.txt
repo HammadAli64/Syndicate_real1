@@ -3,7 +3,8 @@ djangorestframework>=3.14
 django-cors-headers>=4.3
 python-dotenv>=1.0
 openai>=1.40
-# PDF text extraction (PyPDF2 successor; do not add duplicate PyPDF2)
+# PDF: PyMuPDF first (better layout text); pypdf fallback in code
+pymupdf>=1.24.0
 pypdf>=4.0
 python-docx>=1.1
 gunicorn>=22.0
@@ -11,3 +12,5 @@ dj-database-url>=2.2
 psycopg2-binary>=2.9
 django-cloudinary-storage>=0.3
 cloudinary>=1.40
+django-storages[s3]>=1.14
+boto3>=1.34

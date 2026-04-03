@@ -1,9 +1,12 @@
-"""Create UploadedDocument from uploads: text stored in DB only (no disk file). Railway-safe."""
+"""Create UploadedDocument from uploads: text in DB; raw bytes on S3 when configured, else inline path only."""
 from __future__ import annotations
 
 import hashlib
 from pathlib import Path
 
+from django.conf import settings
+from django.core.files.base import ContentFile
+from django.core.files.storage import default_storage
 from django.core.files.uploadedfile import UploadedFile
 
 from api.models import UploadedDocument
@@ -37,7 +40,11 @@ def store_uploaded_file(f: UploadedFile) -> tuple[UploadedDocument | None, str |
     except Exception as e:
         return None, f"Could not read this document (corrupt or unsupported content): {e}"
 
-    stored_path = f"inline/{content_hash}{suffix}"
+    if getattr(settings, "USE_S3_OBJECT_STORAGE", False):
+        key = f"uploads/{content_hash}{suffix}"
+        stored_path = default_storage.save(key, ContentFile(data))
+    else:
+        stored_path = f"inline/{content_hash}{suffix}"
     try:
         doc = UploadedDocument.objects.create(
             original_name=name,

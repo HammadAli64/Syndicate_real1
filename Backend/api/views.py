@@ -4,6 +4,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from django.conf import settings
+from django.core.files.storage import default_storage
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.decorators import api_view
@@ -13,7 +14,7 @@ from apps.challenges.models import GeneratedChallenge
 from apps.challenges.services import ensure_daily_challenges_for_device
 
 from .models import MindsetKnowledge, UploadedDocument
-from .services.document_extract import extract_text, file_sha256, truncate
+from .services.document_extract import extract_text, extract_text_from_bytes, file_sha256, truncate
 from .services.openai_client import extract_mindsets_from_document
 from .services.upload_store import SUPPORTED_SUFFIXES, store_uploaded_file
 
@@ -45,13 +46,24 @@ def _register_file_from_disk(abs_path: Path) -> UploadedDocument:
 
 
 def run_ingest(doc: UploadedDocument) -> tuple[bool, dict | None, str | None]:
-    """Ingest uses text_extracted when set (inline uploads); otherwise reads from disk under data/."""
+    """Ingest uses text_extracted when set; else local file under data/, else object storage (S3/Tigris)."""
     raw = (doc.text_extracted or "").strip()
-    path = _data_path(doc.stored_path)
     if not raw:
-        if not path.is_file():
-            return False, None, "No document text in database and source file is missing from disk."
-        raw = extract_text(path)
+        path = _data_path(doc.stored_path)
+        if path.is_file():
+            raw = extract_text(path)
+        elif getattr(settings, "USE_S3_OBJECT_STORAGE", False) and default_storage.exists(doc.stored_path):
+            with default_storage.open(doc.stored_path, "rb") as fh:
+                blob = fh.read()
+            suf = Path(doc.stored_path).suffix.lower() or Path(doc.original_name).suffix.lower()
+            if suf not in {".pdf", ".txt", ".md", ".markdown", ".docx"}:
+                suf = ".pdf"
+            raw = extract_text_from_bytes(blob, suf)
+        else:
+            return False, None, (
+                "No document text in database and source file is missing "
+                "(not on disk or object storage)."
+            )
         doc.text_extracted = raw
         doc.save(update_fields=["text_extracted"])
 

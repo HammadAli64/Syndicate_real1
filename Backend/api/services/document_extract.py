@@ -1,11 +1,22 @@
-"""Extract plain text from PDF and text-based files (path or in-memory bytes)."""
+"""
+Document text extraction for the syndicate pipeline.
+
+Pipeline alignment:
+  1) Upload → bytes in memory → UploadedDocument.text_extracted (optional: Cloudinary for raw files later).
+  2) Extract text here (PDF via PyMuPDF when installed, else pypdf; DOCX via python-docx).
+  3) OpenAI ingests text → MindsetKnowledge.payload (JSON: mindsets, themes, etc.).
+  4) Challenges app reads DB and generates daily tasks / scoring (see apps.challenges).
+"""
 from __future__ import annotations
 
 import hashlib
 import io
+import logging
 from pathlib import Path
 
 from django.conf import settings
+
+logger = logging.getLogger(__name__)
 
 
 def file_sha256(path: Path) -> str:
@@ -14,6 +25,78 @@ def file_sha256(path: Path) -> str:
         for chunk in iter(lambda: f.read(65536), b""):
             h.update(chunk)
     return h.hexdigest()
+
+
+def _pdf_text_pymupdf(data: bytes) -> str | None:
+    try:
+        import fitz  # PyMuPDF
+    except ImportError:
+        return None
+    try:
+        doc = fitz.open(stream=data, filetype="pdf")
+        try:
+            parts: list[str] = []
+            for page in doc:
+                t = page.get_text() or ""
+                if t.strip():
+                    parts.append(t)
+            return "\n\n".join(parts).strip()
+        finally:
+            doc.close()
+    except Exception as e:
+        logger.warning("PyMuPDF extract failed, will try pypdf: %s", e)
+        return None
+
+
+def _pdf_text_pymupdf_path(path: Path) -> str | None:
+    try:
+        import fitz
+    except ImportError:
+        return None
+    try:
+        doc = fitz.open(path)
+        try:
+            parts: list[str] = []
+            for page in doc:
+                t = page.get_text() or ""
+                if t.strip():
+                    parts.append(t)
+            return "\n\n".join(parts).strip()
+        finally:
+            doc.close()
+    except Exception as e:
+        logger.warning("PyMuPDF path extract failed, will try pypdf: %s", e)
+        return None
+
+
+def _pdf_text_pypdf_bytes(data: bytes) -> str:
+    from pypdf import PdfReader
+
+    buf = io.BytesIO(data)
+    reader = PdfReader(buf)
+    parts: list[str] = []
+    for page in reader.pages:
+        t = page.extract_text() or ""
+        parts.append(t)
+    return "\n\n".join(parts).strip()
+
+
+def _pdf_text_pypdf_path(path: Path) -> str:
+    from pypdf import PdfReader
+
+    reader = PdfReader(str(path))
+    parts: list[str] = []
+    for page in reader.pages:
+        t = page.extract_text() or ""
+        parts.append(t)
+    return "\n\n".join(parts).strip()
+
+
+def _pdf_text_bytes(data: bytes) -> str:
+    text = _pdf_text_pymupdf(data)
+    if text is not None and text.strip():
+        return text
+    return _pdf_text_pypdf_bytes(data)
 
 
 def extract_text_from_bytes(data: bytes, suffix: str) -> str:
@@ -46,22 +129,13 @@ def _docx_text_bytes(data: bytes) -> str:
     return "\n\n".join(parts).strip()
 
 
-def _pdf_text_bytes(data: bytes) -> str:
-    from pypdf import PdfReader
-
-    buf = io.BytesIO(data)
-    reader = PdfReader(buf)
-    parts: list[str] = []
-    for page in reader.pages:
-        t = page.extract_text() or ""
-        parts.append(t)
-    return "\n\n".join(parts).strip()
-
-
 def extract_text(path: Path) -> str:
     suffix = path.suffix.lower()
     if suffix == ".pdf":
-        return _pdf_text(path)
+        text = _pdf_text_pymupdf_path(path)
+        if text is not None and text.strip():
+            return text
+        return _pdf_text_pypdf_path(path)
     if suffix in {".txt", ".md", ".markdown"}:
         return path.read_text(encoding="utf-8", errors="replace")
     if suffix == ".docx":
@@ -87,14 +161,10 @@ def _docx_text(path: Path) -> str:
 
 
 def _pdf_text(path: Path) -> str:
-    from pypdf import PdfReader
-
-    reader = PdfReader(str(path))
-    parts: list[str] = []
-    for page in reader.pages:
-        t = page.extract_text() or ""
-        parts.append(t)
-    return "\n\n".join(parts).strip()
+    text = _pdf_text_pymupdf_path(path)
+    if text is not None and text.strip():
+        return text
+    return _pdf_text_pypdf_path(path)
 
 
 def truncate(text: str, max_chars: int | None = None) -> str:

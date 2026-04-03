@@ -62,6 +62,34 @@ USE_CLOUDINARY = bool(
     )
 )
 
+
+def _s3_object_storage_config() -> dict | None:
+    """S3-compatible object storage (AWS S3, Cloudflare R2, Tigris, etc.)."""
+    if (os.environ.get("USE_S3_OBJECT_STORAGE") or "").strip().lower() in ("0", "false", "no", "off"):
+        return None
+    bucket = (os.environ.get("AWS_STORAGE_BUCKET_NAME") or os.environ.get("S3_BUCKET_NAME") or "").strip()
+    access = (os.environ.get("AWS_ACCESS_KEY_ID") or "").strip().strip("\ufeff")
+    secret = (os.environ.get("AWS_SECRET_ACCESS_KEY") or "").strip().strip("\ufeff")
+    if not (bucket and access and secret):
+        return None
+    endpoint = (os.environ.get("AWS_S3_ENDPOINT_URL") or os.environ.get("S3_ENDPOINT_URL") or "").strip()
+    if not endpoint and access.startswith("tid_"):
+        endpoint = "https://t3.storage.dev"
+    region = (os.environ.get("AWS_S3_REGION_NAME") or os.environ.get("AWS_DEFAULT_REGION") or "").strip()
+    if not region:
+        region = "auto" if access.startswith("tid_") else "us-east-1"
+    return {
+        "bucket_name": bucket,
+        "access_key": access,
+        "secret_key": secret,
+        "endpoint_url": endpoint or None,
+        "region_name": region,
+    }
+
+
+_s3_object_storage_cfg = _s3_object_storage_config()
+USE_S3_OBJECT_STORAGE = _s3_object_storage_cfg is not None
+
 # Source docs + uploads (place files here or upload via API)
 SYNDICATE_DATA_DIR = BASE_DIR / "data"
 SYNDICATE_MAX_DOC_CHARS = 120_000
@@ -232,7 +260,19 @@ STORAGES = {
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
-if USE_CLOUDINARY:
+if USE_S3_OBJECT_STORAGE and _s3_object_storage_cfg:
+    AWS_ACCESS_KEY_ID = _s3_object_storage_cfg["access_key"]
+    AWS_SECRET_ACCESS_KEY = _s3_object_storage_cfg["secret_key"]
+    AWS_STORAGE_BUCKET_NAME = _s3_object_storage_cfg["bucket_name"]
+    AWS_S3_REGION_NAME = _s3_object_storage_cfg["region_name"]
+    if _s3_object_storage_cfg.get("endpoint_url"):
+        AWS_S3_ENDPOINT_URL = _s3_object_storage_cfg["endpoint_url"]
+    AWS_DEFAULT_ACL = None
+    AWS_S3_FILE_OVERWRITE = True
+    STORAGES["default"] = {
+        "BACKEND": "storages.backends.s3.S3Storage",
+    }
+elif USE_CLOUDINARY:
     STORAGES["default"] = {
         "BACKEND": "cloudinary_storage.storage.MediaCloudinaryStorage",
     }
