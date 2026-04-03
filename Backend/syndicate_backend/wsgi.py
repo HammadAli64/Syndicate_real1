@@ -26,19 +26,19 @@ if (os.environ.get("SKIP_WSGI_MIGRATE") or "").strip().lower() not in ("1", "tru
     _is_sqlite = _engine == "django.db.backends.sqlite3"
     if not _is_sqlite:
         _db = settings.DATABASES["default"]
+        # Use stdout so platforms (e.g. Railway) do not label these lines as [error].
         print(
             "syndicate_backend.wsgi: db target "
             f"engine={_db.get('ENGINE')} name={_db.get('NAME')} host={_db.get('HOST')}",
-            file=sys.stderr,
             flush=True,
         )
-        print("syndicate_backend.wsgi: running migrate on default database", file=sys.stderr, flush=True)
+        print("syndicate_backend.wsgi: running migrate on default database", flush=True)
         try:
             call_command("migrate", interactive=False, verbosity=1)
         except Exception:
             print("syndicate_backend.wsgi: migrate failed", file=sys.stderr, flush=True)
             raise
-        print("syndicate_backend.wsgi: migrate finished", file=sys.stderr, flush=True)
+        print("syndicate_backend.wsgi: migrate finished", flush=True)
         from django.db import connection
 
         connection.ensure_connection()
@@ -49,11 +49,7 @@ if (os.environ.get("SKIP_WSGI_MIGRATE") or "").strip().lower() not in ("1", "tru
                 "or deploy the branch that includes migration startup (merge challenges into main)."
             )
     else:
-        print(
-            "syndicate_backend.wsgi: skipping migrate (SQLite default)",
-            file=sys.stderr,
-            flush=True,
-        )
+        print("syndicate_backend.wsgi: skipping migrate (SQLite default)", flush=True)
 
 from django.core.wsgi import get_wsgi_application
 

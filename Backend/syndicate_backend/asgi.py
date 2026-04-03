@@ -8,7 +8,6 @@ https://docs.djangoproject.com/en/4.2/howto/deployment/asgi/
 """
 
 import os
-import sys
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "syndicate_backend.settings")
 
@@ -23,9 +22,9 @@ if (os.environ.get("SKIP_WSGI_MIGRATE") or "").strip().lower() not in ("1", "tru
 
     _engine = (settings.DATABASES["default"].get("ENGINE") or "").lower()
     if _engine != "django.db.backends.sqlite3":
-        print("syndicate_backend.asgi: running migrate on default database", file=sys.stderr, flush=True)
+        print("syndicate_backend.asgi: running migrate on default database", flush=True)
         call_command("migrate", interactive=False, verbosity=1)
-        print("syndicate_backend.asgi: migrate finished", file=sys.stderr, flush=True)
+        print("syndicate_backend.asgi: migrate finished", flush=True)
 
 from django.core.asgi import get_asgi_application
 
