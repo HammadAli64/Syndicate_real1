@@ -12,6 +12,7 @@ import {
   setSyndicateUserId
 } from "@/lib/syndicateAuth";
 import { getSyndicateApiBase } from "@/lib/syndicateApiBase";
+import { parseApiJson } from "@/lib/parseApiJson";
 
 const API_BASE = getSyndicateApiBase();
 
@@ -30,8 +31,12 @@ export default function Page() {
             headers: { Authorization: `Token ${token}` }
           });
           if (r.ok) {
-            const j = (await r.json()) as { id?: number };
-            if (typeof j.id === "number") setSyndicateUserId(j.id);
+            try {
+              const j = await parseApiJson<{ id?: number }>(r);
+              if (typeof j.id === "number") setSyndicateUserId(j.id);
+            } catch {
+              /* ignore bad HTML/JSON from misconfigured API URL */
+            }
           } else if (r.status === 401) {
             logoutSyndicateSession();
             if (!cancelled) {

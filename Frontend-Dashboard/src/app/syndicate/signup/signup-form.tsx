@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { getSyndicateApiBase } from "@/lib/syndicateApiBase";
+import { parseApiJson } from "@/lib/parseApiJson";
 import { createSyndicateSession } from "@/lib/syndicateAuth";
 
 const API_BASE = getSyndicateApiBase();
@@ -32,7 +33,7 @@ export function SyndicateSignupForm({ nextPath }: { nextPath: string }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: safeEmail, password })
       });
-      const j = (await r.json()) as { token?: string; detail?: string; user?: { id?: number; email?: string } };
+      const j = await parseApiJson<{ token?: string; detail?: string; user?: { id?: number; email?: string } }>(r);
       if (!r.ok || !j.token) {
         throw new Error(j.detail || "Signup failed");
       }
