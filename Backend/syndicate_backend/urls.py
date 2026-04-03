@@ -17,12 +17,26 @@ Including another URLconf
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
+from django.http import JsonResponse
 from django.urls import include, path
 
+
+def api_root(_request):
+    """Helps verify the public Railway URL points at this Django app (not the Next.js service)."""
+    return JsonResponse(
+        {
+            "service": "syndicate-backend",
+            "health": "/api/health/",
+            "admin": "/admin/",
+        }
+    )
+
+
 urlpatterns = [
-    path('admin/', admin.site.urls),
-    path('api/challenges/', include('apps.challenges.urls')),
-    path('api/', include('api.urls')),
+    path("", api_root),
+    path("admin/", admin.site.urls),
+    path("api/challenges/", include("apps.challenges.urls")),
+    path("api/", include("api.urls")),
 ]
 
 if settings.DEBUG:
