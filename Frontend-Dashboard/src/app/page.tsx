@@ -11,8 +11,9 @@ import {
   logoutSyndicateSession,
   setSyndicateUserId
 } from "@/lib/syndicateAuth";
+import { getSyndicateApiBase } from "@/lib/syndicateApiBase";
 
-const API_BASE = (process.env.NEXT_PUBLIC_SYNDICATE_API_URL ?? "http://127.0.0.1:8000/api").replace(/\/$/, "");
+const API_BASE = getSyndicateApiBase();
 
 export default function Page() {
   const router = useRouter();

@@ -4,9 +4,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
+import { getSyndicateApiBase } from "@/lib/syndicateApiBase";
 import { createSyndicateSession } from "@/lib/syndicateAuth";
 
-const API_BASE = (process.env.NEXT_PUBLIC_SYNDICATE_API_URL ?? "http://127.0.0.1:8000/api").replace(/\/$/, "");
+const API_BASE = getSyndicateApiBase();
 
 export function SyndicateLoginForm({ nextPath }: { nextPath: string }) {
   const router = useRouter();

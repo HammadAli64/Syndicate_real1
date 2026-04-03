@@ -3,7 +3,9 @@
  * All paths are under /api/challenges/ on the Django server.
  */
 import { getSyndicateAuthHeaders, getSyndicateAuthToken, logoutSyndicateSession } from "@/lib/syndicateAuth";
-const API_BASE = (process.env.NEXT_PUBLIC_SYNDICATE_API_URL ?? "http://127.0.0.1:8000/api").replace(/\/$/, "");
+import { getSyndicateApiBase } from "@/lib/syndicateApiBase";
+
+const API_BASE = getSyndicateApiBase();
 
 export function challengesApiUrl(path: string): string {
   const p = path.startsWith("/") ? path.slice(1) : path;

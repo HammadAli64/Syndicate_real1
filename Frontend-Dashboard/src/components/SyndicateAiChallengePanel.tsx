@@ -49,9 +49,10 @@ import {
   logoutSyndicateSession
 } from "@/lib/syndicateAuth";
 import { applySyncedStateFromServer, collectSyncedState, onSyndicatePersist } from "@/lib/syndicateProgressSync";
+import { getSyndicateApiBase } from "@/lib/syndicateApiBase";
 import { syndicateUserStorageKey as ls } from "@/lib/syndicateStorageKeys";
 
-const API_BASE = (process.env.NEXT_PUBLIC_SYNDICATE_API_URL ?? "http://127.0.0.1:8000/api").replace(/\/$/, "");
+const API_BASE = getSyndicateApiBase();
 
 export type { ChallengeRow } from "@/app/challenges/services/challengesApi";
 
