@@ -213,6 +213,8 @@ USE_TZ = True
 
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
+# WhiteNoise warns if this path is missing; release may not have run collectstatic yet.
+STATIC_ROOT.mkdir(parents=True, exist_ok=True)
 STORAGES = {
     "default": {
         "BACKEND": "django.core.files.storage.FileSystemStorage",
@@ -221,7 +223,8 @@ STORAGES = {
         "BACKEND": (
             "django.contrib.staticfiles.storage.StaticFilesStorage"
             if DEBUG
-            else "whitenoise.storage.CompressedManifestStaticFilesStorage"
+            # Non-manifest storage avoids collectstatic manifest failures on some deploys; still compressed.
+            else "whitenoise.storage.CompressedStaticFilesStorage"
         ),
     },
 }

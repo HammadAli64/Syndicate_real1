@@ -7,4 +7,5 @@ builder = "NIXPACKS"
 [deploy]
 # Use python -m gunicorn so the app runs even when the gunicorn script dir is not on PATH (Railpack/slim images).
 startCommand = "python -m gunicorn syndicate_backend.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --threads 4 --timeout 120"
-releaseCommand = "python manage.py migrate --noinput && python manage.py collectstatic --noinput"
+# Ensure cwd is Backend (Railway Root Directory). mkdir avoids empty STATIC_ROOT edge cases before collectstatic.
+releaseCommand = "mkdir -p staticfiles && python manage.py migrate --noinput && python manage.py collectstatic --noinput"
