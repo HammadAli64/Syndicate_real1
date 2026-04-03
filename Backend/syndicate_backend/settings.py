@@ -20,10 +20,11 @@ from dotenv import load_dotenv
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Load .env from project root (handles UTF-8 BOM; also try cwd for alternate shells)
+# Load .env from project root (handles UTF-8 BOM; also try cwd for alternate shells).
+# override=False: real process env (e.g. Railway DATABASE_URL) must not be replaced by a stray .env.
 for _env_path in (BASE_DIR / ".env", Path.cwd() / ".env"):
     if _env_path.is_file():
-        load_dotenv(_env_path, override=True, encoding="utf-8-sig")
+        load_dotenv(_env_path, override=False, encoding="utf-8-sig")
         break
 else:
     load_dotenv(encoding="utf-8-sig")
