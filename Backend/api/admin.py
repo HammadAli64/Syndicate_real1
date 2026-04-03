@@ -4,13 +4,14 @@ from django import forms
 from django.contrib import admin, messages
 
 from .models import MindsetKnowledge, UploadedDocument
+from .services.ingest_async import schedule_ingest_after_commit
 from .services.upload_store import SUPPORTED_SUFFIXES, store_uploaded_file
 from .views import run_ingest
 
 
 class UploadedDocumentAddForm(forms.ModelForm):
     file = forms.FileField(
-        help_text="Use .docx (not .doc or .docs), or .pdf / .txt / .md. After save, OpenAI ingest runs (OPENAI_API_KEY on Railway).",
+        help_text="Use .docx (not .doc or .docs), or .pdf / .txt / .md. OpenAI ingest runs in the background after save (OPENAI_API_KEY on Railway).",
     )
 
     class Meta:
@@ -81,29 +82,14 @@ class UploadedDocumentAdmin(admin.ModelAdmin):
             raise
         if change:
             return
-        try:
-            ok, data, ingest_err = run_ingest(obj)
-        except Exception as exc:
-            self.message_user(
-                request,
-                f"Document was saved, but ingest crashed: {exc}. Check OPENAI_API_KEY and Railway logs.",
-                level=messages.ERROR,
-            )
-            return
-        if not ok:
-            self.message_user(
-                request,
-                f"Document was saved, but ingest failed: {ingest_err}",
-                level=messages.WARNING,
-            )
-        else:
-            preview = (data or {}).get("mindset_preview") or {}
-            n = preview.get("mindset_count", "?")
-            self.message_user(
-                request,
-                f"Mindsets ingested successfully ({n} mindsets extracted).",
-                level=messages.SUCCESS,
-            )
+        # OpenAI ingest can exceed HTTP/proxy timeouts; run after commit in a background thread.
+        schedule_ingest_after_commit(obj.pk)
+        self.message_user(
+            request,
+            "Document saved. Mindset extraction runs in the background; wait ~30–60s then refresh "
+            "Mindset knowledge or your app. Check deploy logs if it never appears (OPENAI_API_KEY / quota).",
+            level=messages.SUCCESS,
+        )
 
     @admin.action(description="Re-ingest mindsets with OpenAI (selected documents)")
     def ingest_mindsets_action(self, request, queryset):
