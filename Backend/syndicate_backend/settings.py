@@ -66,6 +66,11 @@ USE_CLOUDINARY = bool(
 SYNDICATE_DATA_DIR = BASE_DIR / "data"
 SYNDICATE_MAX_DOC_CHARS = 120_000
 
+# Admin/API multipart uploads (Django default ~2.5MB can reject larger PDFs before the view runs).
+_DATA_UPLOAD_MAX_MB = int((os.environ.get("DATA_UPLOAD_MAX_MB") or "32").strip() or "32")
+DATA_UPLOAD_MAX_MEMORY_SIZE = max(2_621_440, _DATA_UPLOAD_MAX_MB * 1024 * 1024)
+FILE_UPLOAD_MAX_MEMORY_SIZE = DATA_UPLOAD_MAX_MEMORY_SIZE
+
 
 # Application definition
 

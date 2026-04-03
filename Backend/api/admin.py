@@ -10,13 +10,21 @@ from .views import run_ingest
 
 
 class UploadedDocumentAddForm(forms.ModelForm):
+    """Must not use Meta.fields = [] — Django drops non-model fields, so <input type=file> never binds."""
+
     file = forms.FileField(
         help_text="Use .docx (not .doc or .docs), or .pdf / .txt / .md. OpenAI ingest runs in the background after save (OPENAI_API_KEY on Railway).",
     )
 
     class Meta:
         model = UploadedDocument
-        fields: list[str] = []
+        fields = "__all__"
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for name in list(self.fields.keys()):
+            if name != "file":
+                del self.fields[name]
 
     def clean_file(self):
         f = self.cleaned_data["file"]
