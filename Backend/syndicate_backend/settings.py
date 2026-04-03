@@ -96,8 +96,9 @@ INSTALLED_APPS.extend(
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    'corsheaders.middleware.CorsMiddleware',
+    # WhiteNoise before CORS so GET /static/... is served without extra CORS work (fixes missing admin CSS on some hosts).
     'whitenoise.middleware.WhiteNoiseMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -272,9 +273,22 @@ else:
 _rail_csrf = (os.environ.get("RAILWAY_PUBLIC_DOMAIN") or "").strip()
 if _rail_csrf:
     _rail_origin = _rail_csrf if _rail_csrf.startswith("http") else f"https://{_rail_csrf}"
-    _norm = [x.rstrip("/") for x in CSRF_TRUSTED_ORIGINS]
-    if _rail_origin.rstrip("/") not in _norm:
+    _csrf_seen = {x.rstrip("/") for x in CSRF_TRUSTED_ORIGINS}
+    if _rail_origin.rstrip("/") not in _csrf_seen:
         CSRF_TRUSTED_ORIGINS = [*CSRF_TRUSTED_ORIGINS, _rail_origin]
+        _csrf_seen.add(_rail_origin.rstrip("/"))
+
+# Trust the same hostnames you accept in ALLOWED_HOSTS (https), so /admin/ works even if
+# RAILWAY_PUBLIC_DOMAIN is unset or you use a custom domain only listed in ALLOWED_HOSTS.
+_csrf_seen = {x.rstrip("/") for x in CSRF_TRUSTED_ORIGINS}
+for _host in ALLOWED_HOSTS:
+    if _host in ("localhost", "127.0.0.1", "*", ""):
+        continue
+    _origin = _host if "://" in _host else f"https://{_host}"
+    _key = _origin.rstrip("/")
+    if _key not in _csrf_seen:
+        CSRF_TRUSTED_ORIGINS = [*CSRF_TRUSTED_ORIGINS, _origin]
+        _csrf_seen.add(_key)
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
