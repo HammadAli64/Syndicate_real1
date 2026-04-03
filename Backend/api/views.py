@@ -1,7 +1,6 @@
 """REST API for document upload, mindset ingest, and syndicate bootstrap."""
 from __future__ import annotations
 
-import hashlib
 from pathlib import Path
 
 from django.conf import settings
@@ -16,8 +15,7 @@ from apps.challenges.services import ensure_daily_challenges_for_device
 from .models import MindsetKnowledge, UploadedDocument
 from .services.document_extract import extract_text, file_sha256, truncate
 from .services.openai_client import extract_mindsets_from_document
-
-SUPPORTED_SUFFIXES = frozenset({".pdf", ".txt", ".md", ".markdown", ".docx"})
+from .services.upload_store import SUPPORTED_SUFFIXES, store_uploaded_file
 
 
 def _data_path(rel: str) -> Path:
@@ -116,43 +114,16 @@ def upload_document(request):
     if not f:
         return Response({"detail": "Missing file field."}, status=status.HTTP_400_BAD_REQUEST)
 
-    name = getattr(f, "name", "upload") or "upload"
-    suffix = Path(name).suffix.lower()
-    if suffix not in SUPPORTED_SUFFIXES:
-        return Response(
-            {"detail": f"Unsupported type. Use one of: {', '.join(sorted(SUPPORTED_SUFFIXES))}"},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
-
-    _uploads_dir().mkdir(parents=True, exist_ok=True)
-    digest = hashlib.sha256()
-    chunks: list[bytes] = []
-    for chunk in f.chunks():
-        digest.update(chunk)
-        chunks.append(chunk)
-    content_hash = digest.hexdigest()
-
-    rel = f"uploads/{content_hash}{suffix}"
-    path = Path(settings.SYNDICATE_DATA_DIR) / rel
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("wb") as out:
-        for c in chunks:
-            out.write(c)
-
-    text = extract_text(path)
-    doc = UploadedDocument.objects.create(
-        original_name=name,
-        stored_path=str(path.relative_to(settings.SYNDICATE_DATA_DIR)).replace("\\", "/"),
-        content_hash=content_hash,
-        text_extracted=text,
-    )
+    doc, err = store_uploaded_file(f)
+    if err:
+        return Response({"detail": err}, status=status.HTTP_400_BAD_REQUEST)
 
     return Response(
         {
             "id": doc.id,
             "original_name": doc.original_name,
             "content_hash": doc.content_hash,
-            "char_count": len(text),
+            "char_count": len(doc.text_extracted or ""),
             "created_at": doc.created_at.isoformat(),
         },
         status=status.HTTP_201_CREATED,
