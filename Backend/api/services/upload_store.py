@@ -19,23 +19,15 @@ logger = logging.getLogger(__name__)
 SUPPORTED_SUFFIXES = frozenset({".pdf", ".txt", ".md", ".markdown", ".docx"})
 
 
-def store_uploaded_file(f: UploadedFile) -> tuple[UploadedDocument | None, str | None]:
-    """
-    Read upload in memory, extract text, save UploadedDocument.
-    Does not write under data/uploads/ (avoids read-only / ephemeral disk issues on Railway).
-    """
-    name = getattr(f, "name", "upload") or "upload"
+def store_upload_bytes(data: bytes, original_name: str) -> tuple[UploadedDocument | None, str | None]:
+    """Persist raw bytes + extracted text (admin uses this from form.clean() so errors show on the form)."""
+    name = (original_name or "upload").strip() or "upload"
     suffix = Path(name).suffix.lower()
     if suffix not in SUPPORTED_SUFFIXES:
         return None, f"Unsupported type. Use one of: {', '.join(sorted(SUPPORTED_SUFFIXES))}"
-
-    digest = hashlib.sha256()
-    chunks: list[bytes] = []
-    for chunk in f.chunks():
-        digest.update(chunk)
-        chunks.append(chunk)
-    data = b"".join(chunks)
-    content_hash = digest.hexdigest()
+    if not data:
+        return None, "Empty file."
+    content_hash = hashlib.sha256(data).hexdigest()
 
     try:
         text = extract_text_from_bytes(data, suffix)
@@ -45,7 +37,6 @@ def store_uploaded_file(f: UploadedFile) -> tuple[UploadedDocument | None, str |
         return None, f"Could not read this document (corrupt or unsupported content): {e}"
 
     if getattr(settings, "USE_S3_OBJECT_STORAGE", False):
-        # Unique key per row avoids S3 backends that mishandle overwrite of the same name.
         key = f"uploads/{content_hash}-{uuid.uuid4().hex[:12]}{suffix}"
         try:
             stored_path = default_storage.save(key, ContentFile(data))
@@ -64,3 +55,13 @@ def store_uploaded_file(f: UploadedFile) -> tuple[UploadedDocument | None, str |
     except Exception as e:
         return None, f"Could not save document record: {e}"
     return doc, None
+
+
+def store_uploaded_file(f: UploadedFile) -> tuple[UploadedDocument | None, str | None]:
+    """
+    Read upload in memory, extract text, save UploadedDocument.
+    Does not write under data/uploads/ (avoids read-only / ephemeral disk issues on Railway).
+    """
+    name = getattr(f, "name", "upload") or "upload"
+    data = b"".join(f.chunks())
+    return store_upload_bytes(data, name)

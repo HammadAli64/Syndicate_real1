@@ -5,7 +5,7 @@ from django.contrib import admin, messages
 
 from .models import MindsetKnowledge, UploadedDocument
 from .services.ingest_async import schedule_ingest_after_commit
-from .services.upload_store import SUPPORTED_SUFFIXES, store_uploaded_file
+from .services.upload_store import SUPPORTED_SUFFIXES, store_upload_bytes
 from .views import run_ingest
 
 
@@ -42,16 +42,34 @@ class UploadedDocumentAddForm(forms.ModelForm):
             raise forms.ValidationError(
                 f"Unsupported type {suffix!r}. Use one of: {', '.join(sorted(SUPPORTED_SUFFIXES))}"
             )
+        # Read once here; do not re-read in save() (some upload handlers only allow one read).
+        data = b"".join(f.chunks())
+        if not data:
+            raise forms.ValidationError("Empty file.")
+        self._upload_bytes = data
+        self._upload_original_name = name
         return f
 
-    def save(self, commit=True):
-        f = self.cleaned_data["file"]
-        doc, err = store_uploaded_file(f)
+    def clean(self):
+        super().clean()
+        # Persist during validation so S3/DB/extract errors attach to the form instead of 500 after is_valid().
+        if getattr(self, "_admin_upload_doc", None) is not None:
+            return self.cleaned_data
+        data = getattr(self, "_upload_bytes", None)
+        name = getattr(self, "_upload_original_name", None)
+        if data is None or name is None:
+            return self.cleaned_data
+        doc, err = store_upload_bytes(data, name)
         if err:
             raise forms.ValidationError(err)
+        self._admin_upload_doc = doc
+        return self.cleaned_data
+
+    def save(self, commit=True):
+        doc = getattr(self, "_admin_upload_doc", None)
+        if doc is None:
+            raise forms.ValidationError("Upload did not complete. Choose a file and try again.")
         self.instance = doc
-        # ModelAdmin.save_related() always calls form.save_m2m(). BaseModelForm only
-        # attaches save_m2m when super().save(commit=False) runs; we bypass that.
         self.save_m2m = lambda: None
         return doc
 
