@@ -6,6 +6,9 @@ import { AnimatePresence, motion } from "framer-motion";
 import ChromaGrid, { type ChromaItem } from "../components/ChromaGrid";
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import DashboardControlCenter from "../components/dashboard/DashboardControlCenter";
+import { ProgramPromoEmbed } from "../components/ProgramPromoEmbed";
+import { useGoalsPanel } from "@/contexts/GoalsPanelContext";
+import { GoalsPanel } from "@/components/ui/GoalsPanel";
 import { SyndicateAiChallengePanel } from "../components/SyndicateAiChallengePanel";
 
 type NavItem = { label: string; key: string; active?: boolean };
@@ -960,11 +963,23 @@ function UserDashboardPanel({
                     Resume & Continue
                   </button>
                 </div>
+                <ProgramPromoEmbed
+                  title="Continue your program — video briefing"
+                  className="mt-4"
+                  maxWidthClass="max-w-full"
+                />
               </>
             ) : (
-              <div className="mt-3 text-[12px] leading-relaxed text-white/65">
-                You haven’t started a program yet. Hit resume when you pick one from the Courses section.
-              </div>
+              <>
+                <div className="mt-3 text-[12px] leading-relaxed text-white/65">
+                  You haven’t started a program yet. Hit resume when you pick one from the Courses section.
+                </div>
+                <ProgramPromoEmbed
+                  title="Programs introduction — pick a track to begin"
+                  className="mt-4"
+                  maxWidthClass="max-w-full"
+                />
+              </>
             )}
           </div>
 
@@ -1278,18 +1293,7 @@ function InstructorSlideshow() {
       <div className="hero-gold-overlay absolute inset-0 opacity-70" />
       <div className="relative grid grid-cols-1 gap-6 lg:grid-cols-2 lg:gap-8 lg:items-center">
         <div className="flex min-w-0 flex-col gap-5">
-          <div>
-            <div className="text-[13px] font-extrabold uppercase tracking-[0.22em] text-white/60">Instructors</div>
-            <div className="mt-2 text-[16px] font-black uppercase tracking-[0.14em] text-[color:var(--gold)]/90 sm:text-[17px]">
-              Rotating Intel Feed
-            </div>
-          </div>
-
-          <div
-            className="space-y-4 border-t border-[rgba(197,179,88,0.18)] pt-5"
-            aria-live="polite"
-            aria-atomic="true"
-          >
+          <div className="space-y-4" aria-live="polite" aria-atomic="true">
             <div>
               <div className="text-[10px] font-black uppercase tracking-[0.2em] text-white/45">Program</div>
               <div className="mt-1.5 text-[18px] font-black uppercase leading-snug tracking-[0.08em] text-[color:var(--gold)]/95 sm:text-[20px]">
@@ -1359,6 +1363,8 @@ function InstructorSlideshow() {
 }
 
 export default function Page() {
+  const { setShellSectionKey, setPanelThemeMode, closeGoalsPanel, isGoalsPanelOpen } = useGoalsPanel();
+
   const rootRef = useRef<HTMLDivElement | null>(null);
   const ringOuterRef = useRef<HTMLDivElement | null>(null);
   const ringInnerRef = useRef<HTMLDivElement | null>(null);
@@ -1440,6 +1446,19 @@ export default function Page() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [featuresMenuOpen, setFeaturesMenuOpen] = useState(false);
   const [featureSearchQuery, setFeatureSearchQuery] = useState("");
+
+  useEffect(() => {
+    setShellSectionKey(selectedNavKey);
+  }, [selectedNavKey, setShellSectionKey]);
+
+  /** Goals panel is per-section: close when navigating so it must be reopened from the FAB. */
+  useEffect(() => {
+    closeGoalsPanel();
+  }, [selectedNavKey, closeGoalsPanel]);
+
+  useEffect(() => {
+    setPanelThemeMode(themeMode);
+  }, [themeMode, setPanelThemeMode]);
 
   const featureMenuGrouped = useMemo(() => {
     const q = featureSearchQuery.trim().toLowerCase();
@@ -1635,6 +1654,11 @@ export default function Page() {
         borderColor: "rgba(255,215,0,0.55)",
         gradient: "linear-gradient(165deg, rgba(255,215,0,0.16), rgba(255,195,0,0.08), rgba(0,0,0,0.93))"
       })),
+    [courses]
+  );
+
+  const dashboardCoursesForSnapshots = useMemo(
+    () => courses.map((c) => ({ id: c.id, title: c.title, meta: c.meta, statusText: c.statusText, imageSrc: c.imageSrc })),
     [courses]
   );
 
@@ -2299,13 +2323,19 @@ export default function Page() {
           <section
             data-anim="in"
             className={cn(
-              "cut-frame cyber-frame gold-stroke relative col-span-12 min-h-0 w-full max-w-none overflow-hidden border border-[rgba(197,179,88,0.22)] bg-[#060606]/70 p-4 sm:p-5 md:p-6 lg:p-7",
+              "cut-frame cyber-frame gold-stroke relative col-span-12 flex min-h-0 w-full max-w-none flex-col overflow-hidden border border-[rgba(197,179,88,0.22)] bg-[#060606]/70 p-4 sm:p-5 md:p-6 lg:p-7",
               sidebarOpen ? "md:col-span-10 lg:col-span-10" : "md:col-span-12 lg:col-span-12",
-              "flex flex-col"
+              "lg:h-full lg:min-h-0"
             )}
           >
             <div className="absolute inset-0 opacity-70 [background:radial-gradient(820px_520px_at_40%_0%,rgba(197,179,88,0.10),rgba(0,0,0,0)_64%)]" />
-            <div className={cn("relative flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden pr-1 no-scrollbar", !sidebarOpen && "md:pl-14")}>
+            <div
+              data-main-shell-scroll
+              className={cn(
+                "relative flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden pr-1 no-scrollbar",
+                !sidebarOpen && "md:pl-14"
+              )}
+            >
               {selectedNavKey === "monk" ? (
                 <SyndicateModeSection />
               ) : selectedNavKey === "affiliate" ? (
@@ -2341,6 +2371,7 @@ export default function Page() {
                         damping={0.45}
                         fadeOut={0.6}
                         ease="power3.out"
+                        interactionDisabled={isGoalsPanelOpen}
                         className={cn(sidebarOpen ? "py-2" : "py-4")}
                       />
                     </div>
@@ -2361,16 +2392,31 @@ export default function Page() {
                       </div>
                     ) : null}
                   </div>
+
+                  <div className="mt-8 border-t border-[rgba(197,179,88,0.15)] pt-6 pr-1">
+                    <div className="mb-3 text-[12px] font-extrabold uppercase tracking-[0.22em] text-white/55">Program briefing</div>
+                    <ProgramPromoEmbed
+                      title="Programs — course track overview video"
+                      className="w-full"
+                      maxWidthClass="max-w-4xl"
+                    />
+                  </div>
                 </>
               ) : selectedNavKey === "dashboard" ? (
                 <>
+                  <section
+                    aria-label="Instructor intel feed"
+                    className="mb-5 w-full shrink-0 scroll-mt-2"
+                  >
+                    <InstructorSlideshow />
+                  </section>
                   <div className="min-h-0 min-w-0 w-full max-w-none flex-1 py-1 md:py-2">
                     <DashboardControlCenter
                       themeMode={themeMode}
                       userName={profileName}
                       userRole="Operator"
                       profileAvatar={profileAvatar}
-                      courses={courses.map((c) => ({ id: c.id, title: c.title, meta: c.meta, statusText: c.statusText, imageSrc: c.imageSrc }))}
+                      courses={dashboardCoursesForSnapshots}
                       onNavigate={(nav) => {
                         if (nav === "programs") setSelectedNavKey("programs");
                         else if (nav === "monk") setSelectedNavKey("monk");
@@ -2387,6 +2433,7 @@ export default function Page() {
                 <div className="rounded-md border border-white/15 bg-black/35 p-4 text-[12px] text-white/72">Section available soon.</div>
               )}
             </div>
+            <GoalsPanel />
           </section>
 
           {/* Details now live inside the courses panel (scrollable). */}

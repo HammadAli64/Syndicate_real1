@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import type { DashboardNavKey, DashboardSnapshots, NotificationItem } from "./types";
 import { useDashboardSnapshots, type DashboardCourseLike } from "./useDashboardSnapshots";
@@ -8,6 +8,7 @@ import { accentByKey, Card, cn, ProgressBar, themeAccent, type ThemeMode } from 
 import { PortalSessionControls } from "../auth/PortalSessionControls";
 import { DataFlowRecommendations } from "./DataFlowRecommendations";
 import { MissionCommandDeckCard } from "./MissionCommandDeckCard";
+import { ProgramPromoEmbed } from "../ProgramPromoEmbed";
 
 export type { ThemeMode };
 
@@ -307,6 +308,12 @@ function HeroStatusPanel({
           </motion.button>
         </div>
       </div>
+
+      <ProgramPromoEmbed
+        title="Continue program — dashboard briefing"
+        className="relative mx-auto mt-5 w-full"
+        maxWidthClass="max-w-4xl"
+      />
     </div>
   );
 }
@@ -506,58 +513,6 @@ function ActivityTimelineCard({
   );
 }
 
-function GlobalQuickActions({
-  ghostProtocol,
-  onToggleGhostProtocol
-}: {
-  ghostProtocol: boolean;
-  onToggleGhostProtocol: () => void;
-}) {
-  const a = accentByKey("energy");
-  return (
-    <div className="fixed bottom-3 left-3 right-3 z-[9999] mt-4">
-      <div
-        className="cut-frame-sm relative overflow-hidden border bg-[#050505]/88 p-3 backdrop-blur-md"
-        style={{ borderColor: a.border, boxShadow: `0 0 0 1px ${a.glow}, 0 0 42px ${a.glow}` }}
-      >
-        <div className="pointer-events-none absolute inset-0 opacity-75 [background:radial-gradient(820px_220px_at_20%_0%,rgba(255,215,0,0.22),rgba(0,0,0,0)_64%)]" />
-        <div className="pointer-events-none absolute inset-0 opacity-30 [background:repeating-linear-gradient(90deg,rgba(255,215,0,0.06)_0px,rgba(255,215,0,0.06)_1px,transparent_14px,transparent_24px)]" />
-        {/* Animated scan line */}
-        <motion.div
-          className="pointer-events-none absolute left-0 top-0 h-[2px] w-[180px] opacity-70"
-          style={{ background: "linear-gradient(90deg, rgba(255,215,0,0), rgba(255,215,0,0.65), rgba(0,255,255,0.25), rgba(0,0,0,0))" }}
-          animate={{ x: ["-20%", "120%"] }}
-          transition={{ duration: 3.8, repeat: Infinity, ease: "linear" }}
-        />
-
-        <div className="flex flex-wrap items-center justify-end gap-2">
-          <motion.button
-            type="button"
-            onClick={onToggleGhostProtocol}
-            whileHover={{ scale: 1.04, y: -1 }}
-            whileTap={{ scale: 0.98 }}
-            className={cn(
-              "relative inline-flex items-center gap-2 rounded-md border px-3 py-2 font-mono text-[10px] font-black uppercase tracking-[0.18em] transition",
-              ghostProtocol
-                ? "border-[rgba(0,255,255,0.55)] bg-[rgba(0,255,255,0.12)] text-[#bfefff] shadow-[0_0_22px_rgba(0,255,255,0.25)]"
-                : "border-white/20 bg-black/40 text-white/70 hover:border-white/35 hover:text-white/90"
-            )}
-            title="Ghost Protocol: collapse dashboard to Primary CTA + task matrix"
-          >
-            <span
-              className={cn(
-                "inline-block h-2 w-2 rounded-full",
-                ghostProtocol ? "bg-cyan-300 shadow-[0_0_12px_rgba(0,255,255,0.8)]" : "bg-white/40"
-              )}
-            />
-            Ghost protocol
-          </motion.button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 export default function DashboardControlCenter({
   themeMode,
   userName,
@@ -573,39 +528,17 @@ export default function DashboardControlCenter({
   courses: DashboardCourseLike[];
   onNavigate: (nav: DashboardNavKey) => void;
 }) {
-  const { snapshots, hydrated: dashboardHydrated } = useDashboardSnapshots({ userName, courses });
-  const [ghostProtocol, setGhostProtocol] = useState(false);
-  const [ghostGlitching, setGhostGlitching] = useState(false);
-  const glitchTimerRef = useRef<number | null>(null);
+  const { snapshots } = useDashboardSnapshots({ userName, courses });
   const integrityHigh = snapshots.coreIntegrity.integrityPct > 90;
-
-  const toggleGhostProtocol = useCallback(() => {
-    setGhostGlitching(true);
-    if (glitchTimerRef.current != null) window.clearTimeout(glitchTimerRef.current);
-    glitchTimerRef.current = window.setTimeout(() => {
-      setGhostProtocol((v) => !v);
-      setGhostGlitching(false);
-      glitchTimerRef.current = null;
-    }, 480);
-  }, []);
-
-  useEffect(
-    () => () => {
-      if (glitchTimerRef.current != null) window.clearTimeout(glitchTimerRef.current);
-    },
-    []
-  );
 
   return (
     <div
       className={cn(
         "relative w-full max-w-none space-y-5 rounded-lg transition-[box-shadow] duration-700 md:space-y-6 lg:space-y-7",
-        integrityHigh && !ghostProtocol && "dashboard-integrity-pulse",
-        ghostGlitching && "ghost-protocol-glitch",
-        ghostProtocol && "ghost-protocol-active"
+        integrityHigh && "dashboard-integrity-pulse"
       )}
     >
-      <div className={cn("ghost-muted w-full max-w-none space-y-5 md:space-y-6 lg:space-y-7", ghostProtocol && "ghost-muted")}>
+      <div className="ghost-muted w-full max-w-none space-y-5 md:space-y-6 lg:space-y-7">
         <HeroStatusPanel
           themeMode={themeMode}
           userName={userName}
@@ -615,11 +548,7 @@ export default function DashboardControlCenter({
           onNavigate={onNavigate}
         />
 
-        <MissionCommandDeckCard
-          themeMode={themeMode}
-          goals={snapshots.goals}
-          goalsHydrated={dashboardHydrated}
-        />
+        <MissionCommandDeckCard themeMode={themeMode} />
 
         <DataFlowRecommendations themeMode={themeMode} snapshots={snapshots} onNavigate={onNavigate} />
 
@@ -627,8 +556,6 @@ export default function DashboardControlCenter({
 
         <ActivityTimelineCard themeMode={themeMode} snapshots={snapshots} />
       </div>
-
-      <GlobalQuickActions ghostProtocol={ghostProtocol} onToggleGhostProtocol={toggleGhostProtocol} />
     </div>
   );
 }

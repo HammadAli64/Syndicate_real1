@@ -1,9 +1,8 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import type { SocialLinkAccent, SocialLinkItem } from "@/data/socialLinks";
-import { DEFAULT_SOCIAL_LINKS } from "@/data/socialLinks";
 import { useAuth } from "@/contexts/AuthContext";
 import { portalFetch } from "@/lib/portal-api";
 import {
@@ -16,9 +15,25 @@ import {
   PriorityPoints,
   ReminderStatusBadge
 } from "./DeckListPrimitives";
-import { Card, cn, ProgressBar, type ThemeMode } from "./dashboardPrimitives";
-import type { GoalsSnapshot } from "./types";
-import { faviconUrlFromHref } from "@/lib/socialBranding";
+import { Card, cn, type ThemeMode } from "./dashboardPrimitives";
+
+function QuickAccessGridFallback() {
+  return (
+    <div
+      className="flex min-h-[min(48vh,560px)] w-full flex-col justify-center gap-4 rounded-xl border border-white/10 bg-black/25 px-4 py-8"
+      aria-hidden
+    >
+      <div className="mx-auto h-1.5 w-48 max-w-[80%] animate-pulse rounded-full bg-[rgba(197,179,88,0.2)]" />
+      <div className="mx-auto h-1.5 w-32 max-w-[60%] animate-pulse rounded-full bg-white/10" />
+    </div>
+  );
+}
+
+const QuickAccessGrid = dynamic(
+  () =>
+    import("@/features/productivity/control-center/QuickAccessGrid").then((mod) => mod.QuickAccessGrid),
+  { ssr: false, loading: () => <QuickAccessGridFallback /> }
+);
 
 const LS_MISSIONS = "dashboarded:deck-missions";
 const LS_REMINDERS = "dashboarded:deck-reminders";
@@ -50,22 +65,6 @@ type NoteRow = {
 type ApiMission = { id: number; title: string; target_at: string; points: number; status: string };
 type ApiReminder = { id: number; title: string; date: string; time: string; points: number; status: string };
 type ApiNote = { id: number; title: string; body: string; created_at: string };
-type ApiSocial = { id: number; platform: string; url: string; label: string; is_active: boolean };
-
-const SOCIAL_PLATFORM_OPTIONS: { value: string; label: string }[] = [
-  { value: "facebook", label: "Facebook" },
-  { value: "instagram", label: "Instagram" },
-  { value: "x", label: "X (Twitter)" },
-  { value: "linkedin", label: "LinkedIn" },
-  { value: "youtube", label: "YouTube" },
-  { value: "tiktok", label: "TikTok" },
-  { value: "discord", label: "Discord" },
-  { value: "website", label: "Website" },
-  { value: "calendar", label: "Calendar" },
-  { value: "email", label: "Email" },
-  { value: "other", label: "Other" }
-];
-
 function safeParse<T>(raw: string | null, fallback: T): T {
   if (!raw) return fallback;
   try {
@@ -77,46 +76,6 @@ function safeParse<T>(raw: string | null, fallback: T): T {
 
 function uid() {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}`;
-}
-
-function socialAccentStyle(accent: SocialLinkItem["accent"]) {
-  switch (accent) {
-    case "ice":
-      return { border: "rgba(0,255,255,0.45)", glow: "rgba(0,255,255,0.2)", text: "#d7ffff" };
-    case "green":
-      return { border: "rgba(0,255,122,0.45)", glow: "rgba(0,255,122,0.2)", text: "#b4ffd8" };
-    case "violet":
-      return { border: "rgba(196,126,255,0.5)", glow: "rgba(196,126,255,0.22)", text: "#ead6ff" };
-    default:
-      return { border: "rgba(255,215,0,0.5)", glow: "rgba(255,215,0,0.22)", text: "#ffe7a1" };
-  }
-}
-
-function platformToAccent(platform: string): SocialLinkAccent {
-  switch (platform) {
-    case "facebook":
-    case "linkedin":
-    case "discord":
-      return "ice";
-    case "instagram":
-    case "tiktok":
-      return "violet";
-    case "youtube":
-      return "green";
-    case "x":
-      return "gold";
-    default:
-      return "gold";
-  }
-}
-
-function apiSocialToItem(s: ApiSocial): SocialLinkItem {
-  return {
-    id: String(s.id),
-    label: (s.label || s.platform).trim() || s.platform,
-    href: s.url,
-    accent: platformToAccent(s.platform)
-  };
 }
 
 function mapMission(m: ApiMission): MissionRow {
@@ -154,9 +113,45 @@ function timeForApi(t: string) {
   return t;
 }
 
-/** Inner panels: same gold / #060606 language as sidebar & top bar */
-const DECK_QUARTER =
+/** Quick Access–aligned deck shells: colored border, gradient fill, outer glow */
+const DECK_MISSIONS =
+  "relative w-full min-w-0 shrink-0 overflow-hidden rounded-xl border border-cyan-400/42 bg-gradient-to-b from-cyan-950/42 via-[#060606]/96 to-[#050505] p-5 shadow-[0_0_0_1px_rgba(34,211,238,0.14),0_0_32px_rgba(34,211,238,0.14),0_0_64px_rgba(34,211,238,0.06),inset_0_1px_0_rgba(255,255,255,0.05)] md:p-6 lg:p-8 xl:p-9";
+
+const DECK_REMINDERS =
+  "relative w-full min-w-0 shrink-0 overflow-hidden rounded-xl border border-fuchsia-500/40 bg-gradient-to-b from-purple-950/45 via-[#07060c]/96 to-[#050505] p-5 shadow-[0_0_0_1px_rgba(192,132,252,0.16),0_0_32px_rgba(168,85,247,0.14),0_0_64px_rgba(147,51,234,0.07),inset_0_1px_0_rgba(255,255,255,0.05)] md:p-6 lg:p-8 xl:p-9";
+
+const DECK_NOTES =
+  "relative w-full min-w-0 shrink-0 overflow-hidden rounded-xl border-[rgba(255,215,0,0.44)] bg-gradient-to-b from-[rgba(255,215,0,0.09)] via-[#060606]/96 to-[#050505] p-5 shadow-[0_0_0_1px_rgba(255,215,0,0.14),0_0_36px_rgba(255,215,0,0.1),0_0_72px_rgba(255,200,0,0.05),inset_0_1px_0_rgba(255,255,255,0.05)] md:p-6 lg:p-8 xl:p-9";
+
+const DECK_QUICK_WRAP =
   "relative overflow-hidden rounded-xl border border-[rgba(197,179,88,0.26)] bg-[#060606]/78 p-5 shadow-[0_0_0_1px_rgba(197,179,88,0.08),0_0_52px_rgba(197,179,88,0.08),inset_0_1px_0_rgba(197,179,88,0.08)] md:p-6 lg:p-8 xl:p-9";
+
+function DeckGlowMissions() {
+  return (
+    <div
+      className="pointer-events-none absolute inset-0 opacity-[0.92] [background:radial-gradient(780px_300px_at_22%_0%,rgba(34,211,238,0.28),rgba(0,0,0,0)_58%)]"
+      aria-hidden
+    />
+  );
+}
+
+function DeckGlowReminders() {
+  return (
+    <div
+      className="pointer-events-none absolute inset-0 opacity-[0.9] [background:radial-gradient(780px_300px_at_22%_0%,rgba(192,132,252,0.3),rgba(0,0,0,0)_58%)]"
+      aria-hidden
+    />
+  );
+}
+
+function DeckGlowNotes() {
+  return (
+    <div
+      className="pointer-events-none absolute inset-0 opacity-[0.88] [background:radial-gradient(780px_300px_at_20%_0%,rgba(255,215,0,0.18),rgba(0,0,0,0)_58%)]"
+      aria-hidden
+    />
+  );
+}
 
 function DeckQuarterGlow() {
   return (
@@ -167,163 +162,28 @@ function DeckQuarterGlow() {
   );
 }
 
-const DECK_LIST_SCROLL =
-  "mt-3 min-h-[min(36vh,320px)] max-h-[min(72vh,820px)] space-y-2.5 overflow-y-auto overflow-x-hidden py-1 pr-1.5 [scrollbar-color:rgba(197,179,88,0.5)_rgba(0,0,0,0.35)]";
+const SCROLL_CYAN =
+  "[scrollbar-color:rgba(34,211,238,0.55)_rgba(0,0,0,0.35)]";
+const SCROLL_FUCHSIA =
+  "[scrollbar-color:rgba(192,132,252,0.55)_rgba(0,0,0,0.35)]";
+const SCROLL_GOLD =
+  "[scrollbar-color:rgba(255,215,0,0.5)_rgba(0,0,0,0.35)]";
+const SCROLL_EMERALD =
+  "[scrollbar-color:rgba(52,211,153,0.55)_rgba(0,0,0,0.35)]";
+const SCROLL_ROSE = "[scrollbar-color:rgba(251,113,133,0.55)_rgba(0,0,0,0.35)]";
 
 /** Sub-panels inside missions/reminders (active/missed lists) */
-const DECK_LIST_INNER =
-  "mt-2 min-h-[min(34vh,280px)] max-h-[min(68vh,720px)] space-y-2.5 overflow-y-auto overflow-x-hidden py-1 pr-1.5 [scrollbar-color:rgba(197,179,88,0.5)_rgba(0,0,0,0.35)]";
+const DECK_LIST_INNER_BASE =
+  "mt-2 min-h-[min(34vh,280px)] max-h-[min(68vh,720px)] space-y-2.5 overflow-y-auto overflow-x-hidden py-1 pr-1.5";
 
-const DECK_FORM_SHELL =
-  "mt-4 space-y-3 rounded-xl border border-[rgba(197,179,88,0.22)] bg-black/38 p-3.5 shadow-[inset_0_1px_0_rgba(197,179,88,0.06)] md:mt-5 md:p-4 lg:p-5";
+const FORM_MISSIONS =
+  "mt-4 space-y-3 rounded-xl border border-cyan-400/32 bg-black/45 p-3.5 shadow-[0_0_0_1px_rgba(34,211,238,0.12),inset_0_1px_0_rgba(34,211,238,0.1)] md:mt-5 md:p-4 lg:p-5";
 
-function GoalsMilestonesRail({ goals, hydrated }: { goals: GoalsSnapshot; hydrated: boolean }) {
-  if (!hydrated) {
-    return (
-      <div
-        className="mb-6 rounded-xl border border-[rgba(197,179,88,0.26)] bg-[#060606]/80 p-6 shadow-[0_0_0_1px_rgba(197,179,88,0.08),0_0_56px_rgba(197,179,88,0.08),inset_0_1px_0_rgba(197,179,88,0.08)] md:mb-7 md:p-7 lg:p-8"
-        aria-busy="true"
-        aria-label="Loading goals"
-      >
-        <div className="h-4 w-48 max-w-[60%] animate-pulse rounded-md bg-[rgba(197,179,88,0.14)]" />
-        <p className="mt-3 h-4 w-full max-w-md animate-pulse rounded bg-[rgba(197,179,88,0.08)]" />
-        <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="h-[5rem] animate-pulse rounded-lg bg-[rgba(197,179,88,0.07)]" />
-          ))}
-        </div>
-        <div className="mt-5 grid gap-3 sm:grid-cols-3">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="h-28 animate-pulse rounded-lg bg-[rgba(197,179,88,0.06)]" />
-          ))}
-        </div>
-      </div>
-    );
-  }
+const FORM_REMINDERS =
+  "mt-4 space-y-3 rounded-xl border border-fuchsia-400/34 bg-black/45 p-3.5 shadow-[0_0_0_1px_rgba(192,132,252,0.12),inset_0_1px_0_rgba(192,132,252,0.1)] md:mt-5 md:p-4 lg:p-5";
 
-  const metrics: { label: string; pct: number; tone: "neonGreen" | "ember" }[] = [
-    { label: `Rank · ${goals.rankGoalLabel}`, pct: goals.rankProgressPct, tone: "neonGreen" },
-    { label: "Program completion", pct: goals.completionGoalPct, tone: "ember" },
-    { label: "Earnings target", pct: goals.earningsGoalPct, tone: "ember" },
-    { label: "Integrity load", pct: goals.integrityGoalPct, tone: "ember" }
-  ];
-
-  return (
-    <div className="relative mb-6 overflow-hidden rounded-xl border border-[rgba(197,179,88,0.26)] bg-[#060606]/80 p-6 shadow-[0_0_0_1px_rgba(197,179,88,0.08),0_0_56px_rgba(197,179,88,0.08),inset_0_1px_0_rgba(197,179,88,0.08)] md:mb-7 md:p-7 lg:p-8">
-      <DeckQuarterGlow />
-      <div className="relative z-[1]">
-        <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <div className="text-[12px] font-black uppercase tracking-[0.22em] text-[color:var(--gold)] md:text-[13px]">Goals snapshot</div>
-          <p className="mt-2 max-w-3xl text-[13px] leading-relaxed text-white/65 md:text-[14px] md:leading-relaxed">
-            Rank and pipeline targets aligned with the command shell. Milestones show{" "}
-            <span className="font-semibold text-[#7dff5c]">neon green</span> when secured and{" "}
-            <span className="font-semibold text-[#ff7a7a]">neon red</span> while still open.
-          </p>
-        </div>
-        </div>
-
-        <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {metrics.map((m) => (
-          <div
-            key={m.label}
-            className="rounded-lg border border-[rgba(197,179,88,0.22)] bg-black/40 p-4 shadow-[inset_0_1px_0_rgba(197,179,88,0.05)] md:p-4"
-          >
-            <div className="text-[14px] font-semibold leading-snug text-white/90 md:text-[15px]">{m.label}</div>
-            <div className="mt-3">
-              <ProgressBar pct={m.pct} tone={m.tone} />
-            </div>
-            <div className="mt-2 font-mono text-[13px] font-bold tabular-nums text-white/55">{Math.round(m.pct)}%</div>
-          </div>
-        ))}
-        </div>
-
-        {goals.milestones.length > 0 ? (
-        <div className="mt-6 border-t border-[rgba(197,179,88,0.2)] pt-5">
-          <div className="text-[11px] font-black uppercase tracking-[0.2em] text-[color:var(--gold)] md:text-[12px]">Milestone ledger</div>
-          <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            {goals.milestones.map((ms) => (
-              <div
-                key={ms.label}
-                className={cn(
-                  "rounded-lg border px-4 py-4 transition-shadow md:px-5 md:py-4",
-                  ms.reached
-                    ? "border-[#39ff14]/45 bg-[#081208]/90 shadow-[0_0_22px_rgba(57,255,20,0.14)]"
-                    : "border-[#ff3838]/42 bg-[#160808]/90 shadow-[0_0_18px_rgba(255,56,56,0.12)]"
-                )}
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <span className="text-[15px] font-bold leading-snug text-white/92 md:text-[16px]">{ms.label}</span>
-                  <span
-                    className={cn(
-                      "shrink-0 rounded border px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.12em]",
-                      ms.reached
-                        ? "border-[#39ff14]/40 text-[#9dff7a]"
-                        : "border-[#ff4d4d]/40 text-[#ff9d9d]"
-                    )}
-                  >
-                    {ms.reached ? "Secured" : "Open"}
-                  </span>
-                </div>
-                <div className="mt-2.5">
-                  <ProgressBar pct={ms.reached ? 100 : ms.pct} tone={ms.reached ? "neonGreen" : "danger"} />
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-        ) : null}
-      </div>
-    </div>
-  );
-}
-
-function SocialQuickLinkTile({ link }: { link: SocialLinkItem }) {
-  const a = socialAccentStyle(link.accent);
-  const [iconOk, setIconOk] = useState(true);
-  const fav = faviconUrlFromHref(link.href);
-
-  return (
-    <motion.a
-      href={link.href}
-      whileHover={{ y: -2 }}
-      whileTap={{ scale: 0.98 }}
-      className="group flex min-h-[5.5rem] flex-col justify-between rounded-xl border bg-gradient-to-b from-[#101010]/95 to-[#060606]/98 px-3.5 py-3 text-left outline-none transition-[filter,box-shadow] hover:brightness-[1.05] focus-visible:ring-2 focus-visible:ring-[rgba(197,179,88,0.35)] md:min-h-[5.75rem]"
-      style={{
-        borderColor: a.border,
-        boxShadow: `0 0 0 1px ${a.glow}, 0 0 28px rgba(197,179,88,0.06), inset 0 1px 0 rgba(197,179,88,0.05)`
-      }}
-    >
-      <div className="flex items-start gap-2.5">
-        <div className="grid h-10 w-10 shrink-0 place-items-center rounded-lg border border-[rgba(197,179,88,0.2)] bg-black/50 md:h-11 md:w-11">
-          {fav && iconOk ? (
-            <img
-              src={fav}
-              alt=""
-              width={24}
-              height={24}
-              className="h-6 w-6 object-contain opacity-95 group-hover:opacity-100"
-              loading="lazy"
-              onError={() => setIconOk(false)}
-            />
-          ) : (
-            <span className="text-[15px] font-black text-[#8a7a6a]" aria-hidden>
-              {link.label.slice(0, 1).toUpperCase()}
-            </span>
-          )}
-        </div>
-        <div className="min-w-0 flex-1">
-          <span className="block text-[12px] font-black uppercase tracking-[0.1em] leading-tight" style={{ color: a.text }}>
-            {link.label}
-          </span>
-          <span className="mt-1 block truncate font-mono text-[10px] leading-tight text-[#9d8e7c]">
-            {link.href.replace(/^https?:\/\//, "")}
-          </span>
-        </div>
-      </div>
-    </motion.a>
-  );
-}
+const FORM_NOTES =
+  "mt-4 space-y-3 rounded-xl border-[rgba(255,215,0,0.36)] bg-black/45 p-3.5 shadow-[0_0_0_1px_rgba(255,215,0,0.1),inset_0_1px_0_rgba(255,215,0,0.08)] md:mt-5 md:p-4 lg:p-5";
 
 function bucketMissions(missions: MissionRow[]) {
   const now = Date.now();
@@ -344,31 +204,17 @@ function bucketMissions(missions: MissionRow[]) {
   return { active, missed };
 }
 
-export function MissionCommandDeckCard({
-  themeMode,
-  goals,
-  goalsHydrated
-}: {
-  themeMode: ThemeMode;
-  goals: GoalsSnapshot;
-  goalsHydrated: boolean;
-}) {
+export function MissionCommandDeckCard({ themeMode }: { themeMode: ThemeMode }) {
   const { user, loading: authLoading, can } = useAuth();
 
   const useApiDeck =
     !authLoading && !!user && (can("deck.view") || can("deck.manage") || can("*"));
   const canDeckWrite = can("deck.manage") || can("*");
-  const canSocialRead =
-    can("social.links.view") || can("social.links.manage") || can("social.links.manage_all") || can("*");
-  const canSocialWrite = can("social.links.manage") || can("social.links.manage_all") || can("*");
-
   const [missions, setMissions] = useState<MissionRow[]>([]);
   const [reminders, setReminders] = useState<ReminderRow[]>([]);
   const [notes, setNotes] = useState<NoteRow[]>([]);
   const [notesExpanded, setNotesExpanded] = useState(false);
   const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null);
-  const [socialLinks, setSocialLinks] = useState<SocialLinkItem[]>(DEFAULT_SOCIAL_LINKS);
-  const [rawSocial, setRawSocial] = useState<ApiSocial[]>([]);
   const [portalError, setPortalError] = useState<string | null>(null);
   const [portalBusy, setPortalBusy] = useState(false);
 
@@ -395,11 +241,6 @@ export function MissionCommandDeckCard({
 
   const [nTitle, setNTitle] = useState("");
   const [nBody, setNBody] = useState("");
-
-  const [sPlatform, setSPlatform] = useState("website");
-  const [sUrl, setSUrl] = useState("https://");
-  const [sLabel, setSLabel] = useState("");
-  const [sActive, setSActive] = useState(true);
 
   const refreshPortal = useCallback(async () => {
     if (!user || !useApiDeck) return;
@@ -438,26 +279,12 @@ export function MissionCommandDeckCard({
 
       const nList = (nRes.ok && Array.isArray(nRes.data) ? nRes.data : []) as ApiNote[];
       setNotes(nList.map(mapNote).sort((a, b) => b.createdAt - a.createdAt));
-
-      if (canSocialRead) {
-        const sRes = await portalFetch<unknown>(`/api/portal/social-links/`);
-        if (sRes.ok && Array.isArray(sRes.data)) {
-          const all = sRes.data as ApiSocial[];
-          setRawSocial(all);
-          setSocialLinks(
-            all.filter((s) => s.is_active).map(apiSocialToItem)
-          );
-        }
-      } else {
-        setRawSocial([]);
-        setSocialLinks(DEFAULT_SOCIAL_LINKS);
-      }
     } catch (e) {
       setPortalError(e instanceof Error ? e.message : "Portal sync failed");
     } finally {
       setPortalBusy(false);
     }
-  }, [user, useApiDeck, canDeckWrite, canSocialRead]);
+  }, [user, useApiDeck, canDeckWrite]);
 
   const hydrateLocal = useCallback(() => {
     let m = safeParse<MissionRow[]>(window.localStorage.getItem(LS_MISSIONS), []);
@@ -475,7 +302,6 @@ export function MissionCommandDeckCard({
     const n = safeParse<NoteRow[]>(window.localStorage.getItem(LS_NOTES), []);
     n.sort((a, b) => b.createdAt - a.createdAt);
     setNotes(n);
-    setSocialLinks(DEFAULT_SOCIAL_LINKS);
   }, []);
 
   useEffect(() => {
@@ -669,41 +495,20 @@ export function MissionCommandDeckCard({
     setNBody("");
   };
 
-  const addSocialLink = async () => {
-    if (!canSocialWrite || !useApiDeck) return;
-    const url = sUrl.trim();
-    if (!url.startsWith("http://") && !url.startsWith("https://")) {
-      setPortalError("Social URL must start with http:// or https://");
-      return;
-    }
-    const res = await portalFetch(`/api/portal/social-links/`, {
-      method: "POST",
-      body: JSON.stringify({
-        platform: sPlatform,
-        url,
-        label: sLabel.trim(),
-        is_active: sActive
-      })
-    });
-    if (!res.ok) setPortalError("Could not create social link");
-    setSUrl("https://");
-    setSLabel("");
-    setSPlatform("website");
-    setSActive(true);
-    await refreshPortal();
-  };
+  const missionsLabel =
+    "text-[11px] font-extrabold uppercase tracking-[0.16em] text-cyan-200/90 md:text-[12px]";
+  const missionsInput =
+    "mt-1.5 w-full rounded-lg border border-cyan-400/38 bg-black/45 px-3 py-2.5 text-[14px] text-cyan-50/95 outline-none placeholder:text-cyan-200/30 shadow-[inset_0_1px_0_rgba(34,211,238,0.07)] focus:border-cyan-300/80 focus:shadow-[0_0_0_1px_rgba(34,211,238,0.3),0_0_22px_rgba(34,211,238,0.22)] md:py-2.5 md:text-[15px]";
 
-  const deleteSocialLink = async (id: number) => {
-    if (!canSocialWrite) return;
-    const res = await portalFetch(`/api/portal/social-links/${id}/`, { method: "DELETE" });
-    if (!res.ok) setPortalError("Could not delete link");
-    await refreshPortal();
-  };
+  const remindersLabel =
+    "text-[11px] font-extrabold uppercase tracking-[0.16em] text-fuchsia-200/90 md:text-[12px]";
+  const remindersInput =
+    "mt-1.5 w-full rounded-lg border border-fuchsia-400/40 bg-black/45 px-3 py-2.5 text-[14px] text-fuchsia-50/95 outline-none placeholder:text-fuchsia-200/30 shadow-[inset_0_1px_0_rgba(192,132,252,0.08)] focus:border-fuchsia-300/78 focus:shadow-[0_0_0_1px_rgba(192,132,252,0.28),0_0_22px_rgba(168,85,247,0.22)] md:py-2.5 md:text-[15px]";
 
-  const labelCls =
-    "text-[11px] font-extrabold uppercase tracking-[0.16em] text-[color:var(--gold)]/75 md:text-[12px]";
-  const inputCls =
-    "mt-1.5 w-full rounded-lg border border-[rgba(197,179,88,0.22)] bg-black/45 px-3 py-2.5 text-[14px] text-white/88 outline-none placeholder:text-white/35 shadow-[inset_0_1px_0_rgba(197,179,88,0.04)] focus:border-[rgba(197,179,88,0.5)] focus:shadow-[0_0_0_1px_rgba(197,179,88,0.12)] md:py-2.5 md:text-[15px]";
+  const notesLabel =
+    "text-[11px] font-extrabold uppercase tracking-[0.16em] text-[color:var(--gold)]/88 md:text-[12px]";
+  const notesInput =
+    "mt-1.5 w-full rounded-lg border-[rgba(255,215,0,0.42)] bg-black/45 px-3 py-2.5 text-[14px] text-[rgba(255,248,220,0.92)] outline-none placeholder:text-[rgba(255,230,150,0.32)] shadow-[inset_0_1px_0_rgba(255,215,0,0.07)] focus:border-[rgba(255,230,120,0.78)] focus:shadow-[0_0_0_1px_rgba(255,215,0,0.25),0_0_24px_rgba(255,200,0,0.2)] md:py-2.5 md:text-[15px]";
 
   return (
     <Card
@@ -733,27 +538,29 @@ export function MissionCommandDeckCard({
         </div>
       ) : null}
 
-      <GoalsMilestonesRail goals={goals} hydrated={goalsHydrated} />
-
-      <div className="grid w-full max-w-none grid-cols-1 gap-6 min-[1400px]:grid-cols-2 min-[1400px]:gap-8 lg:gap-7 xl:gap-8">
-        {/* 1 — Missions */}
-        <div className={DECK_QUARTER}>
-          <DeckQuarterGlow />
+      <div className="flex w-full max-w-none min-w-0 flex-col gap-6 min-[1400px]:gap-8 lg:gap-7 xl:gap-8">
+        {/* 1 — Missions (full width, cyan strike deck) */}
+        <div className={DECK_MISSIONS}>
+          <DeckGlowMissions />
           <div className="relative z-[1]">
-          <div className="text-[12px] font-black uppercase tracking-[0.2em] text-[color:var(--gold)] md:text-[13px] lg:text-[14px]">Missions</div>
-          <p className="mt-2 text-[13px] leading-relaxed text-white/60 md:text-[14px] md:leading-relaxed">
+          <div className="text-[12px] font-black uppercase tracking-[0.2em] text-cyan-200 md:text-[13px] lg:text-[14px]">
+            Missions
+          </div>
+          <p className="mt-2 text-[13px] leading-relaxed text-cyan-100/55 md:text-[14px] md:leading-relaxed">
             Create a mission with a target time and point value. Track active and missed.
           </p>
 
           {useApiDeck && !canDeckWrite ? (
-            <p className="mt-2 text-[10px] text-amber-200/85">Read-only: your role can view missions but not edit.</p>
+            <p className="mt-2 text-[10px] text-amber-200/90 shadow-[0_0_12px_rgba(251,191,36,0.2)]">
+              Read-only: your role can view missions but not edit.
+            </p>
           ) : null}
 
-          <div className={DECK_FORM_SHELL}>
+          <div className={FORM_MISSIONS}>
             <div>
-              <label className={labelCls}>Mission title</label>
+              <label className={missionsLabel}>Mission title</label>
               <input
-                className={inputCls}
+                className={missionsInput}
                 value={mTitle}
                 onChange={(e) => setMTitle(e.target.value)}
                 placeholder="e.g. Deep work — proposal"
@@ -762,9 +569,9 @@ export function MissionCommandDeckCard({
             </div>
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               <div>
-                <label className={labelCls}>Target date & time</label>
+                <label className={missionsLabel}>Target date & time</label>
                 <input
-                  className={inputCls}
+                  className={missionsInput}
                   type="datetime-local"
                   value={mTarget}
                   onChange={(e) => setMTarget(e.target.value)}
@@ -772,9 +579,9 @@ export function MissionCommandDeckCard({
                 />
               </div>
               <div>
-                <label className={labelCls}>Points</label>
+                <label className={missionsLabel}>Points</label>
                 <input
-                  className={inputCls}
+                  className={missionsInput}
                   type="number"
                   min={0}
                   max={9999}
@@ -789,16 +596,19 @@ export function MissionCommandDeckCard({
               whileTap={{ scale: 0.98 }}
               onClick={() => void addMission()}
               disabled={useApiDeck && !canDeckWrite}
-              className="w-full rounded-lg border border-[#39ff14]/38 bg-[rgba(57,255,20,0.08)] py-3 text-[11px] font-black uppercase tracking-[0.15em] text-[#b8ff9e] shadow-[0_0_22px_rgba(57,255,20,0.1)] hover:bg-[rgba(57,255,20,0.14)] disabled:cursor-not-allowed disabled:opacity-40 md:text-[12px]"
+              className="w-full rounded-lg border border-emerald-400/55 bg-emerald-950/35 py-3 text-[11px] font-black uppercase tracking-[0.15em] text-emerald-100 shadow-[0_0_0_1px_rgba(52,211,153,0.25),0_0_28px_rgba(16,185,129,0.35),0_0_48px_rgba(52,211,153,0.12)] hover:border-emerald-300/75 hover:bg-emerald-950/50 hover:shadow-[0_0_0_1px_rgba(52,211,153,0.45),0_0_36px_rgba(52,211,153,0.45)] disabled:cursor-not-allowed disabled:opacity-40 md:text-[12px]"
             >
               Create mission
             </motion.button>
           </div>
 
-          <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div className="rounded-xl border border-[#39ff14]/34 bg-[#071007]/90 p-3 shadow-[0_0_24px_rgba(57,255,20,0.08)] md:p-4">
-              <div className="text-[10px] font-black uppercase tracking-[0.16em] text-[#9dff7a]">Active missions</div>
+          <div className="mt-5 grid w-full min-w-0 grid-cols-1 gap-4 md:grid-cols-2 md:gap-5">
+            <div className="min-w-0 rounded-xl border border-emerald-400/45 bg-gradient-to-b from-emerald-950/40 to-black/55 p-3 shadow-[0_0_0_1px_rgba(52,211,153,0.18),0_0_32px_rgba(16,185,129,0.22),0_0_56px_rgba(52,211,153,0.08)] md:p-4">
+              <div className="text-[10px] font-black uppercase tracking-[0.16em] text-emerald-200">
+                Active missions
+              </div>
               <DeckListToolbar
+                tone="emerald"
                 search={mSearchA}
                 onSearchChange={setMSearchA}
                 sortLabel="Due"
@@ -806,7 +616,7 @@ export function MissionCommandDeckCard({
                 onSortDirToggle={() => setMSortA((d) => (d === "desc" ? "asc" : "desc"))}
                 placeholder="Search active…"
               />
-              <div className={DECK_LIST_INNER}>
+              <div className={cn(DECK_LIST_INNER_BASE, SCROLL_EMERALD)}>
                 {filteredActiveMissions.length === 0 ? (
                   <div className="text-[13px] text-white/45">None active.</div>
                 ) : (
@@ -816,6 +626,7 @@ export function MissionCommandDeckCard({
                     return (
                       <DeckListItem
                         key={m.id}
+                        tone="emerald"
                         title={m.title}
                         badge={<MissionStatusBadge status="active" />}
                         subtitle={
@@ -835,14 +646,14 @@ export function MissionCommandDeckCard({
                             <div className="flex flex-wrap gap-1">
                               <button
                                 type="button"
-                                className="rounded border border-white/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.1em] text-[#d4c4b8] hover:border-[#39ff14]/45 hover:text-[#b8ff9e]"
+                                className="rounded border border-emerald-500/35 bg-black/40 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.1em] text-emerald-100/90 shadow-[0_0_12px_rgba(16,185,129,0.15)] hover:border-emerald-300/70 hover:shadow-[0_0_18px_rgba(52,211,153,0.35)]"
                                 onClick={() => void patchMission(m.id, "done")}
                               >
                                 Complete
                               </button>
                               <button
                                 type="button"
-                                className="rounded border border-white/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.1em] text-[#d4c4b8] hover:border-[#ff3838]/55 hover:text-[#ffb0b0]"
+                                className="rounded border border-rose-500/35 bg-black/40 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.1em] text-rose-100/90 shadow-[0_0_12px_rgba(251,113,133,0.12)] hover:border-rose-400/65 hover:shadow-[0_0_18px_rgba(251,113,133,0.3)]"
                                 onClick={() => void patchMission(m.id, "missed")}
                               >
                                 Mark missed
@@ -856,9 +667,10 @@ export function MissionCommandDeckCard({
                 )}
               </div>
             </div>
-            <div className="rounded-xl border border-[#ff3838]/34 bg-[#140808]/90 p-3 shadow-[0_0_24px_rgba(255,56,56,0.1)] md:p-4">
-              <div className="text-[10px] font-black uppercase tracking-[0.16em] text-[#ff9a9a]">Missed missions</div>
+            <div className="min-w-0 rounded-xl border border-rose-500/45 bg-gradient-to-b from-rose-950/38 to-black/55 p-3 shadow-[0_0_0_1px_rgba(251,113,133,0.2),0_0_32px_rgba(251,113,133,0.22),0_0_56px_rgba(244,63,94,0.1)] md:p-4">
+              <div className="text-[10px] font-black uppercase tracking-[0.16em] text-rose-200">Missed missions</div>
               <DeckListToolbar
+                tone="rose"
                 search={mSearchM}
                 onSearchChange={setMSearchM}
                 sortLabel="Due"
@@ -866,13 +678,14 @@ export function MissionCommandDeckCard({
                 onSortDirToggle={() => setMSortM((d) => (d === "desc" ? "asc" : "desc"))}
                 placeholder="Search missed…"
               />
-              <div className={DECK_LIST_INNER}>
+              <div className={cn(DECK_LIST_INNER_BASE, SCROLL_ROSE)}>
                 {filteredMissedMissions.length === 0 ? (
                   <div className="text-[13px] text-white/45">None missed.</div>
                 ) : (
                   filteredMissedMissions.map((m) => (
                     <DeckListItem
                       key={m.id}
+                      tone="rose"
                       title={m.title}
                       badge={<MissionStatusBadge status="missed" />}
                       subtitle={
@@ -887,26 +700,26 @@ export function MissionCommandDeckCard({
           </div>
         </div>
 
-        {/* 2 — Reminders */}
-        <div className={DECK_QUARTER}>
-          <DeckQuarterGlow />
+        {/* 2 — Reminders (full width, fuchsia ops deck) */}
+        <div className={DECK_REMINDERS}>
+          <DeckGlowReminders />
           <div className="relative z-[1]">
-          <div className="text-[12px] font-black uppercase tracking-[0.2em] text-[color:var(--gold)] md:text-[13px] lg:text-[14px]">
+          <div className="text-[12px] font-black uppercase tracking-[0.2em] text-fuchsia-200 md:text-[13px] lg:text-[14px]">
             Reminders / schedules
           </div>
-          <p className="mt-2 text-[13px] leading-relaxed text-white/60 md:text-[14px] md:leading-relaxed">
+          <p className="mt-2 text-[13px] leading-relaxed text-fuchsia-100/55 md:text-[14px] md:leading-relaxed">
             Schedule with date and time. Separate active and completed.
           </p>
 
           {useApiDeck && !canDeckWrite ? (
-            <p className="mt-2 text-[10px] text-amber-200/85">Read-only reminders for your role.</p>
+            <p className="mt-2 text-[10px] text-amber-200/90">Read-only reminders for your role.</p>
           ) : null}
 
-          <div className={DECK_FORM_SHELL}>
+          <div className={FORM_REMINDERS}>
             <div>
-              <label className={labelCls}>Reminder title</label>
+              <label className={remindersLabel}>Reminder title</label>
               <input
-                className={inputCls}
+                className={remindersInput}
                 value={rTitle}
                 onChange={(e) => setRTitle(e.target.value)}
                 placeholder="e.g. Call mentor"
@@ -915,9 +728,9 @@ export function MissionCommandDeckCard({
             </div>
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               <div>
-                <label className={labelCls}>Date</label>
+                <label className={remindersLabel}>Date</label>
                 <input
-                  className={inputCls}
+                  className={remindersInput}
                   type="date"
                   value={rDate}
                   onChange={(e) => setRDate(e.target.value)}
@@ -925,9 +738,9 @@ export function MissionCommandDeckCard({
                 />
               </div>
               <div>
-                <label className={labelCls}>Time</label>
+                <label className={remindersLabel}>Time</label>
                 <input
-                  className={inputCls}
+                  className={remindersInput}
                   type="time"
                   value={rTime}
                   onChange={(e) => setRTime(e.target.value)}
@@ -940,18 +753,19 @@ export function MissionCommandDeckCard({
               whileTap={{ scale: 0.98 }}
               onClick={() => void addReminder()}
               disabled={useApiDeck && !canDeckWrite}
-              className="w-full rounded-lg border border-[rgba(197,179,88,0.45)] bg-[rgba(197,179,88,0.1)] py-3 text-[11px] font-black uppercase tracking-[0.16em] text-[color:var(--gold)] shadow-[0_0_20px_rgba(197,179,88,0.08)] hover:bg-[rgba(197,179,88,0.16)] disabled:cursor-not-allowed disabled:opacity-40 md:text-[12px]"
+              className="w-full rounded-lg border border-fuchsia-400/55 bg-fuchsia-950/35 py-3 text-[11px] font-black uppercase tracking-[0.16em] text-fuchsia-100 shadow-[0_0_0_1px_rgba(192,132,252,0.28),0_0_28px_rgba(168,85,247,0.35),0_0_52px_rgba(147,51,234,0.12)] hover:border-fuchsia-300/78 hover:bg-fuchsia-950/48 hover:shadow-[0_0_36px_rgba(192,132,252,0.42)] disabled:cursor-not-allowed disabled:opacity-40 md:text-[12px]"
             >
               Create reminder
             </motion.button>
           </div>
 
-          <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div className="rounded-xl border border-[#39ff14]/32 bg-[#071007]/88 p-3 md:p-4">
-              <div className="text-[10px] font-black uppercase tracking-[0.16em] text-[#b8ff9e]">
+          <div className="mt-5 grid w-full min-w-0 grid-cols-1 gap-4 md:grid-cols-2 md:gap-5">
+            <div className="min-w-0 rounded-xl border border-cyan-400/45 bg-gradient-to-b from-cyan-950/38 to-black/55 p-3 shadow-[0_0_0_1px_rgba(34,211,238,0.2),0_0_30px_rgba(34,211,238,0.25),0_0_52px_rgba(6,182,212,0.1)] md:p-4">
+              <div className="text-[10px] font-black uppercase tracking-[0.16em] text-cyan-200">
                 Active reminders
               </div>
               <DeckListToolbar
+                tone="cyan"
                 search={rSearchAct}
                 onSearchChange={setRSearchAct}
                 sortLabel="When"
@@ -959,7 +773,7 @@ export function MissionCommandDeckCard({
                 onSortDirToggle={() => setRSortAct((d) => (d === "desc" ? "asc" : "desc"))}
                 placeholder="Search active…"
               />
-              <div className={DECK_LIST_INNER}>
+              <div className={cn(DECK_LIST_INNER_BASE, SCROLL_CYAN)}>
                 {filteredActiveReminders.length === 0 ? (
                   <div className="text-[13px] text-white/45">None scheduled.</div>
                 ) : (
@@ -973,6 +787,7 @@ export function MissionCommandDeckCard({
                     return (
                       <DeckListItem
                         key={r.id}
+                        tone="cyan"
                         title={r.title}
                         badge={<ReminderStatusBadge status="active" />}
                         subtitle={<DueDateLine label="When" value={`${r.date} · ${r.time}`} urgent={urgent} />}
@@ -980,7 +795,7 @@ export function MissionCommandDeckCard({
                           (!useApiDeck || canDeckWrite) && (
                             <button
                               type="button"
-                              className="rounded border border-white/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.1em] text-[#d4c4b8] hover:border-[#39ff14]/45 hover:text-[#b8ff9e]"
+                              className="rounded border border-cyan-400/45 bg-black/35 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.1em] text-cyan-100 shadow-[0_0_12px_rgba(34,211,238,0.2)] hover:border-cyan-300/75 hover:shadow-[0_0_20px_rgba(34,211,238,0.35)]"
                               onClick={() => void patchReminder(r.id, "completed")}
                             >
                               Mark completed
@@ -993,9 +808,12 @@ export function MissionCommandDeckCard({
                 )}
               </div>
             </div>
-            <div className="rounded-xl border border-[rgba(197,179,88,0.28)] bg-black/35 p-3 shadow-[inset_0_1px_0_rgba(197,179,88,0.06)] md:p-4">
-              <div className="text-[10px] font-black uppercase tracking-[0.18em] text-[color:var(--gold)]/80 md:text-[11px]">Completed reminders</div>
+            <div className="min-w-0 rounded-xl border border-fuchsia-400/42 bg-gradient-to-b from-fuchsia-950/32 to-black/55 p-3 shadow-[0_0_0_1px_rgba(192,132,252,0.22),0_0_30px_rgba(168,85,247,0.28),0_0_52px_rgba(147,51,234,0.1)] md:p-4">
+              <div className="text-[10px] font-black uppercase tracking-[0.18em] text-fuchsia-200 md:text-[11px]">
+                Completed reminders
+              </div>
               <DeckListToolbar
+                tone="fuchsia"
                 search={rSearchDone}
                 onSearchChange={setRSearchDone}
                 sortLabel="When"
@@ -1003,13 +821,14 @@ export function MissionCommandDeckCard({
                 onSortDirToggle={() => setRSortDone((d) => (d === "desc" ? "asc" : "desc"))}
                 placeholder="Search completed…"
               />
-              <div className={DECK_LIST_INNER}>
+              <div className={cn(DECK_LIST_INNER_BASE, SCROLL_FUCHSIA)}>
                 {filteredDoneReminders.length === 0 ? (
                   <div className="text-[13px] text-white/45">None yet.</div>
                 ) : (
                   filteredDoneReminders.map((r) => (
                     <DeckListItem
                       key={r.id}
+                      tone="fuchsia"
                       title={r.title}
                       dimmed
                       badge={<ReminderStatusBadge status="completed" />}
@@ -1025,24 +844,26 @@ export function MissionCommandDeckCard({
           </div>
         </div>
 
-        {/* 3 — Notes */}
-        <div className={DECK_QUARTER}>
-          <DeckQuarterGlow />
+        {/* 3 — Notes (full width, ledger gold deck) */}
+        <div className={DECK_NOTES}>
+          <DeckGlowNotes />
           <div className="relative z-[1]">
-          <div className="text-[12px] font-black uppercase tracking-[0.2em] text-[color:var(--gold)] md:text-[13px] lg:text-[14px]">Notes</div>
-          <p className="mt-2 text-[13px] leading-relaxed text-white/60 md:text-[14px] md:leading-relaxed">
-            Create notes and review the latest five in the selector below.
+          <div className="text-[12px] font-black uppercase tracking-[0.2em] text-[color:var(--gold)] md:text-[13px] lg:text-[14px]">
+            Notes
+          </div>
+          <p className="mt-2 text-[13px] leading-relaxed text-[rgba(255,240,200,0.55)] md:text-[14px] md:leading-relaxed">
+            Capture intel below, then open it from the library—title stays in the list so the reader stays clean.
           </p>
 
           {useApiDeck && !canDeckWrite ? (
-            <p className="mt-2 text-[10px] text-amber-200/85">Read-only notes for your role.</p>
+            <p className="mt-2 text-[10px] text-amber-200/90">Read-only notes for your role.</p>
           ) : null}
 
-          <div className={DECK_FORM_SHELL}>
+          <div className={FORM_NOTES}>
             <div>
-              <label className={labelCls}>Note title</label>
+              <label className={notesLabel}>Note title</label>
               <input
-                className={inputCls}
+                className={notesInput}
                 value={nTitle}
                 onChange={(e) => setNTitle(e.target.value)}
                 placeholder="Short label"
@@ -1050,9 +871,9 @@ export function MissionCommandDeckCard({
               />
             </div>
             <div>
-              <label className={labelCls}>Note body</label>
+              <label className={notesLabel}>Note body</label>
               <textarea
-                className={cn(inputCls, "min-h-[72px] resize-y")}
+                className={cn(notesInput, "min-h-[72px] resize-y")}
                 value={nBody}
                 onChange={(e) => setNBody(e.target.value)}
                 placeholder="Intel, ideas, links…"
@@ -1064,14 +885,15 @@ export function MissionCommandDeckCard({
               whileTap={{ scale: 0.98 }}
               onClick={() => void addNote()}
               disabled={useApiDeck && !canDeckWrite}
-              className="w-full rounded-lg border border-[rgba(197,179,88,0.45)] bg-[rgba(197,179,88,0.1)] py-3 text-[11px] font-black uppercase tracking-[0.16em] text-[color:var(--gold)] shadow-[0_0_20px_rgba(197,179,88,0.08)] hover:bg-[rgba(197,179,88,0.16)] disabled:cursor-not-allowed disabled:opacity-40 md:text-[12px]"
+              className="w-full rounded-lg border-[rgba(255,215,0,0.55)] bg-[rgba(255,215,0,0.1)] py-3 text-[11px] font-black uppercase tracking-[0.16em] text-[color:var(--gold)] shadow-[0_0_0_1px_rgba(255,215,0,0.22),0_0_28px_rgba(255,200,0,0.22),0_0_52px_rgba(255,180,0,0.08)] hover:border-[rgba(255,235,160,0.75)] hover:bg-[rgba(255,215,0,0.14)] hover:shadow-[0_0_36px_rgba(255,215,0,0.28)] disabled:cursor-not-allowed disabled:opacity-40 md:text-[12px]"
             >
               Save note
             </motion.button>
           </div>
 
-          <div className="mt-5">
+          <div className="mt-5 w-full min-w-0">
             <DeckListToolbar
+              tone="gold"
               search={nSearch}
               onSearchChange={setNSearch}
               sortLabel="Created"
@@ -1079,139 +901,153 @@ export function MissionCommandDeckCard({
               onSortDirToggle={() => setNSort((d) => (d === "desc" ? "asc" : "desc"))}
               placeholder="Search notes…"
             />
-            <label className={labelCls}>Recent notes (select to view)</label>
-            <select
-              className="mt-1 w-full rounded-md border border-[rgba(255,215,0,0.35)] bg-[#0a0a0a] px-2 py-1 font-mono text-[13px] font-semibold leading-snug text-white/90 outline-none focus:border-[rgba(255,215,0,0.65)]"
-              size={filteredNotes.length === 0 ? 1 : Math.min(8, Math.max(4, optionNotes.length))}
-              value={selectedNote?.id ?? ""}
-              onChange={(e) => setSelectedNoteId(e.target.value || null)}
-            >
-              {optionNotes.length === 0 ? (
-                <option value="">No notes yet</option>
-              ) : (
-                optionNotes.map((n) => (
-                  <option key={n.id} value={n.id} className="bg-[#111] py-2 text-[13px]">
-                    {n.title} — {new Date(n.createdAt).toLocaleDateString()}
-                  </option>
-                ))
+
+            {/* Single merged library + reader (no duplicate title in preview) */}
+            <div
+              className={cn(
+                "mt-3 grid min-h-[min(52vh,420px)] w-full min-w-0 overflow-hidden rounded-xl border-[rgba(255,215,0,0.48)] bg-gradient-to-br from-black/80 via-[#070604]/95 to-black/90 shadow-[0_0_0_1px_rgba(255,215,0,0.18),0_0_40px_rgba(255,200,0,0.14),0_0_80px_rgba(255,180,0,0.06),inset_0_1px_0_rgba(255,235,160,0.06)]",
+                "grid-cols-1 lg:grid-cols-[minmax(240px,34%)_1fr] lg:min-h-[min(44vh,480px)]"
               )}
-            </select>
-            {selectedNote ? (
-              <div className="mt-4 min-h-[min(28vh,200px)] rounded-xl border border-[rgba(197,179,88,0.24)] bg-black/45 p-4 shadow-[inset_0_1px_0_rgba(197,179,88,0.06)] md:min-h-[min(32vh,260px)] md:p-6">
-                <div className="text-[11px] font-bold uppercase tracking-[0.14em] text-[color:var(--gold)]/75">Preview</div>
-                <div className="mt-2 text-[15px] font-black text-white/92 md:text-[16px]">{selectedNote.title}</div>
-                <div className="mt-3 max-h-[min(48vh,520px)] overflow-y-auto whitespace-pre-wrap text-[14px] leading-relaxed text-white/75 [scrollbar-color:rgba(197,179,88,0.42)_rgba(0,0,0,0.25)] md:text-[15px] md:leading-relaxed">
-                  {selectedNote.body || "—"}
+              role="region"
+              aria-label="Note library and reader"
+            >
+              {/* Library column */}
+              <div className="flex min-h-0 min-w-0 flex-col border-b border-[rgba(255,215,0,0.22)] lg:border-b-0 lg:border-r">
+                <div className="shrink-0 border-b border-[rgba(255,215,0,0.18)] bg-black/35 px-3 py-2.5 md:px-4">
+                  <div className="text-[10px] font-black uppercase tracking-[0.22em] text-[color:var(--gold)]/90">
+                    Note library
+                  </div>
+                  <p className="mt-0.5 text-[11px] leading-snug text-white/45">
+                    Tap a row—the reader shows body only, no repeated heading.
+                  </p>
                 </div>
-              </div>
-            ) : null}
-            {notesRemaining > 0 && !notesExpanded ? (
-              <motion.button
-                type="button"
-                whileTap={{ scale: 0.99 }}
-                onClick={() => setNotesExpanded(true)}
-                className="mt-2 w-full rounded-md border border-[rgba(255,215,0,0.35)] bg-black/40 py-2.5 text-[11px] font-extrabold uppercase tracking-[0.14em] text-[color:var(--gold)]/92 hover:bg-black/55"
-              >
-                View more ({notesRemaining} left)
-              </motion.button>
-            ) : null}
-            {notesExpanded && filteredNotes.length > 5 ? (
-              <button
-                type="button"
-                className="mt-2 text-[10px] font-bold uppercase tracking-[0.16em] text-white/45 underline hover:text-white/70"
-                onClick={() => setNotesExpanded(false)}
-              >
-                Show first 5 only
-              </button>
-            ) : null}
-          </div>
-          </div>
-        </div>
-
-        {/* 4 — Quick access + social admin */}
-        <div className={DECK_QUARTER}>
-          <DeckQuarterGlow />
-          <div className="relative z-[1]">
-          <div className="text-[12px] font-black uppercase tracking-[0.2em] text-[color:var(--gold)] md:text-[13px] lg:text-[14px]">
-            Quick access · social tools
-          </div>
-          <p className="mt-2 text-[13px] leading-relaxed text-white/60 md:text-[14px] md:leading-relaxed">
-            Links from the portal API when signed in; otherwise bundled defaults. Tiles open in{" "}
-            <span className="font-semibold text-[#9dff7a]">this tab</span> (site icons via public favicon lookup).
-          </p>
-
-          <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 md:gap-3.5">
-            {socialLinks.map((link) => (
-              <SocialQuickLinkTile key={link.id} link={link} />
-            ))}
-          </div>
-
-          {useApiDeck && canSocialWrite ? (
-            <div className="mt-5 rounded-lg border border-[rgba(197,179,88,0.2)] bg-black/35 p-3 md:p-4">
-              <div className="text-[10px] font-black uppercase tracking-[0.16em] text-[color:var(--gold)]/80">Manage links</div>
-              <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
-                <div>
-                  <label className={labelCls}>Platform</label>
-                  <select
-                    className={inputCls}
-                    value={sPlatform}
-                    onChange={(e) => setSPlatform(e.target.value)}
-                  >
-                    {SOCIAL_PLATFORM_OPTIONS.map((o) => (
-                      <option key={o.value} value={o.value}>
-                        {o.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className={labelCls}>Label</label>
-                  <input className={inputCls} value={sLabel} onChange={(e) => setSLabel(e.target.value)} />
-                </div>
-                <div className="sm:col-span-2">
-                  <label className={labelCls}>URL</label>
-                  <input className={inputCls} value={sUrl} onChange={(e) => setSUrl(e.target.value)} />
-                </div>
-              </div>
-              <label className="mt-2 flex items-center gap-2 text-[10px] text-white/55">
-                <input type="checkbox" checked={sActive} onChange={(e) => setSActive(e.target.checked)} />
-                Active (shown in quick grid)
-              </label>
-              <motion.button
-                type="button"
-                whileTap={{ scale: 0.99 }}
-                onClick={() => void addSocialLink()}
-                className="mt-3 w-full rounded-lg border border-[rgba(197,179,88,0.42)] bg-[rgba(197,179,88,0.09)] py-2.5 text-[10px] font-black uppercase tracking-[0.15em] text-[color:var(--gold)] shadow-[0_0_18px_rgba(197,179,88,0.08)] hover:bg-[rgba(197,179,88,0.14)] md:text-[11px]"
-              >
-                Add social link
-              </motion.button>
-
-              {rawSocial.length ? (
-                <ul className="mt-4 min-h-[120px] max-h-[min(48vh,440px)] space-y-1.5 overflow-y-auto overflow-x-hidden text-[13px] text-white/78 [scrollbar-color:rgba(197,179,88,0.42)_rgba(0,0,0,0.25)]">
-                  {rawSocial.map((s) => (
-                    <li
-                      key={s.id}
-                      className="flex items-center justify-between gap-2 rounded border border-white/8 bg-black/40 px-2 py-1"
+                <div
+                  role="listbox"
+                  aria-label="Saved notes"
+                  className={cn(
+                    "flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto p-2.5 md:p-3",
+                    SCROLL_GOLD
+                  )}
+                >
+                  {optionNotes.length === 0 ? (
+                    <div className="rounded-lg border border-dashed border-[rgba(255,215,0,0.22)] bg-black/25 px-3 py-8 text-center text-[13px] text-white/45">
+                      No notes match. Save one above or clear search.
+                    </div>
+                  ) : (
+                    optionNotes.map((n) => {
+                      const active = selectedNote?.id === n.id;
+                      return (
+                        <button
+                          key={n.id}
+                          type="button"
+                          role="option"
+                          aria-selected={active}
+                          title={n.title}
+                          onClick={() => setSelectedNoteId(n.id)}
+                          className={cn(
+                            "w-full rounded-lg border px-3 py-2.5 text-left motion-safe:transition-[box-shadow,border-color,background-color] motion-safe:duration-200",
+                            active
+                              ? "border-sky-400/55 bg-gradient-to-r from-sky-500/20 via-sky-500/12 to-transparent shadow-[inset_0_0_0_1px_rgba(56,189,248,0.35),0_0_24px_rgba(56,189,248,0.25),0_0_48px_rgba(14,165,233,0.12)]"
+                              : "border-[rgba(255,215,0,0.14)] bg-black/30 hover:border-[rgba(255,235,160,0.35)] hover:bg-black/45 hover:shadow-[0_0_18px_rgba(255,200,0,0.1)]"
+                          )}
+                        >
+                          <div className="line-clamp-2 text-[13px] font-bold leading-snug text-white/92">{n.title}</div>
+                          <div className="mt-1 font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-[rgba(255,230,180,0.45)]">
+                            {new Date(n.createdAt).toLocaleDateString(undefined, {
+                              month: "short",
+                              day: "numeric",
+                              year: "numeric"
+                            })}
+                          </div>
+                        </button>
+                      );
+                    })
+                  )}
+                  {notesRemaining > 0 && !notesExpanded ? (
+                    <motion.button
+                      type="button"
+                      whileTap={{ scale: 0.99 }}
+                      onClick={() => setNotesExpanded(true)}
+                      className="mt-1 w-full rounded-lg border-[rgba(255,215,0,0.42)] bg-black/5 py-2.5 text-[10px] font-extrabold uppercase tracking-[0.14em] text-[color:var(--gold)]/92 shadow-[0_0_14px_rgba(255,200,0,0.12)] hover:border-[rgba(255,235,160,0.65)] hover:shadow-[0_0_22px_rgba(255,215,0,0.18)]"
                     >
-                      <span className="min-w-0 truncate">
-                        <span className="font-mono text-[9px] text-white/40">{s.platform}</span>{" "}
-                        {s.label || s.url}
-                      </span>
-                      <button
-                        type="button"
-                        className="shrink-0 text-[9px] font-bold uppercase tracking-[0.1em] text-red-300/90 hover:underline"
-                        onClick={() => void deleteSocialLink(s.id)}
-                      >
-                        Delete
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              ) : null}
+                      Load more ({notesRemaining})
+                    </motion.button>
+                  ) : null}
+                  {notesExpanded && filteredNotes.length > 5 ? (
+                    <button
+                      type="button"
+                      className="w-full py-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-[rgba(255,230,180,0.5)] underline hover:text-[color:var(--gold)]/85"
+                      onClick={() => setNotesExpanded(false)}
+                    >
+                      Collapse to recent five
+                    </button>
+                  ) : null}
+                </div>
+              </div>
+
+              {/* Reader column — body & meta only */}
+              <div className="flex min-h-0 min-w-0 flex-col bg-black/25 lg:bg-black/20">
+                <div className="shrink-0 border-b border-[rgba(255,215,0,0.15)] px-4 py-2.5 md:px-5">
+                  <div className="text-[10px] font-black uppercase tracking-[0.22em] text-[color:var(--gold)]/75">
+                    Reader
+                  </div>
+                </div>
+                <div
+                  className={cn(
+                    "min-h-0 flex-1 overflow-y-auto px-4 py-4 md:px-6 md:py-5",
+                    SCROLL_GOLD
+                  )}
+                >
+                  {selectedNote ? (
+                    <div className="flex min-h-[12rem] flex-col pb-2">
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-[rgba(255,215,0,0.12)] pb-3 font-mono text-[11px] text-white/50">
+                        <span className="text-[color:var(--gold)]/70">
+                          {new Date(selectedNote.createdAt).toLocaleString()}
+                        </span>
+                        {selectedNote.body?.trim() ? (
+                          <span className="text-white/35">
+                            {selectedNote.body.trim().length} chars
+                          </span>
+                        ) : null}
+                      </div>
+                      <div className="mt-4 whitespace-pre-wrap text-[15px] leading-[1.65] text-white/88 md:text-[16px] md:leading-relaxed">
+                        {selectedNote.body?.trim()
+                          ? selectedNote.body
+                          : "No body on this note—titles live in the library list so this space stays for long-form intel."}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex min-h-[12rem] flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-[rgba(255,215,0,0.2)] bg-black/20 px-4 py-10 text-center">
+                      <p className="text-[13px] text-white/50">Nothing selected</p>
+                      <p className="max-w-sm text-[12px] text-white/35">
+                        Choose a note in the library, or create one with the form above.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
-          ) : null}
+          </div>
           </div>
         </div>
+
+        {/* 4 — Quick access: full width & height below notes */}
+        <section
+          aria-label="Quick access tools"
+          className="relative w-full min-w-0 flex-1 scroll-mt-4"
+        >
+          <div
+            className={cn(
+              DECK_QUICK_WRAP,
+              "relative flex w-full min-h-[min(52vh,640px)] min-w-0 flex-col sm:min-h-[min(48vh,560px)]"
+            )}
+          >
+            <DeckQuarterGlow />
+            <div className="relative z-[1] flex min-h-0 w-full flex-1 flex-col">
+              <QuickAccessGrid siteName="The Syndicate" variant="fullWidth" />
+            </div>
+          </div>
+        </section>
       </div>
     </Card>
   );

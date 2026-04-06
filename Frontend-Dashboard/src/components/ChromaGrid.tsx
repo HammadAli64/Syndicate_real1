@@ -30,6 +30,8 @@ export type ChromaGridProps = {
   damping?: number;
   fadeOut?: number;
   ease?: string;
+  /** When true, skip pointer-driven GSAP updates (e.g. goals overlay open on Programs). */
+  interactionDisabled?: boolean;
 };
 
 type SetterFn = (v: number | string) => void;
@@ -43,7 +45,8 @@ export default function ChromaGrid({
   radius = 360,
   damping = 0.45,
   fadeOut = 0.6,
-  ease = "power3.out"
+  ease = "power3.out",
+  interactionDisabled = false
 }: ChromaGridProps) {
   const rootRef = useRef<HTMLDivElement>(null);
   const setX = useRef<SetterFn | null>(null);
@@ -64,6 +67,11 @@ export default function ChromaGrid({
     setY.current(pos.current.y);
   }, []);
 
+  useEffect(() => {
+    if (!interactionDisabled) return;
+    gsap.killTweensOf(pos.current);
+  }, [interactionDisabled]);
+
   const moveTo = (x: number, y: number) => {
     gsap.to(pos.current, {
       x,
@@ -79,6 +87,7 @@ export default function ChromaGrid({
   };
 
   const handleMove = (e: React.PointerEvent) => {
+    if (interactionDisabled) return;
     const r = rootRef.current!.getBoundingClientRect();
     moveTo(e.clientX - r.left, e.clientY - r.top);
   };
@@ -86,6 +95,7 @@ export default function ChromaGrid({
   const handleLeave = () => {};
 
   const handleCardMove: React.MouseEventHandler<HTMLElement> = (e) => {
+    if (interactionDisabled) return;
     const c = e.currentTarget as HTMLElement;
     const rect = c.getBoundingClientRect();
     c.style.setProperty("--mouse-x", `${e.clientX - rect.left}px`);
@@ -95,9 +105,9 @@ export default function ChromaGrid({
   return (
     <div
       ref={rootRef}
-      onPointerMove={handleMove}
+      onPointerMove={interactionDisabled ? undefined : handleMove}
       onPointerLeave={handleLeave}
-      className={`courses-grid ${columns === 4 ? "cols-4" : columns === 3 ? "cols-3" : "cols-2"} relative h-full w-full items-start gap-6 ${className}`}
+      className={`courses-grid ${columns === 4 ? "cols-4" : columns === 3 ? "cols-3" : "cols-2"} relative h-full w-full items-start gap-6 ${interactionDisabled ? "pointer-events-none" : ""} ${className}`}
       style={
         {
           ["--r" as any]: `${radius}px`,
@@ -112,8 +122,8 @@ export default function ChromaGrid({
           <article
             key={c.id}
             data-course-card
-            onMouseMove={handleCardMove}
-            onClick={() => onSelect?.(c.id)}
+            onMouseMove={interactionDisabled ? undefined : handleCardMove}
+            onClick={() => !interactionDisabled && onSelect?.(c.id)}
             className={[
               "group premium-card gold-glow-hover relative flex min-h-[430px] flex-col w-full rounded-[22px] overflow-hidden cursor-pointer",
               "bg-black/72",
@@ -129,7 +139,7 @@ export default function ChromaGrid({
               } as React.CSSProperties
             }
             role="button"
-            tabIndex={0}
+            tabIndex={interactionDisabled ? -1 : 0}
           >
             <div className="absolute left-4 top-4 z-30 rounded-md border border-[rgba(255,215,0,0.6)] bg-black/70 px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-[color:var(--gold)] shadow-[0_0_12px_rgba(255,215,0,0.35)]">
               {c.badge ?? "Premium"}

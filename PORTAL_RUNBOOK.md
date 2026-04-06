@@ -101,7 +101,7 @@ See also `Syndicate_real/LOCAL_DEV_CREDENTIALS.txt`.
 
 ## Migration notes
 
-- The Next.js route `src/app/api/social-links/route.ts` was removed; social links are served only from Django when the user is authenticated with `social.links.view` (or manage). Without auth, the dashboard uses bundled defaults from `src/data/socialLinks.ts`.
+- The Next.js route `src/app/api/social-links/route.ts` was removed. Django still exposes `/api/portal/social-links/` for admin-style CRUD, but the dashboard **Quick access** UI uses static categories in `Frontend-Dashboard/src/features/productivity/control-center/QuickAccessGrid.tsx` (same-tab + optional in-app iframe viewer).
 - CORS is configured in `syndicate_backend/settings.py` for `http://localhost:3000` and `http://127.0.0.1:3000`; add production origins as needed.
 - **404 on `POST /api/auth/login/`:** Portal auth is also mounted from `api/urls.py` under `auth/`, so `/api/auth/login/` resolves whenever `path("api/", include("api.urls"))` exists. Restart `runserver` after updating files.
 
