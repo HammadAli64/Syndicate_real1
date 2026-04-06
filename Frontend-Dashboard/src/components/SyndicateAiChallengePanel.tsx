@@ -101,10 +101,8 @@ const STATS_MOOD_HINTS_INFER: Record<(typeof STATS_MOODS)[number], string[]> = {
 function inferStatsMoodForRow(row: ChallengeRow): (typeof STATS_MOODS)[number] {
   const p = row.payload;
   const sm = Array.isArray(p?.suitable_moods) ? p.suitable_moods.map((x) => String(x).toLowerCase()) : [];
-  const smBlob = sm.join(" ");
-
   for (const mk of STATS_MOODS) {
-    if (smBlob.includes(mk)) return mk;
+    if (sm.some((s) => moodTagEqualsFilter(s, mk))) return mk;
   }
 
   const text = [...sm, p?.challenge_title ?? "", p?.challenge_description ?? "", p?.based_on_mindset ?? ""]
@@ -130,6 +128,17 @@ function isPrimaryStatsMood(s: string): s is (typeof STATS_MOODS)[number] {
   return (STATS_MOODS as readonly string[]).includes(s);
 }
 
+/** True if a mood tag equals the filter (exact match after trim); never use substring — "unhappy" must not match "happy". */
+function moodTagEqualsFilter(tag: string, filterMood: string): boolean {
+  const t = String(tag).toLowerCase().trim();
+  const m = filterMood.toLowerCase();
+  if (t === m) return true;
+  for (const part of t.split(/[/|,]+/)) {
+    if (part.trim() === m) return true;
+  }
+  return false;
+}
+
 /** Filter by mood: daily batches store exact mood on `row.mood` (one per category × mood). */
 function challengeMatchesStatsMood(row: ChallengeRow, mood: string): boolean {
   const rowMood = (row.mood || "").toLowerCase();
@@ -146,8 +155,8 @@ function challengeMatchesStatsMood(row: ChallengeRow, mood: string): boolean {
   const list = row.payload?.suitable_moods;
   const sm = Array.isArray(list) ? list.map((x) => String(x).toLowerCase()) : [];
 
-  if (rowMood && rowMood !== "daily" && (rowMood === m || rowMood.includes(m))) return true;
-  if (sm.some((s) => s.includes(m))) return true;
+  if (rowMood && rowMood !== "daily" && rowMood === m) return true;
+  if (sm.some((s) => moodTagEqualsFilter(s, m))) return true;
 
   return inferStatsMoodForRow(row) === m;
 }
@@ -181,6 +190,34 @@ function applyMoodCategoryPairHide(rows: ChallengeRow[], doneIds: Set<number>): 
     }
   }
   return rows.filter((r) => !hide.has(r.id));
+}
+
+/** One system mission per (category, primary mood); keeps lowest slot then lowest id (legacy double-slot rows). */
+function dedupePrimaryMoodSystemRows(rows: ChallengeRow[]): ChallengeRow[] {
+  const winners = new Map<string, ChallengeRow>();
+  for (const r of rows) {
+    if (r.user_created) continue;
+    const cat = (r.category || r.payload?.category || "").toLowerCase();
+    const mood = (r.mood || "").toLowerCase();
+    if (!cat || !isPrimaryStatsMood(mood)) continue;
+    const k = `${cat}|${mood}`;
+    const prev = winners.get(k);
+    if (!prev) {
+      winners.set(k, r);
+      continue;
+    }
+    const rs = r.slot ?? 1;
+    const ps = prev.slot ?? 1;
+    if (rs < ps || (rs === ps && r.id < prev.id)) winners.set(k, r);
+  }
+  return rows.filter((r) => {
+    if (r.user_created) return true;
+    const cat = (r.category || r.payload?.category || "").toLowerCase();
+    const mood = (r.mood || "").toLowerCase();
+    if (!cat || !isPrimaryStatsMood(mood)) return true;
+    const w = winners.get(`${cat}|${mood}`);
+    return w?.id === r.id;
+  });
 }
 
 /** Distinct slices for pie (categories). */
@@ -1507,7 +1544,7 @@ export function SyndicateAiChallengePanel() {
       if (doneFilter === "incomplete" && done) return false;
       return true;
     });
-    return applyMoodCategoryPairHide(base, doneIds);
+    return dedupePrimaryMoodSystemRows(applyMoodCategoryPairHide(base, doneIds));
   }, [rows, catFilter, doneFilter, doneIds, statsMood]);
 
   useEffect(() => {
