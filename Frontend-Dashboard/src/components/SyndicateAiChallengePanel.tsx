@@ -758,6 +758,58 @@ function persistMissionAwardedPoints(map: Record<number, number>) {
   onSyndicatePersist();
 }
 
+const MAX_MISSION_COMPLETION_LOG = 400;
+
+/** Append-only log for Stats & profile (mission title, response, points, completion date). */
+type MissionCompletionLogEntryV1 = {
+  entryId: string;
+  challengeId: number;
+  completedIso: string;
+  title: string;
+  category: string;
+  mood: string;
+  responseText: string;
+  awardedPoints: number;
+  maxPoints: number;
+};
+
+function isMissionCompletionLogEntry(x: unknown): x is MissionCompletionLogEntryV1 {
+  if (!x || typeof x !== "object") return false;
+  const o = x as Record<string, unknown>;
+  return (
+    typeof o.entryId === "string" &&
+    typeof o.challengeId === "number" &&
+    Number.isFinite(o.challengeId) &&
+    typeof o.completedIso === "string" &&
+    typeof o.title === "string" &&
+    typeof o.category === "string" &&
+    typeof o.mood === "string" &&
+    typeof o.responseText === "string" &&
+    typeof o.awardedPoints === "number" &&
+    typeof o.maxPoints === "number"
+  );
+}
+
+function loadMissionCompletionLog(): MissionCompletionLogEntryV1[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = window.localStorage.getItem(ls("mission_completion_log_v1"));
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter(isMissionCompletionLogEntry);
+  } catch {
+    return [];
+  }
+}
+
+function persistMissionCompletionLog(entries: MissionCompletionLogEntryV1[]) {
+  if (typeof window === "undefined") return;
+  const trimmed = entries.slice(0, MAX_MISSION_COMPLETION_LOG);
+  window.localStorage.setItem(ls("mission_completion_log_v1"), JSON.stringify(trimmed));
+  onSyndicatePersist();
+}
+
 /** e.g. 264 → "4m 24s", 3725 → "1h 2m 5s" */
 function formatDurationReadable(sec: number): string {
   const s = Math.max(0, Math.floor(sec));
@@ -1183,6 +1235,7 @@ export function SyndicateAiChallengePanel() {
   const [lastScore, setLastScore] = useState<MissionScoreResponse | null>(null);
   const [missionScores, setMissionScores] = useState<Record<number, MissionScoreResponse>>({});
   const [missionAwardedMap, setMissionAwardedMap] = useState<Record<number, number>>({});
+  const [missionCompletionLog, setMissionCompletionLog] = useState<MissionCompletionLogEntryV1[]>([]);
   const [missionCompleteToast, setMissionCompleteToast] = useState<{
     title: string;
     points: number;
@@ -1308,6 +1361,7 @@ export function SyndicateAiChallengePanel() {
       setMissionStartMap(loadMissionStartTimes());
       setMissionScores(loadMissionScores());
       setMissionAwardedMap(loadMissionAwardedPoints());
+      setMissionCompletionLog(loadMissionCompletionLog());
       setRedeemedRewards(loadRedeemedRewards());
       setPoundsBalance(loadPoundsBalance());
       if (typeof window !== "undefined") {
@@ -1898,6 +1952,11 @@ export function SyndicateAiChallengePanel() {
     });
   }, [challengeDayData, rows, doneIds, challengeLogVersion, pointsTotal]);
 
+  const completionEntriesForHistoryDate = useMemo(
+    () => missionCompletionLog.filter((e) => e.completedIso === historyFilterDate),
+    [missionCompletionLog, historyFilterDate]
+  );
+
   const regenerateNewDay = useCallback(async () => {
     setError(null);
     setBusy("regen");
@@ -1930,6 +1989,7 @@ export function SyndicateAiChallengePanel() {
         setStreak(pr.streak_count);
         setLastActivityIso(pr.last_activity_date);
         applySyncedStateFromServer(pr.state ?? {});
+        setMissionCompletionLog(loadMissionCompletionLog());
       } catch {
         /* streak unchanged if progress fetch fails */
       }
@@ -2065,6 +2125,7 @@ export function SyndicateAiChallengePanel() {
       const prev = parseInt(window.localStorage.getItem(ls("streak_before_break")) || "1", 10);
       const restored = await postSyndicateStreakRestore(Math.max(1, prev));
       applySyncedStateFromServer(restored.state ?? {});
+      setMissionCompletionLog(loadMissionCompletionLog());
       window.localStorage.removeItem(ls("streak_before_break"));
       window.localStorage.removeItem(ls("streak_break_date"));
       setStreak(restored.streak_count);
@@ -2258,6 +2319,20 @@ export function SyndicateAiChallengePanel() {
         const cat = (selected.category || selected.payload?.category || "business").toLowerCase();
         appendPointsForDay(today, cat, pts);
         recordCompletionForDay(today);
+        const logEntry: MissionCompletionLogEntryV1 = {
+          entryId: `${id}-${today}-${Date.now()}`,
+          challengeId: id,
+          completedIso: today,
+          title: ((selected.payload?.challenge_title ?? "Mission") as string).trim() || "Mission",
+          category: cat,
+          mood: ((selected.mood || "") as string).toLowerCase() || "—",
+          responseText: text,
+          awardedPoints: pts,
+          maxPoints: typeof scored.max_points === "number" ? scored.max_points : selected.points || 0
+        };
+        const nextLog = [logEntry, ...loadMissionCompletionLog()].slice(0, MAX_MISSION_COMPLETION_LOG);
+        persistMissionCompletionLog(nextLog);
+        setMissionCompletionLog(nextLog);
         setChallengeLogVersion((v) => v + 1);
 
         if (lastActivityIso !== today) {
@@ -2752,6 +2827,61 @@ export function SyndicateAiChallengePanel() {
                       ))}
                     </tbody>
                   </table>
+                </div>
+
+                <div className="mt-6 border-t border-white/10 pt-5">
+                  <h4 className="text-[15px] font-black uppercase tracking-[0.12em] text-[#a8d8ff] sm:text-[16px]">
+                    Completed missions · detail
+                  </h4>
+                  <p className="mt-1 text-[12px] leading-snug text-white/60 sm:text-[13px]">
+                    Your submitted text and points for the date selected above (default: today). New completions are saved with your profile and sync across devices.
+                  </p>
+                  <div className="mt-4 max-h-[min(70vh,28rem)] space-y-3 overflow-y-auto overscroll-y-contain pr-1 [-webkit-overflow-scrolling:touch]">
+                    {completionEntriesForHistoryDate.length === 0 ? (
+                      <p className="rounded-lg border border-white/10 bg-black/30 px-4 py-6 text-center text-[14px] text-white/55">
+                        No completed missions recorded for {historyFilterDate}.
+                      </p>
+                    ) : (
+                      completionEntriesForHistoryDate.map((e) => (
+                        <article
+                          key={e.entryId}
+                          className="rounded-xl border border-cyan-400/25 bg-[linear-gradient(180deg,rgba(0,45,70,0.35),rgba(0,0,0,0.45))] p-4 sm:p-5 [box-shadow:inset_0_0_0_1px_rgba(180,240,255,0.06)]"
+                        >
+                          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between sm:gap-3">
+                            <h5 className="min-w-0 flex-1 text-[15px] font-bold leading-snug text-white sm:text-[16px]">{e.title}</h5>
+                            <div className="flex shrink-0 flex-wrap items-center gap-2">
+                              <span className="rounded-md border border-[rgba(255,215,0,0.35)] bg-[rgba(255,215,0,0.1)] px-2.5 py-1 text-[12px] font-black tabular-nums text-[color:var(--gold)]">
+                                +{e.awardedPoints}
+                                {e.maxPoints > 0 ? (
+                                  <span className="font-semibold text-[color:var(--gold)]/75"> / {e.maxPoints}</span>
+                                ) : null}{" "}
+                                pts
+                              </span>
+                            </div>
+                          </div>
+                          <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-white/50 sm:text-[12px]">
+                            <span>
+                              {CAT_LABEL[e.category] ?? e.category}
+                            </span>
+                            <span className="text-white/25" aria-hidden>
+                              ·
+                            </span>
+                            <span className="capitalize text-cyan-200/85">{e.mood}</span>
+                            <span className="text-white/25 max-sm:hidden" aria-hidden>
+                              ·
+                            </span>
+                            <span className="w-full text-white/40 max-sm:mt-0.5 sm:w-auto">ID {e.challengeId}</span>
+                          </div>
+                          <div className="mt-3 rounded-lg border border-white/10 bg-black/35 p-3 sm:p-4">
+                            <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-white/45">Your response</div>
+                            <p className="mt-2 whitespace-pre-wrap break-words text-[14px] leading-relaxed text-white/88 sm:text-[15px]">
+                              {e.responseText.trim() || "—"}
+                            </p>
+                          </div>
+                        </article>
+                      ))
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
