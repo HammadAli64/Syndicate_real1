@@ -538,7 +538,7 @@ export default function DashboardControlCenter({
         integrityHigh && "dashboard-integrity-pulse"
       )}
     >
-      <div className="ghost-muted w-full max-w-none space-y-5 md:space-y-6 lg:space-y-7">
+      <div className="ghost-muted w-full min-w-0 max-w-none space-y-5 md:space-y-6 lg:space-y-7">
         <HeroStatusPanel
           themeMode={themeMode}
           userName={userName}

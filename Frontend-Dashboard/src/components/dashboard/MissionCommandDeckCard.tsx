@@ -1,9 +1,8 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { Calendar, Clock } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { portalFetch } from "@/lib/portal-api";
 import {
@@ -16,109 +15,9 @@ import {
   PriorityPoints,
   ReminderStatusBadge
 } from "./DeckListPrimitives";
+import { DeckBrowseDateBar, DeckDateField, DeckTimeField } from "./DeckDateTimePickers";
+import { missionLocalDay, noteLocalDay } from "./deck-date-utils";
 import { Card, cn, type ThemeMode } from "./dashboardPrimitives";
-
-type PickerTone = "cyan" | "fuchsia";
-
-const PICKER_TONE: Record<
-  PickerTone,
-  { wrap: string; icon: string; divider: string }
-> = {
-  cyan: {
-    wrap:
-      "border-cyan-400/38 shadow-[inset_0_1px_0_rgba(34,211,238,0.07)] focus-within:border-cyan-300/80 focus-within:shadow-[0_0_0_1px_rgba(34,211,238,0.3),0_0_22px_rgba(34,211,238,0.22)]",
-    icon: "text-cyan-200/75",
-    divider: "border-cyan-400/25"
-  },
-  fuchsia: {
-    wrap:
-      "border-fuchsia-400/40 shadow-[inset_0_1px_0_rgba(192,132,252,0.08)] focus-within:border-fuchsia-300/78 focus-within:shadow-[0_0_0_1px_rgba(192,132,252,0.28),0_0_22px_rgba(168,85,247,0.22)]",
-    icon: "text-fuchsia-200/75",
-    divider: "border-fuchsia-400/28"
-  }
-};
-
-/** Native date/time pickers only — read-only field + icon opens calendar or clock (`showPicker` when supported). */
-function DeckPickerField({
-  id,
-  type,
-  label,
-  labelClassName,
-  value,
-  onValueChange,
-  disabled,
-  tone
-}: {
-  id: string;
-  type: "date" | "time";
-  label: string;
-  labelClassName: string;
-  value: string;
-  onValueChange: (v: string) => void;
-  disabled?: boolean;
-  tone: PickerTone;
-}) {
-  const inputRef = useRef<HTMLInputElement>(null);
-  const t = PICKER_TONE[tone];
-
-  const openPicker = () => {
-    const el = inputRef.current;
-    if (!el || disabled) return;
-    try {
-      if (typeof el.showPicker === "function") el.showPicker();
-    } catch {
-      el.focus();
-    }
-  };
-
-  return (
-    <div>
-      <label htmlFor={id} className={labelClassName}>
-        {label}
-      </label>
-      <div
-        className={cn(
-          "mt-1.5 flex min-h-[2.65rem] w-full min-w-0 items-stretch overflow-hidden rounded-lg border bg-black/45",
-          t.wrap
-        )}
-      >
-        <button
-          type="button"
-          disabled={disabled}
-          onClick={openPicker}
-          className={cn(
-            "grid w-11 shrink-0 place-items-center border-r bg-black/35",
-            t.divider,
-            disabled ? "cursor-not-allowed opacity-40" : "cursor-pointer hover:bg-white/5"
-          )}
-          aria-label={type === "date" ? "Open calendar" : "Open clock"}
-        >
-          {type === "date" ? (
-            <Calendar className={cn("h-[18px] w-[18px]", t.icon)} strokeWidth={2} aria-hidden />
-          ) : (
-            <Clock className={cn("h-[18px] w-[18px]", t.icon)} strokeWidth={2} aria-hidden />
-          )}
-        </button>
-        <input
-          ref={inputRef}
-          id={id}
-          type={type}
-          value={value}
-          onChange={(e) => onValueChange(e.target.value)}
-          readOnly
-          disabled={disabled}
-          onClick={openPicker}
-          className={cn(
-            "min-w-0 flex-1 cursor-pointer bg-transparent px-3 py-2.5 text-[14px] outline-none md:py-2.5 md:text-[15px]",
-            tone === "cyan"
-              ? "text-cyan-50/95"
-              : "text-fuchsia-50/95"
-          )}
-        />
-      </div>
-    </div>
-  );
-}
 
 function localDateAndTimeToIso(dateStr: string, timeStr: string): string | null {
   if (!dateStr?.trim() || !timeStr?.trim()) return null;
@@ -256,13 +155,13 @@ function timeForApi(t: string) {
 
 /** Quick Access–aligned deck shells: colored border, gradient fill, outer glow */
 const DECK_MISSIONS =
-  "relative w-full min-w-0 shrink-0 overflow-hidden rounded-xl border border-cyan-400/42 bg-gradient-to-b from-cyan-950/42 via-[#060606]/96 to-[#050505] p-5 shadow-[0_0_0_1px_rgba(34,211,238,0.14),0_0_32px_rgba(34,211,238,0.14),0_0_64px_rgba(34,211,238,0.06),inset_0_1px_0_rgba(255,255,255,0.05)] md:p-6 lg:p-8 xl:p-9";
+  "relative w-full min-w-0 shrink-0 overflow-hidden rounded-xl border border-cyan-400/42 bg-gradient-to-b from-cyan-950/42 via-[#060606]/96 to-[#050505] p-3.5 shadow-[0_0_0_1px_rgba(34,211,238,0.14),0_0_32px_rgba(34,211,238,0.14),0_0_64px_rgba(34,211,238,0.06),inset_0_1px_0_rgba(255,255,255,0.05)] sm:p-5 md:p-6 lg:p-8 xl:p-9";
 
 const DECK_REMINDERS =
-  "relative w-full min-w-0 shrink-0 overflow-hidden rounded-xl border border-fuchsia-500/40 bg-gradient-to-b from-purple-950/45 via-[#07060c]/96 to-[#050505] p-5 shadow-[0_0_0_1px_rgba(192,132,252,0.16),0_0_32px_rgba(168,85,247,0.14),0_0_64px_rgba(147,51,234,0.07),inset_0_1px_0_rgba(255,255,255,0.05)] md:p-6 lg:p-8 xl:p-9";
+  "relative w-full min-w-0 shrink-0 overflow-hidden rounded-xl border border-fuchsia-500/40 bg-gradient-to-b from-purple-950/45 via-[#07060c]/96 to-[#050505] p-3.5 shadow-[0_0_0_1px_rgba(192,132,252,0.16),0_0_32px_rgba(168,85,247,0.14),0_0_64px_rgba(147,51,234,0.07),inset_0_1px_0_rgba(255,255,255,0.05)] sm:p-5 md:p-6 lg:p-8 xl:p-9";
 
 const DECK_NOTES =
-  "relative w-full min-w-0 shrink-0 overflow-hidden rounded-xl border-[rgba(255,215,0,0.44)] bg-gradient-to-b from-[rgba(255,215,0,0.09)] via-[#060606]/96 to-[#050505] p-5 shadow-[0_0_0_1px_rgba(255,215,0,0.14),0_0_36px_rgba(255,215,0,0.1),0_0_72px_rgba(255,200,0,0.05),inset_0_1px_0_rgba(255,255,255,0.05)] md:p-6 lg:p-8 xl:p-9";
+  "relative w-full min-w-0 shrink-0 overflow-hidden rounded-xl border-[rgba(255,215,0,0.44)] bg-gradient-to-b from-[rgba(255,215,0,0.09)] via-[#060606]/96 to-[#050505] p-3.5 shadow-[0_0_0_1px_rgba(255,215,0,0.14),0_0_36px_rgba(255,215,0,0.1),0_0_72px_rgba(255,200,0,0.05),inset_0_1px_0_rgba(255,255,255,0.05)] sm:p-5 md:p-6 lg:p-8 xl:p-9";
 
 const DECK_QUICK_WRAP =
   "relative overflow-hidden rounded-xl border border-[rgba(197,179,88,0.26)] bg-[#060606]/78 p-5 shadow-[0_0_0_1px_rgba(197,179,88,0.08),0_0_52px_rgba(197,179,88,0.08),inset_0_1px_0_rgba(197,179,88,0.08)] md:p-6 lg:p-8 xl:p-9";
@@ -318,13 +217,13 @@ const DECK_LIST_INNER_BASE =
   "mt-2 min-h-[min(34vh,280px)] max-h-[min(68vh,720px)] space-y-2.5 overflow-y-auto overflow-x-hidden py-1 pr-1.5";
 
 const FORM_MISSIONS =
-  "mt-4 space-y-3 rounded-xl border border-cyan-400/32 bg-black/45 p-3.5 shadow-[0_0_0_1px_rgba(34,211,238,0.12),inset_0_1px_0_rgba(34,211,238,0.1)] md:mt-5 md:p-4 lg:p-5";
+  "mt-3 space-y-2.5 rounded-xl border border-cyan-400/32 bg-black/45 p-3 shadow-[0_0_0_1px_rgba(34,211,238,0.12),inset_0_1px_0_rgba(34,211,238,0.1)] sm:mt-4 sm:space-y-3 sm:p-3.5 md:mt-5 md:p-4 lg:p-5";
 
 const FORM_REMINDERS =
-  "mt-4 space-y-3 rounded-xl border border-fuchsia-400/34 bg-black/45 p-3.5 shadow-[0_0_0_1px_rgba(192,132,252,0.12),inset_0_1px_0_rgba(192,132,252,0.1)] md:mt-5 md:p-4 lg:p-5";
+  "mt-3 space-y-2.5 rounded-xl border border-fuchsia-400/34 bg-black/45 p-3 shadow-[0_0_0_1px_rgba(192,132,252,0.12),inset_0_1px_0_rgba(192,132,252,0.1)] sm:mt-4 sm:space-y-3 sm:p-3.5 md:mt-5 md:p-4 lg:p-5";
 
 const FORM_NOTES =
-  "mt-4 space-y-3 rounded-xl border-[rgba(255,215,0,0.36)] bg-black/45 p-3.5 shadow-[0_0_0_1px_rgba(255,215,0,0.1),inset_0_1px_0_rgba(255,215,0,0.08)] md:mt-5 md:p-4 lg:p-5";
+  "mt-3 space-y-2.5 rounded-xl border-[rgba(255,215,0,0.36)] bg-black/45 p-3 shadow-[0_0_0_1px_rgba(255,215,0,0.1),inset_0_1px_0_rgba(255,215,0,0.08)] sm:mt-4 sm:space-y-3 sm:p-3.5 md:mt-5 md:p-4 lg:p-5";
 
 function bucketMissions(missions: MissionRow[]) {
   const now = Date.now();
@@ -345,7 +244,14 @@ function bucketMissions(missions: MissionRow[]) {
   return { active, missed };
 }
 
-export function MissionCommandDeckCard({ themeMode }: { themeMode: ThemeMode }) {
+export function MissionCommandDeckCard({
+  themeMode,
+  layoutVariant = "embedded"
+}: {
+  themeMode: ThemeMode;
+  /** `fullscreen`: opened from mobile viewport overlay — tighter chrome, no hover lift. */
+  layoutVariant?: "embedded" | "fullscreen";
+}) {
   const { user, loading: authLoading, can } = useAuth();
 
   const useApiDeck =
@@ -386,6 +292,9 @@ export function MissionCommandDeckCard({ themeMode }: { themeMode: ThemeMode }) 
 
   const [nTitle, setNTitle] = useState("");
   const [nBody, setNBody] = useState("");
+
+  /** Filter all deck lists to this calendar day (local). Null = show everything. */
+  const [browseDate, setBrowseDate] = useState<string | null>(null);
 
   const refreshPortal = useCallback(async () => {
     if (!user || !useApiDeck) return;
@@ -491,14 +400,16 @@ export function MissionCommandDeckCard({ themeMode }: { themeMode: ThemeMode }) 
   };
 
   const filteredActiveMissions = useMemo(() => {
-    const rows = filterBySearch(activeMissions, (r) => `${r.title} ${r.targetIso}`, mSearchA);
+    let rows = filterBySearch(activeMissions, (r) => `${r.title} ${r.targetIso}`, mSearchA);
+    if (browseDate) rows = rows.filter((r) => missionLocalDay(r.targetIso) === browseDate);
     return [...rows].sort((a, b) => sortByTarget(a, b, mSortA));
-  }, [activeMissions, mSearchA, mSortA]);
+  }, [activeMissions, mSearchA, mSortA, browseDate]);
 
   const filteredMissedMissions = useMemo(() => {
-    const rows = filterBySearch(missedMissions, (r) => `${r.title} ${r.targetIso}`, mSearchM);
+    let rows = filterBySearch(missedMissions, (r) => `${r.title} ${r.targetIso}`, mSearchM);
+    if (browseDate) rows = rows.filter((r) => missionLocalDay(r.targetIso) === browseDate);
     return [...rows].sort((a, b) => sortByTarget(a, b, mSortM));
-  }, [missedMissions, mSearchM, mSortM]);
+  }, [missedMissions, mSearchM, mSortM, browseDate]);
 
   const activeReminders = useMemo(() => reminders.filter((r) => r.status === "active"), [reminders]);
   const doneReminders = useMemo(() => reminders.filter((r) => r.status === "completed"), [reminders]);
@@ -506,34 +417,42 @@ export function MissionCommandDeckCard({ themeMode }: { themeMode: ThemeMode }) 
   const reminderSortKey = (r: ReminderRow) => `${r.date}T${r.time.length === 5 ? r.time + ":00" : r.time}`;
 
   const filteredActiveReminders = useMemo(() => {
-    const rows = filterBySearch(activeReminders, (r) => `${r.title} ${r.date} ${r.time}`, rSearchAct);
+    let rows = filterBySearch(activeReminders, (r) => `${r.title} ${r.date} ${r.time}`, rSearchAct);
+    if (browseDate) rows = rows.filter((r) => r.date === browseDate);
     return [...rows].sort((a, b) => {
       const cmp = reminderSortKey(a).localeCompare(reminderSortKey(b));
       return rSortAct === "desc" ? -cmp : cmp;
     });
-  }, [activeReminders, rSearchAct, rSortAct]);
+  }, [activeReminders, rSearchAct, rSortAct, browseDate]);
 
   const filteredDoneReminders = useMemo(() => {
-    const rows = filterBySearch(doneReminders, (r) => `${r.title} ${r.date} ${r.time}`, rSearchDone);
+    let rows = filterBySearch(doneReminders, (r) => `${r.title} ${r.date} ${r.time}`, rSearchDone);
+    if (browseDate) rows = rows.filter((r) => r.date === browseDate);
     return [...rows].sort((a, b) => {
       const cmp = reminderSortKey(a).localeCompare(reminderSortKey(b));
       return rSortDone === "desc" ? -cmp : cmp;
     });
-  }, [doneReminders, rSearchDone, rSortDone]);
+  }, [doneReminders, rSearchDone, rSortDone, browseDate]);
 
   const filteredNotes = useMemo(() => {
-    const rows = filterBySearch(notes, (n) => `${n.title} ${n.body}`, nSearch);
+    let rows = filterBySearch(notes, (n) => `${n.title} ${n.body}`, nSearch);
+    if (browseDate) rows = rows.filter((n) => noteLocalDay(n.createdAt) === browseDate);
     return [...rows].sort((a, b) => {
       const cmp = a.createdAt - b.createdAt;
       return nSort === "desc" ? -cmp : cmp;
     });
-  }, [notes, nSearch, nSort]);
+  }, [notes, nSearch, nSort, browseDate]);
 
   const optionNotes = notesExpanded ? filteredNotes : filteredNotes.slice(0, 5);
   const notesRemaining = Math.max(0, filteredNotes.length - 5);
 
   const selectedNote =
     filteredNotes.find((n) => n.id === selectedNoteId) ?? optionNotes[0] ?? null;
+
+  useEffect(() => {
+    if (!selectedNoteId) return;
+    if (!filteredNotes.some((n) => n.id === selectedNoteId)) setSelectedNoteId(null);
+  }, [filteredNotes, selectedNoteId]);
 
   const addMission = async () => {
     const title = mTitle.trim();
@@ -668,6 +587,10 @@ export function MissionCommandDeckCard({ themeMode }: { themeMode: ThemeMode }) 
     <Card
       themeMode={themeMode}
       frameVariant="shell"
+      disableHoverLift={layoutVariant === "fullscreen"}
+      className={
+        layoutVariant === "fullscreen" ? "!p-3.5 sm:!p-4 md:!p-6 lg:!p-7" : undefined
+      }
       title="Goals & Milestones"
       right={
         <div className="flex items-center gap-2">
@@ -691,6 +614,10 @@ export function MissionCommandDeckCard({ themeMode }: { themeMode: ThemeMode }) 
           </button>
         </div>
       ) : null}
+
+      <div className="mb-5">
+        <DeckBrowseDateBar browseDate={browseDate} onBrowseDateChange={setBrowseDate} tone="gold" />
+      </div>
 
       <div className="flex w-full max-w-none min-w-0 flex-col gap-6 min-[1400px]:gap-8 lg:gap-7 xl:gap-8">
         {/* 1 — Missions (full width, cyan strike deck) */}
@@ -722,9 +649,8 @@ export function MissionCommandDeckCard({ themeMode }: { themeMode: ThemeMode }) 
               />
             </div>
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-              <DeckPickerField
+              <DeckDateField
                 id="mission-target-date"
-                type="date"
                 label="Target date"
                 labelClassName={missionsLabel}
                 value={mDate}
@@ -732,9 +658,8 @@ export function MissionCommandDeckCard({ themeMode }: { themeMode: ThemeMode }) 
                 disabled={useApiDeck && !canDeckWrite}
                 tone="cyan"
               />
-              <DeckPickerField
+              <DeckTimeField
                 id="mission-target-time"
-                type="time"
                 label="Target time"
                 labelClassName={missionsLabel}
                 value={mTime}
@@ -782,7 +707,9 @@ export function MissionCommandDeckCard({ themeMode }: { themeMode: ThemeMode }) 
               />
               <div className={cn(DECK_LIST_INNER_BASE, SCROLL_EMERALD)}>
                 {filteredActiveMissions.length === 0 ? (
-                  <div className="text-[13px] text-white/45">None active.</div>
+                  <div className="text-[13px] text-white/45">
+                    {browseDate ? "No active missions on this day." : "None active."}
+                  </div>
                 ) : (
                   filteredActiveMissions.map((m) => {
                     const dueTs = new Date(m.targetIso).getTime();
@@ -844,7 +771,9 @@ export function MissionCommandDeckCard({ themeMode }: { themeMode: ThemeMode }) 
               />
               <div className={cn(DECK_LIST_INNER_BASE, SCROLL_ROSE)}>
                 {filteredMissedMissions.length === 0 ? (
-                  <div className="text-[13px] text-white/45">None missed.</div>
+                  <div className="text-[13px] text-white/45">
+                    {browseDate ? "No missed missions on this day." : "None missed."}
+                  </div>
                 ) : (
                   filteredMissedMissions.map((m) => (
                     <DeckListItem
@@ -891,9 +820,8 @@ export function MissionCommandDeckCard({ themeMode }: { themeMode: ThemeMode }) 
               />
             </div>
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-              <DeckPickerField
+              <DeckDateField
                 id="reminder-date"
-                type="date"
                 label="Date"
                 labelClassName={remindersLabel}
                 value={rDate}
@@ -901,9 +829,8 @@ export function MissionCommandDeckCard({ themeMode }: { themeMode: ThemeMode }) 
                 disabled={useApiDeck && !canDeckWrite}
                 tone="fuchsia"
               />
-              <DeckPickerField
+              <DeckTimeField
                 id="reminder-time"
-                type="time"
                 label="Time"
                 labelClassName={remindersLabel}
                 value={rTime}
@@ -939,7 +866,9 @@ export function MissionCommandDeckCard({ themeMode }: { themeMode: ThemeMode }) 
               />
               <div className={cn(DECK_LIST_INNER_BASE, SCROLL_CYAN)}>
                 {filteredActiveReminders.length === 0 ? (
-                  <div className="text-[13px] text-white/45">None scheduled.</div>
+                  <div className="text-[13px] text-white/45">
+                    {browseDate ? "No active reminders on this day." : "None scheduled."}
+                  </div>
                 ) : (
                   filteredActiveReminders.map((r) => {
                     const timePart = r.time.length === 5 ? `${r.time}:00` : r.time;
@@ -987,7 +916,9 @@ export function MissionCommandDeckCard({ themeMode }: { themeMode: ThemeMode }) 
               />
               <div className={cn(DECK_LIST_INNER_BASE, SCROLL_FUCHSIA)}>
                 {filteredDoneReminders.length === 0 ? (
-                  <div className="text-[13px] text-white/45">None yet.</div>
+                  <div className="text-[13px] text-white/45">
+                    {browseDate ? "No completed reminders on this day." : "None yet."}
+                  </div>
                 ) : (
                   filteredDoneReminders.map((r) => (
                     <DeckListItem
@@ -1095,7 +1026,9 @@ export function MissionCommandDeckCard({ themeMode }: { themeMode: ThemeMode }) 
                 >
                   {optionNotes.length === 0 ? (
                     <div className="rounded-lg border border-dashed border-[rgba(255,215,0,0.22)] bg-black/25 px-3 py-8 text-center text-[13px] text-white/45">
-                      No notes match. Save one above or clear search.
+                      {browseDate
+                        ? "No notes created on this day."
+                        : "No notes match. Save one above or clear search."}
                     </div>
                   ) : (
                     optionNotes.map((n) => {

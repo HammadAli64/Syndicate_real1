@@ -106,13 +106,13 @@ function CheckboxSlot({ active }: { active?: boolean }) {
   return (
     <div
       className={cn(
-        "relative h-[22px] w-[22px] rounded-[6px] border",
+        "relative h-[18px] w-[18px] shrink-0 rounded-[5px] border md:h-[22px] md:w-[22px] md:rounded-[6px]",
         active ? "border-[rgba(255,90,90,0.82)]" : "border-white/10"
       )}
     >
       <span
         className={cn(
-          "absolute left-1/2 top-1/2 h-[10px] w-[10px] -translate-x-1/2 -translate-y-1/2 rounded-[3px] opacity-0 transition",
+          "absolute left-1/2 top-1/2 h-[8px] w-[8px] -translate-x-1/2 -translate-y-1/2 rounded-[2px] opacity-0 transition md:h-[10px] md:w-[10px] md:rounded-[3px]",
           active &&
             "opacity-100 [background:linear-gradient(135deg,rgba(255,215,0,0.95),rgba(255,59,59,0.9))] [box-shadow:0_0_18px_rgba(255,59,59,0.28)]"
         )}
@@ -1444,6 +1444,8 @@ export default function Page() {
     }
   }, []);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  /** Below md (768px): main + sidebar sit side-by-side; nav column is 5/12 (~42% width). */
+  const [isNarrowViewport, setIsNarrowViewport] = useState(false);
   const [featuresMenuOpen, setFeaturesMenuOpen] = useState(false);
   const [featureSearchQuery, setFeatureSearchQuery] = useState("");
 
@@ -1459,6 +1461,22 @@ export default function Page() {
   useEffect(() => {
     setPanelThemeMode(themeMode);
   }, [themeMode, setPanelThemeMode]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mq = window.matchMedia("(max-width: 767px)");
+    const apply = () => setIsNarrowViewport(mq.matches);
+    apply();
+    mq.addEventListener("change", apply);
+    return () => mq.removeEventListener("change", apply);
+  }, []);
+
+  /** Mobile (max-width 767px): auto-collapse sidebar 2s after it opens (including initial load). */
+  useEffect(() => {
+    if (!isNarrowViewport || !sidebarOpen) return;
+    const id = window.setTimeout(() => setSidebarOpen(false), 2000);
+    return () => window.clearTimeout(id);
+  }, [isNarrowViewport, sidebarOpen]);
 
   const featureMenuGrouped = useMemo(() => {
     const q = featureSearchQuery.trim().toLowerCase();
@@ -1986,15 +2004,16 @@ export default function Page() {
       </div>
       <div className="hud-ambient-glow" aria-hidden="true" />
       <div className="relative flex min-h-screen w-full max-w-[100vw] flex-col px-1.5 pb-2 sm:px-2 md:px-3 md:pb-3 lg:px-4 lg:h-full">
-        {/* Top title bar */}
-        <div
-          ref={topbarRef}
-          data-anim="in"
-          className={cn(
-            "shell-neon-yellow cut-frame cyber-frame gold-stroke-strong premium-navbar sticky top-0 z-50 relative shrink-0 overflow-visible border bg-[#070707]/80 py-2.5 pl-1 pr-2.5 sm:py-2.5 sm:pl-1.5 sm:pr-4 md:py-3.5 md:pl-2 md:pr-5",
-            "flex items-center justify-between gap-2 sm:gap-3 md:gap-5 lg:overflow-hidden"
-          )}
-        >
+        {/* Sticky shell has no GSAP transform; inner bar uses data-anim (transform breaks sticky on same node). */}
+        <div className="sticky top-0 z-[60] w-full max-w-full shrink-0">
+          <div
+            ref={topbarRef}
+            data-anim="in"
+            className={cn(
+              "shell-neon-yellow cut-frame cyber-frame gold-stroke-strong premium-navbar overflow-visible border bg-[#070707]/80 py-2.5 pl-1 pr-2.5 sm:py-2.5 sm:pl-1.5 sm:pr-4 md:py-3.5 md:pl-2 md:pr-5",
+              "flex items-center justify-between gap-2 sm:gap-3 md:gap-5 lg:overflow-hidden"
+            )}
+          >
           <div className="absolute inset-0 opacity-80 [background:radial-gradient(900px_280px_at_30%_0%,rgba(250,204,21,0.14),rgba(0,0,0,0)_55%)]" />
           <div
             ref={topDockRef}
@@ -2245,10 +2264,11 @@ export default function Page() {
               </div>
             </div>
           </div>
+          </div>
         </div>
 
         {/* Main frame */}
-        <div className="mt-0 grid min-h-0 w-full max-w-none flex-1 grid-cols-12 gap-2 pt-2 sm:gap-2.5 sm:pt-3 md:gap-3 lg:gap-4">
+        <div className="mt-0 grid min-h-0 w-full max-w-none flex-1 grid-cols-12 gap-1.5 max-md:items-start pt-2 sm:gap-2 sm:pt-3 md:gap-3 md:pt-3 lg:gap-4">
           {/* Sidebar */}
           {sidebarOpen ? (
             <aside
@@ -2261,23 +2281,27 @@ export default function Page() {
                 dockMouseY.current = Infinity;
               }}
               className={cn(
-                "shell-neon-yellow cut-frame cyber-frame gold-stroke relative col-span-12 overflow-hidden border bg-[#060606]/70 p-2.5 sm:p-3 md:col-span-2 lg:col-span-2",
-                "h-auto max-h-none overflow-visible lg:sticky lg:top-0 lg:h-full lg:max-h-none lg:overflow-auto no-scrollbar"
+                "shell-neon-yellow cut-frame cyber-frame gold-stroke relative col-span-5 overflow-hidden border bg-[#060606]/70 md:col-span-2 lg:col-span-2",
+                "max-md:max-h-[min(calc(100dvh-4.5rem),92vh)] max-md:self-start max-md:overflow-y-auto max-md:overflow-x-hidden",
+                "p-1.5 sm:p-2.5 md:p-3",
+                "h-auto max-h-none md:overflow-visible lg:sticky lg:top-0 lg:h-full lg:max-h-none lg:overflow-auto no-scrollbar"
               )}
             >
               <div className="absolute inset-0 opacity-70 [background:radial-gradient(680px_320px_at_20%_10%,rgba(250,204,21,0.1),rgba(0,0,0,0)_62%)]" />
-              <div className="relative pb-6">
-                <div className="mb-3 flex items-center justify-between">
-                  <div className="text-[13px] font-extrabold uppercase tracking-[0.22em] text-white/60">Navigation</div>
+              <div className="relative pb-4 md:pb-6">
+                <div className="mb-2 flex items-center justify-between md:mb-3">
+                  <div className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-white/60 md:text-[13px] md:tracking-[0.22em]">
+                    Nav
+                  </div>
                 </div>
-                <div className="space-y-1.5">
+                <div className="space-y-1 md:space-y-1.5">
                 {nav.map((item, i) => (
                   <button
                     key={item.label}
                     onClick={() => setSelectedNavKey(item.key)}
                     data-dock-item="sidebar"
                     className={cn(
-                      "nav-item group relative flex w-full items-center gap-3 px-3 py-2 text-left",
+                      "nav-item group relative flex w-full items-center gap-1.5 px-1.5 py-1.5 text-left md:gap-3 md:px-3 md:py-2",
                       "cut-frame-sm hud-hover-glow glass-dark premium-gold-border gold-glow-hover transition",
                       "hover:bg-black/45",
                       selectedNavKey === item.key &&
@@ -2286,14 +2310,14 @@ export default function Page() {
                     type="button"
                   >
                     <CheckboxSlot active={selectedNavKey === item.key} />
-                    <span className="grid h-7 w-7 place-items-center rounded-md border border-[color:var(--gold-neon-border-soft)] bg-black/25 text-[color:var(--gold-neon)]/90 group-hover:text-[color:var(--gold-neon)]">
+                    <span className="grid h-6 w-6 shrink-0 place-items-center rounded-md border border-[color:var(--gold-neon-border-soft)] bg-black/25 text-[color:var(--gold-neon)]/90 group-hover:text-[color:var(--gold-neon)] md:h-7 md:w-7">
                       <NavIcon k={item.key} />
                     </span>
-                    <span className="nav-label text-[13px] font-extrabold uppercase tracking-[0.12em] text-[color:var(--gold-neon)]/92 group-hover:text-[color:var(--gold-neon)] sm:text-[14px] sm:tracking-[0.14em]">
-                      <span className="nav-label-text">{item.label}</span>
-                      <span className="nav-glitch" aria-hidden="true" />
+                    <span className="nav-label min-w-0 flex-1 text-[9px] font-extrabold uppercase leading-tight tracking-[0.06em] text-[color:var(--gold-neon)]/92 group-hover:text-[color:var(--gold-neon)] sm:text-[10px] md:text-[13px] md:tracking-[0.12em] lg:text-[14px] lg:tracking-[0.14em]">
+                      <span className="nav-label-text line-clamp-2 break-words">{item.label}</span>
+                      <span className="nav-glitch max-md:hidden" aria-hidden="true" />
                     </span>
-                    <span className="ml-auto h-px w-[40px] bg-[linear-gradient(90deg,rgba(250,204,21,0),rgba(250,204,21,0.45))] opacity-0 transition group-hover:opacity-100" />
+                    <span className="ml-auto hidden h-px w-[28px] shrink-0 bg-[linear-gradient(90deg,rgba(250,204,21,0),rgba(250,204,21,0.45))] opacity-0 transition group-hover:opacity-100 md:block md:w-[40px]" />
                   </button>
                 ))}
                 </div>
@@ -2305,8 +2329,8 @@ export default function Page() {
           <section
             data-anim="in"
             className={cn(
-              "shell-neon-yellow cut-frame cyber-frame gold-stroke relative col-span-12 flex min-h-0 w-full max-w-none flex-col overflow-hidden border bg-[#060606]/70 p-4 sm:p-5 md:p-6 lg:p-7",
-              sidebarOpen ? "md:col-span-10 lg:col-span-10" : "md:col-span-12 lg:col-span-12",
+              "shell-neon-yellow cut-frame cyber-frame gold-stroke relative flex min-h-0 w-full min-w-0 max-w-none flex-col overflow-hidden border bg-[#060606]/70 p-3 sm:p-4 md:p-6 lg:p-7",
+              sidebarOpen ? "col-span-7 md:col-span-10 lg:col-span-10" : "col-span-12",
               "lg:h-full lg:min-h-0"
             )}
           >
@@ -2318,8 +2342,8 @@ export default function Page() {
                 !sidebarOpen && "md:pl-14"
               )}
             >
-              <header className="mb-4 shrink-0 border-b border-[color:var(--gold-neon-border-mid)] pb-3 pr-1">
-                <div className="heading-glow text-[22px] font-black italic tracking-[0.02em] text-[color:var(--gold-neon)] drop-shadow-[0_0_28px_rgba(250,204,21,0.35)] sm:text-[28px] lg:text-[34px]">
+              <header className="mb-3 shrink-0 border-b border-[color:var(--gold-neon-border-mid)] pb-2 pr-1 sm:mb-4 sm:pb-3">
+                <div className="heading-glow text-[15px] font-black italic tracking-[0.02em] text-[color:var(--gold-neon)] drop-shadow-[0_0_28px_rgba(250,204,21,0.35)] min-[400px]:text-[18px] sm:text-[24px] md:text-[28px] lg:text-[34px]">
                   THE SYNDICATE
                 </div>
               </header>
@@ -2353,8 +2377,12 @@ export default function Page() {
                         items={chromaItems}
                         selectedId={selectedCourseId}
                         onSelect={(id) => setSelectedCourseId(id)}
-                        columns={sidebarOpen ? 3 : 4}
-                        radius={sidebarOpen ? 380 : 440}
+                        columns={
+                          sidebarOpen ? (isNarrowViewport ? 2 : 3) : 4
+                        }
+                        radius={
+                          sidebarOpen ? (isNarrowViewport ? 280 : 380) : 440
+                        }
                         damping={0.45}
                         fadeOut={0.6}
                         ease="power3.out"

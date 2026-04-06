@@ -106,23 +106,29 @@ export function GoalPathSystem({
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35, ease: "easeOut" }}
-      className="cut-frame cyber-frame gold-stroke relative w-full max-w-none overflow-hidden border border-[rgba(197,179,88,0.24)] bg-[#060606]/78 p-4 backdrop-blur-[10px] sm:p-5 md:p-6"
-      style={{ borderColor: t.border, boxShadow: `0 0 0 1px ${t.glow}, 0 0 40px rgba(0,0,0,0.45)` }}
+      className="cut-frame cyber-frame gold-stroke relative w-full min-w-0 max-w-none overflow-hidden border border-[rgba(197,179,88,0.32)] bg-[#050505]/90 p-4 backdrop-blur-[12px] sm:p-5 md:p-7"
+      style={{
+        borderColor: t.border,
+        boxShadow: `0 0 0 1px ${t.glow}, 0 0 48px rgba(250,204,21,0.06), 0 24px 80px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,215,0,0.06)`
+      }}
     >
-      <div className="pointer-events-none absolute inset-0 opacity-[0.85] [background:radial-gradient(880px_320px_at_20%_0%,rgba(197,179,88,0.08),rgba(0,0,0,0)_60%)]" />
+      <div
+        className="pointer-events-none absolute inset-0 opacity-100 [background:radial-gradient(ellipse_120%_70%_at_50%_-15%,rgba(250,204,21,0.11),rgba(0,0,0,0)_55%),radial-gradient(900px_420px_at_85%_0%,rgba(197,179,88,0.07),rgba(0,0,0,0)_58%),linear-gradient(180deg,rgba(255,215,0,0.03),rgba(0,0,0,0)_28%)]"
+        aria-hidden
+      />
       <div className="relative">
-        <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <div className="font-mono text-[11px] font-extrabold uppercase tracking-[0.24em] text-white/55 md:text-[12px]">
-              Goal-based path
-            </div>
-            <p className="mt-1 max-w-2xl text-[12px] leading-relaxed text-white/48 md:text-[13px]">
-              Clear milestones, guided courses, earning cues — minimal, premium progression.
-            </p>
+        <header className="border-b border-[rgba(197,179,88,0.2)] pb-4 sm:pb-5">
+          <div className="font-mono text-[10px] font-black uppercase tracking-[0.28em] text-[color:var(--gold-neon)] sm:text-[11px] sm:tracking-[0.3em]">
+            Goal-based path
           </div>
-        </div>
+          <p className="mt-2 max-w-2xl text-[13px] leading-relaxed text-white/72 sm:text-[14px]">
+            Clear milestones, guided courses, earning cues — minimal, premium progression.
+          </p>
+        </header>
 
-        <PathSelector selected={goal} onSelect={setGoal} />
+        <div className="mt-5 sm:mt-6">
+          <PathSelector selected={goal} onSelect={setGoal} />
+        </div>
         <RoadmapFlow goal={goal} currentIndex={currentIndex} onCompleteStep={completeStep} />
         <CourseFlow courses={courseTriple} onNavigate={onNavigate} />
       </div>

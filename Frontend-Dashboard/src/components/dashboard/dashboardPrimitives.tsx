@@ -50,7 +50,8 @@ export function Card({
   className,
   accentKey,
   headerImageSrc,
-  frameVariant = "default"
+  frameVariant = "default",
+  disableHoverLift = false
 }: {
   themeMode: ThemeMode;
   title: string;
@@ -61,6 +62,8 @@ export function Card({
   headerImageSrc?: string;
   /** Match main app shell (navbar / sidebar): gold frame, full opacity, extra padding. */
   frameVariant?: "default" | "shell";
+  /** Disable vertical nudge on hover (e.g. mobile fullscreen panels). */
+  disableHoverLift?: boolean;
 }) {
   const t = themeAccent(themeMode);
   const a = accentKey ? accentByKey(accentKey) : null;
@@ -70,7 +73,7 @@ export function Card({
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.22, ease: "easeOut" }}
-      whileHover={{ y: -2 }}
+      whileHover={disableHoverLift ? undefined : { y: -2 }}
       className={cn(
         "dashboard-card cyber-corners group relative overflow-hidden border transition",
         shell
@@ -108,16 +111,23 @@ export function Card({
         </>
       )}
 
-      <div className="relative flex items-center justify-between gap-3">
+      <div
+        className={cn(
+          "relative flex gap-3",
+          shell
+            ? "flex-col items-stretch sm:flex-row sm:items-center sm:justify-between"
+            : "items-center justify-between"
+        )}
+      >
         <div
           className={cn(
-            "font-mono font-extrabold uppercase tracking-[0.2em] text-white/88 group-hover:text-white/95",
-            shell ? "text-[13px] sm:text-[14px] md:text-[15px]" : "text-[12px]"
+            "min-w-0 font-mono font-extrabold uppercase tracking-[0.2em] text-white/88 group-hover:text-white/95",
+            shell ? "text-[12px] sm:text-[14px] md:text-[15px]" : "text-[12px]"
           )}
         >
           {title}
         </div>
-        {right}
+        {right ? <div className="flex shrink-0 flex-wrap items-center gap-2 sm:justify-end">{right}</div> : null}
       </div>
       {headerImageSrc ? (
         <div className="relative mt-3 overflow-hidden rounded-md border border-white/10 bg-black/40">
