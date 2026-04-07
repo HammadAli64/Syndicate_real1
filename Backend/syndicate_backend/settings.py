@@ -278,13 +278,11 @@ STORAGES = {
     "default": {
         "BACKEND": "django.core.files.storage.FileSystemStorage",
     },
-    # Production (Railway): WhiteNoise serves /static/ from STATIC_ROOT after collectstatic.
+    # Use plain StaticFilesStorage for collectstatic. WhiteNoise's CompressedStaticFilesStorage
+    # post-process step can FileNotFoundError on Railway (admin Select2 i18n paths, etc.).
+    # WhiteNoiseMiddleware still serves /static/ from STATIC_ROOT in production.
     "staticfiles": {
-        "BACKEND": (
-            "whitenoise.storage.CompressedStaticFilesStorage"
-            if not DEBUG
-            else "django.contrib.staticfiles.storage.StaticFilesStorage"
-        ),
+        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
     },
 }
 MEDIA_URL = "/media/"
