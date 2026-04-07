@@ -280,9 +280,8 @@ STORAGES = {
     "default": {
         "BACKEND": "django.core.files.storage.FileSystemStorage",
     },
-    # Do not use whitenoise.storage.CompressedManifestStaticFilesStorage: collectstatic post-process
-    # fails on Railway (MissingFileError on admin CSS refs like widgets.css, Select2 i18n, etc.).
-    # WhiteNoiseMiddleware still serves /static/ from STATIC_ROOT without this storage backend.
+    # Do not use WhiteNoise compressed/manifest storages: collectstatic post-processing fails on Railway.
+    # WhiteNoiseMiddleware still serves /static/ from STATIC_ROOT.
     "staticfiles": {
         "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
     },
