@@ -276,24 +276,15 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 STATIC_ROOT.mkdir(parents=True, exist_ok=True)
 # Explicit root for WhiteNoise (avoids edge cases where auto-detection disagrees with STATIC_ROOT).
 WHITENOISE_ROOT = str(STATIC_ROOT)
-# STORAGES = {
-#     "default": {
-#         "BACKEND": "django.core.files.storage.FileSystemStorage",
-#     },
-#     # Use plain StaticFilesStorage for collectstatic. WhiteNoise's CompressedStaticFilesStorage
-#     # post-process step can FileNotFoundError on Railway (admin Select2 i18n paths, etc.).
-#     # WhiteNoiseMiddleware still serves /static/ from STATIC_ROOT in production.
-#     "staticfiles": {
-#         "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
-#     },
-# }
-
 STORAGES = {
     "default": {
         "BACKEND": "django.core.files.storage.FileSystemStorage",
     },
+    # Do not use whitenoise.storage.CompressedManifestStaticFilesStorage: collectstatic post-process
+    # fails on Railway (MissingFileError on admin CSS refs like widgets.css, Select2 i18n, etc.).
+    # WhiteNoiseMiddleware still serves /static/ from STATIC_ROOT without this storage backend.
     "staticfiles": {
-        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
     },
 }
 MEDIA_URL = "/media/"
