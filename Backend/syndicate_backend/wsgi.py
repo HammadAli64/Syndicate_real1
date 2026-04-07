@@ -24,32 +24,42 @@ if (os.environ.get("SKIP_WSGI_MIGRATE") or "").strip().lower() not in ("1", "tru
 
     _engine = (settings.DATABASES["default"].get("ENGINE") or "").lower()
     _is_sqlite = _engine == "django.db.backends.sqlite3"
+
     if not _is_sqlite:
         _db = settings.DATABASES["default"]
-        # Use stdout so platforms (e.g. Railway) do not label these lines as [error].
+
         print(
             "syndicate_backend.wsgi: db target "
             f"engine={_db.get('ENGINE')} name={_db.get('NAME')} host={_db.get('HOST')}",
             flush=True,
         )
+
         print("syndicate_backend.wsgi: running migrate on default database", flush=True)
+
         try:
             call_command("migrate", interactive=False, verbosity=1)
         except Exception:
             print("syndicate_backend.wsgi: migrate failed", file=sys.stderr, flush=True)
             raise
+
         print("syndicate_backend.wsgi: migrate finished", flush=True)
+
         from django.db import connection
 
         connection.ensure_connection()
-        if connection.vendor == "postgresql" and "auth_user" not in connection.introspection.table_names():
+
+        if (
+            connection.vendor == "postgresql"
+            and "auth_user" not in connection.introspection.table_names()
+        ):
             raise RuntimeError(
                 "PostgreSQL has no auth_user after migrate. "
-                "Fix DATABASE_URL on this Railway service (same DB as Postgres plugin), "
-                "or deploy the branch that includes migration startup (merge challenges into main)."
+                "Fix DATABASE_URL on this Railway service (same DB as Postgres plugin)."
             )
+
     else:
         print("syndicate_backend.wsgi: skipping migrate (SQLite default)", flush=True)
+
 
 from django.core.wsgi import get_wsgi_application
 
