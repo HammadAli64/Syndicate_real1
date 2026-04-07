@@ -1,8 +1,11 @@
 #!/bin/sh
-# Railway/Nixpacks: use as the web start command; Root Directory = Backend.
 set -eu
+
 cd "$(dirname "$0")"
 PORT="${PORT:-8080}"
+
+echo "railway_start: installing requirements"
+pip install -r requirements.txt
 
 if [ -z "${DATABASE_URL:-}" ] && [ -z "${DATABASE_PRIVATE_URL:-}" ] && [ -z "${DATABASE_PUBLIC_URL:-}" ] && [ -z "${PGHOST:-}" ]; then
   echo "railway_start: WARNING: no Postgres env; Django may use SQLite for migrate."
