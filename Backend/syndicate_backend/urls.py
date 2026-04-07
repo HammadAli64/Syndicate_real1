@@ -14,34 +14,15 @@ Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
-import os
-
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
 from django.http import JsonResponse
-from django.urls import include, path, re_path
-from django.views.static import serve
+from django.urls import include, path
 
 from syndicate_backend.admin_forms import EmailAsUsernameAdminLoginForm
 
 admin.site.login_form = EmailAsUsernameAdminLoginForm
-
-
-def _production_static_urls():
-    """Reliable admin CSS/JS on Railway (WhiteNoise can fail on some deploys)."""
-    if settings.DEBUG:
-        return []
-    root = settings.STATIC_ROOT
-    if not root:
-        return []
-    return [
-        re_path(
-            r"^static/(?P<path>.*)$",
-            serve,
-            {"document_root": os.fspath(root)},
-        ),
-    ]
 
 
 def api_root(_request):
@@ -55,7 +36,7 @@ def api_root(_request):
     )
 
 
-urlpatterns = _production_static_urls() + [
+urlpatterns = [
     path("", api_root),
     path("admin/", admin.site.urls),
     path("api/challenges/", include("apps.challenges.urls")),

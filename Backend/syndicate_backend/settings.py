@@ -154,6 +154,7 @@ INSTALLED_APPS.extend(
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -277,9 +278,13 @@ STORAGES = {
     "default": {
         "BACKEND": "django.core.files.storage.FileSystemStorage",
     },
-    # Plain StaticFilesStorage (collectstatic). Production serves STATIC_ROOT via urls.py, not WhiteNoise.
+    # Production (Railway): WhiteNoise serves /static/ from STATIC_ROOT after collectstatic.
     "staticfiles": {
-        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+        "BACKEND": (
+            "whitenoise.storage.CompressedStaticFilesStorage"
+            if not DEBUG
+            else "django.contrib.staticfiles.storage.StaticFilesStorage"
+        ),
     },
 }
 MEDIA_URL = "/media/"
