@@ -281,7 +281,6 @@ STORAGES = {
         "BACKEND": "django.core.files.storage.FileSystemStorage",
     },
     # Do not use WhiteNoise compressed/manifest storages: collectstatic post-processing fails on Railway.
-    # WhiteNoiseMiddleware still serves /static/ from STATIC_ROOT.
     "staticfiles": {
         "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
     },
