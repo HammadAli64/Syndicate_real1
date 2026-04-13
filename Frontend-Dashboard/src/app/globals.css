@@ -3,6 +3,10 @@
 :root {
   --void: #0a0a0a;
   --gold: #ffd700;
+  /* Goals & Milestones chip / FAB / ops deck — same vivid gold as reference UI */
+  --goals-milestones-gold: #ffd700;
+  --goals-milestones-line: rgba(255, 215, 0, 0.55);
+  --goals-milestones-glow: rgba(255, 215, 0, 0.32);
   --gold-alt: #ffc300;
   --gold-aura: rgba(255, 215, 0, 0.4);
   --gold-80: rgba(255, 215, 0, 0.8);

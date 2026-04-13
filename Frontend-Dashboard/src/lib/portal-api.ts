@@ -84,8 +84,10 @@ export function getApiBase(): string {
   return typeof window !== "undefined" ? window.location.origin : "";
 }
 
+/** Portal JWT login gate for the dashboard. Off unless explicitly enabled (open `/` by default). */
 export function authRequired(): boolean {
-  return process.env.NEXT_PUBLIC_AUTH_REQUIRED !== "false";
+  const v = (process.env.NEXT_PUBLIC_AUTH_REQUIRED ?? "").trim().toLowerCase();
+  return v === "true" || v === "1" || v === "yes";
 }
 
 export function readStoredAccess(): string | null {

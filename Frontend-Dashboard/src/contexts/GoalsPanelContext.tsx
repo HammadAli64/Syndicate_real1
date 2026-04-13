@@ -9,6 +9,7 @@ import {
   type ReactNode
 } from "react";
 import type { ThemeMode } from "@/components/dashboard/dashboardPrimitives";
+import { useActivityTimeline } from "@/contexts/ActivityTimelineContext";
 
 export type GoalsPanelContextValue = {
   isGoalsPanelOpen: boolean;
@@ -25,11 +26,21 @@ export type GoalsPanelContextValue = {
 const GoalsPanelContext = createContext<GoalsPanelContextValue | null>(null);
 
 export function GoalsPanelProvider({ children }: { children: ReactNode }) {
+  const { recordEvent } = useActivityTimeline();
   const [isGoalsPanelOpen, setGoalsPanelOpen] = useState(false);
   const [shellSectionKey, setShellSectionKey] = useState<string | null>(null);
   const [themeMode, setPanelThemeMode] = useState<ThemeMode>("default");
 
-  const openGoalsPanel = useCallback(() => setGoalsPanelOpen(true), []);
+  const openGoalsPanel = useCallback(() => {
+    setGoalsPanelOpen(true);
+    recordEvent({
+      category: "system",
+      title: "Opened Goals & Milestones",
+      detail: "Mission deck & timeline overlay",
+      moreDetails:
+        "You opened the floating Goals & Milestones panel: missions, automatic lead-up reminders, notes, and quick access tools."
+    });
+  }, [recordEvent]);
   const closeGoalsPanel = useCallback(() => setGoalsPanelOpen(false), []);
   const toggleGoalsPanel = useCallback(() => setGoalsPanelOpen((v) => !v), []);
 

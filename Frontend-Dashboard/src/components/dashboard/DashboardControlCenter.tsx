@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import type { DashboardNavKey, DashboardSnapshots } from "./types";
+import { useActivityTimeline } from "@/contexts/ActivityTimelineContext";
+import type { ActivityCategory, DashboardNavKey, DashboardSnapshots } from "./types";
 import { useDashboardSnapshots, type DashboardCourseLike } from "./useDashboardSnapshots";
 import { accentByKey, Card, cn, ProgressBar, themeAccent, type ThemeMode } from "./dashboardPrimitives";
 import { PortalSessionControls } from "../auth/PortalSessionControls";
@@ -20,6 +21,25 @@ function timeAgo(ts: number) {
   const d = Math.floor(h / 24);
   return `${d}d ago`;
 }
+
+/** Timeline strip: uppercase compact relative time (matches HUD reference). */
+function timeAgoCaps(ts: number) {
+  const s = Math.max(0, Math.floor((Date.now() - ts) / 1000));
+  if (s < 60) return `${s}S AGO`;
+  const m = Math.floor(s / 60);
+  if (m < 60) return `${m}M AGO`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}H AGO`;
+  const d = Math.floor(h / 24);
+  return `${d}D AGO`;
+}
+
+const ACTIVITY_CAT_LABEL: Record<ActivityCategory, string> = {
+  program: "PROGRAM",
+  syndicate: "SYNDICATE",
+  affiliate: "AFFILIATE",
+  system: "SYSTEM"
+};
 
 function HeroStatusPanel({
   themeMode,
@@ -353,43 +373,83 @@ function AffiliateSnapshotCard({
   );
 }
 
-function ActivityTimelineCard({
-  themeMode,
-  snapshots
-}: {
-  themeMode: ThemeMode;
-  snapshots: DashboardSnapshots;
-}) {
-  const icon = (_cat: string) => "rgba(197,179,88,0.78)";
+function ActivityTimelineCard({ themeMode }: { themeMode: ThemeMode }) {
+  const { items } = useActivityTimeline();
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const gold = "rgba(255, 215, 0, 0.85)";
+  const goldSoft = "rgba(255, 215, 0, 0.42)";
+
+  const rows = useMemo(() => items.slice(0, 20), [items]);
 
   return (
     <Card
       themeMode={themeMode}
       title="Activity Timeline"
       frameVariant="shell"
-      right={<div className="text-[10px] font-bold uppercase tracking-[0.14em] text-white/45">Unified</div>}
+      right={
+        <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-[color:var(--goals-milestones-gold)]/80">
+          Unified
+        </div>
+      }
     >
-      <div className="min-h-[min(42vh,380px)] max-h-[min(62vh,620px)] space-y-2 overflow-y-auto overflow-x-hidden pr-1 [scrollbar-color:rgba(197,179,88,0.35)_transparent]">
-        {snapshots.activity.slice(0, 10).map((a) => (
-          <div
-            key={a.id}
-            className="flex items-start justify-between gap-3 rounded-md border border-[rgba(197,179,88,0.18)] bg-black/40 px-3 py-2.5 md:px-4 md:py-3"
-          >
-            <div className="flex min-w-0 items-start gap-2">
-              <span className="mt-[5px] inline-flex h-2.5 w-2.5 rounded-full" style={{ background: icon(a.category), boxShadow: `0 0 14px ${icon(a.category)}` }} />
-              <div className="min-w-0">
-                <div className="truncate text-[12px] font-semibold text-white/78">
-                  {a.title}{" "}
-                  <span className="ml-2 rounded-md border border-white/10 bg-black/40 px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.12em] text-white/50">
-                    {a.category}
-                  </span>
-                </div>
-                {a.detail ? <div className="truncate text-[12px] text-white/58">{a.detail}</div> : null}
-              </div>
-            </div>
-            <div className="shrink-0 text-[10px] font-bold uppercase tracking-[0.12em] text-white/45">{timeAgo(a.ts)}</div>
+      <div className="min-h-[min(42vh,380px)] max-h-[min(62vh,620px)] space-y-2 overflow-y-auto overflow-x-hidden pr-1 [scrollbar-color:rgba(255,215,0,0.4)_transparent]">
+        {rows.length === 0 ? (
+          <div className="rounded-md border border-[rgba(255,215,0,0.2)] bg-black/35 px-4 py-8 text-center text-[13px] leading-relaxed text-white/55">
+            Your moves appear here automatically—open a section, a course, or Goals &amp; Milestones to start the feed.
           </div>
-        ))}
+        ) : (
+          rows.map((a) => {
+            const open = expandedId === a.id;
+            return (
+              <div
+                key={a.id}
+                className="rounded-md border border-[rgba(255,215,0,0.22)] bg-black/45 px-3 py-2.5 md:px-4 md:py-3"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex min-w-0 items-start gap-2.5">
+                    <span
+                      className="mt-[6px] inline-flex h-2.5 w-2.5 shrink-0 rounded-full"
+                      style={{
+                        background: gold,
+                        boxShadow: `0 0 12px ${goldSoft}, 0 0 20px rgba(255,215,0,0.25)`
+                      }}
+                    />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                        <span className="text-[12px] font-semibold text-white/88">{a.title}</span>
+                        <span className="rounded-md border border-[rgba(255,215,0,0.35)] bg-black/50 px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.14em] text-[color:var(--goals-milestones-gold)]/90">
+                          {ACTIVITY_CAT_LABEL[a.category]}
+                        </span>
+                      </div>
+                      {a.detail ? (
+                        <div className="mt-1 line-clamp-2 text-[12px] leading-snug text-white/55">{a.detail}</div>
+                      ) : null}
+                    </div>
+                  </div>
+                  <div className="flex shrink-0 flex-col items-end gap-1.5">
+                    <div className="text-[10px] font-bold uppercase tracking-[0.12em] text-[color:var(--goals-milestones-gold)]/90">
+                      {timeAgoCaps(a.ts)}
+                    </div>
+                    {a.moreDetails ? (
+                      <button
+                        type="button"
+                        onClick={() => setExpandedId(open ? null : a.id)}
+                        className="rounded border border-[rgba(255,215,0,0.4)] bg-black/40 px-2 py-1 text-[9px] font-black uppercase tracking-[0.14em] text-[color:var(--goals-milestones-gold)]/95 transition hover:border-[rgba(255,215,0,0.65)] hover:bg-black/55"
+                      >
+                        {open ? "Hide" : "Details"}
+                      </button>
+                    ) : null}
+                  </div>
+                </div>
+                {open && a.moreDetails ? (
+                  <div className="mt-3 border-t border-[rgba(255,215,0,0.15)] pt-3 text-[12px] leading-relaxed text-white/70">
+                    {a.moreDetails}
+                  </div>
+                ) : null}
+              </div>
+            );
+          })
+        )}
       </div>
     </Card>
   );
@@ -436,7 +496,7 @@ export default function DashboardControlCenter({
 
         <AffiliateSnapshotCard themeMode={themeMode} snapshots={snapshots} onNavigate={onNavigate} />
 
-        <ActivityTimelineCard themeMode={themeMode} snapshots={snapshots} />
+        <ActivityTimelineCard themeMode={themeMode} />
       </div>
     </div>
   );

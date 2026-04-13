@@ -62,8 +62,8 @@ export default function LoginPage() {
         </p>
         {!authRequired() ? (
           <p className="mt-2 text-[11px] text-amber-200/80">
-            Auth gate is off (<code className="font-mono">NEXT_PUBLIC_AUTH_REQUIRED=false</code>). You can open the
-            dashboard directly; login is optional for API-backed data.
+            Auth gate is off (default). Set <code className="font-mono">NEXT_PUBLIC_AUTH_REQUIRED=true</code> to require
+            login for the dashboard. Optional sign-in still unlocks API-backed data.
           </p>
         ) : null}
         {process.env.NODE_ENV === "development" ? (

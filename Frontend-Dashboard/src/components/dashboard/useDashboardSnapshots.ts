@@ -270,13 +270,8 @@ export function useDashboardSnapshots({
           reminder: { title: "Streak defense", reason: "Do one 10-minute mission today to protect streak.", nav: "monk" }
         };
       })(),
-      activity: [
-        { id: "a-1", category: "program", title: "Completed lesson", detail: "Java: OOP Foundations", ts: nowMinus(22) },
-        { id: "a-2", category: "syndicate", title: "XP gained", detail: "+12 XP from mission entry", ts: nowMinus(64) },
-        { id: "a-3", category: "affiliate", title: "Referral clicked", detail: "New click from TikTok bio", ts: nowMinus(120) },
-        { id: "a-4", category: "system", title: "Core integrity synced", detail: "Throughput nominal", ts: nowMinus(240) },
-        { id: "a-5", category: "system", title: "Resource thread updated", detail: "New insight highlighted", ts: nowMinus(420) }
-      ],
+      /* Live entries come from ActivityTimelineProvider (localStorage); keep empty here */
+      activity: [],
       notifications: notificationsSeed
     });
     setHydrated(true);

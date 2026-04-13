@@ -11,9 +11,7 @@ import {
   DueDateLine,
   type DeckSortDir,
   filterBySearch,
-  MissionStatusBadge,
-  PriorityPoints,
-  ReminderStatusBadge
+  MissionStatusBadge
 } from "./DeckListPrimitives";
 import { DeckBrowseDateBar, DeckDateField, DeckTimeField } from "./DeckDateTimePickers";
 import { missionLocalDay, noteLocalDay, toYyyyMmDd } from "./deck-date-utils";
@@ -43,7 +41,7 @@ function QuickAccessGridFallback() {
       className="flex min-h-[min(48vh,560px)] w-full flex-col justify-center gap-4 rounded-xl border border-white/10 bg-black/25 px-4 py-8"
       aria-hidden
     >
-      <div className="mx-auto h-1.5 w-48 max-w-[80%] animate-pulse rounded-full bg-[rgba(197,179,88,0.2)]" />
+      <div className="mx-auto h-1.5 w-48 max-w-[80%] animate-pulse rounded-full bg-[rgba(255,215,0,0.2)]" />
       <div className="mx-auto h-1.5 w-32 max-w-[60%] animate-pulse rounded-full bg-white/10" />
     </div>
   );
@@ -164,6 +162,48 @@ function timeForApi(t: string) {
   return t;
 }
 
+/** Points still sent to API / stored locally when the field is hidden from UI */
+const DEFAULT_MISSION_POINTS = 10;
+
+/** Offsets before mission target — auto reminder rows (local wall time). */
+const MISSION_AUTO_REMINDER_OFFSETS: ReadonlyArray<{ label: string; ms: number }> = [
+  { label: "1 week before", ms: 7 * 24 * 60 * 60 * 1000 },
+  { label: "3 days before", ms: 3 * 24 * 60 * 60 * 1000 },
+  { label: "24 hours before", ms: 24 * 60 * 60 * 1000 },
+  { label: "12 hours before", ms: 12 * 60 * 60 * 1000 },
+  { label: "6 hours before", ms: 6 * 60 * 60 * 1000 },
+  { label: "1 hour before", ms: 60 * 60 * 1000 },
+  { label: "30 minutes before", ms: 30 * 60 * 1000 }
+];
+
+function localWallDateTimeFromInstant(instantMs: number): { date: string; time: string } | null {
+  const d = new Date(instantMs);
+  if (!Number.isFinite(d.getTime())) return null;
+  const date = toYyyyMmDd(d);
+  const hh = String(d.getHours()).padStart(2, "0");
+  const mm = String(d.getMinutes()).padStart(2, "0");
+  return { date, time: `${hh}:${mm}` };
+}
+
+/** Future reminder slots only; skips offsets already in the past. */
+function buildMissionAutoReminderPayloads(
+  missionTitle: string,
+  targetIso: string
+): Array<{ title: string; date: string; time: string }> {
+  const targetMs = new Date(targetIso).getTime();
+  if (!Number.isFinite(targetMs)) return [];
+  const now = Date.now();
+  const rows: Array<{ title: string; date: string; time: string }> = [];
+  for (const { label, ms } of MISSION_AUTO_REMINDER_OFFSETS) {
+    const at = targetMs - ms;
+    if (at <= now) continue;
+    const parts = localWallDateTimeFromInstant(at);
+    if (!parts?.date || !parts.time) continue;
+    rows.push({ title: `${missionTitle} (${label})`, date: parts.date, time: parts.time });
+  }
+  return rows;
+}
+
 /** Local scheduled instant for a reminder row (date + time). */
 function reminderDueMs(r: ReminderRow): number {
   const tp = r.time.length === 5 ? `${r.time}:00` : r.time;
@@ -212,16 +252,15 @@ type DeckTimeEditTarget =
 
 /** Same shell chrome as Quick Access + navbar/sidebar: gold frame, #060606 glass */
 const DECK_SHELL =
-  "relative w-full min-w-0 shrink-0 overflow-hidden rounded-xl border border-[rgba(197,179,88,0.26)] bg-[#060606]/78 p-[var(--fluid-deck-p)] shadow-[0_0_0_1px_rgba(197,179,88,0.08),0_0_52px_rgba(197,179,88,0.08),inset_0_1px_0_rgba(197,179,88,0.08)] backdrop-blur-[10px]";
+  "relative w-full min-w-0 shrink-0 overflow-hidden rounded-xl border border-[rgba(255,215,0,0.26)] bg-[#060606]/78 p-[var(--fluid-deck-p)] shadow-[0_0_0_1px_rgba(255,215,0,0.08),0_0_52px_rgba(255,215,0,0.08),inset_0_1px_0_rgba(255,215,0,0.08)] backdrop-blur-[10px]";
 
 const DECK_MISSIONS = DECK_SHELL;
-const DECK_REMINDERS = DECK_SHELL;
 
 const DECK_NOTES =
   "relative w-full min-w-0 shrink-0 overflow-hidden rounded-xl border-[rgba(255,215,0,0.46)] bg-gradient-to-b from-[rgba(255,215,0,0.1)] via-[#060606]/96 to-[#050505] p-[var(--fluid-deck-p)] shadow-[0_14px_48px_rgba(0,0,0,0.48),0_0_0_1px_rgba(255,215,0,0.16),0_0_44px_rgba(255,215,0,0.12),0_0_72px_rgba(255,200,0,0.06),inset_0_1px_0_rgba(255,255,255,0.06)]";
 
 const DECK_QUICK_WRAP =
-  "relative overflow-hidden rounded-xl border border-[rgba(197,179,88,0.26)] bg-[#060606]/78 p-[var(--fluid-deck-p)] shadow-[0_0_0_1px_rgba(197,179,88,0.08),0_0_52px_rgba(197,179,88,0.08),inset_0_1px_0_rgba(197,179,88,0.08)]";
+  "relative overflow-hidden rounded-xl border border-[rgba(255,215,0,0.26)] bg-[#060606]/78 p-[var(--fluid-deck-p)] shadow-[0_0_0_1px_rgba(255,215,0,0.08),0_0_52px_rgba(255,215,0,0.08),inset_0_1px_0_rgba(255,215,0,0.08)]";
 
 function DeckGlowNotes() {
   return (
@@ -235,29 +274,29 @@ function DeckGlowNotes() {
 function DeckQuarterGlow() {
   return (
     <div
-      className="pointer-events-none absolute inset-0 opacity-90 [background:radial-gradient(720px_320px_at_20%_0%,rgba(197,179,88,0.11),rgba(0,0,0,0)_60%)]"
+      className="pointer-events-none absolute inset-0 opacity-90 [background:radial-gradient(720px_320px_at_20%_0%,rgba(255,215,0,0.11),rgba(0,0,0,0)_60%)]"
       aria-hidden
     />
   );
 }
 
 const SCROLL_GOLD =
-  "[scrollbar-color:rgba(197,179,88,0.45)_rgba(0,0,0,0.35)]";
+  "[scrollbar-color:rgba(255,215,0,0.45)_rgba(0,0,0,0.35)]";
 
 /** Sub-panels inside missions/reminders (active/missed lists) */
 const DECK_LIST_INNER_BASE =
   "mt-2 min-h-[clamp(12rem,34vh,17.5rem)] max-h-[min(68vh,720px)] space-y-[clamp(0.4rem,1vw+0.15rem,0.65rem)] overflow-y-auto overflow-x-hidden py-1 pr-[clamp(0.25rem,0.8vw+0.1rem,0.45rem)]";
 
 const FORM_SHELL =
-  "mt-[clamp(0.65rem,1.5vw+0.2rem,1.35rem)] space-y-[clamp(0.4rem,1vw+0.15rem,0.75rem)] rounded-xl border border-[rgba(197,179,88,0.22)] bg-black/50 p-[var(--fluid-deck-form-p)] shadow-[0_10px_36px_rgba(0,0,0,0.42),0_0_0_1px_rgba(197,179,88,0.1),inset_0_1px_0_rgba(197,179,88,0.08)]";
+  "mt-[clamp(0.65rem,1.5vw+0.2rem,1.35rem)] space-y-[clamp(0.4rem,1vw+0.15rem,0.75rem)] rounded-xl border border-[rgba(255,215,0,0.22)] bg-black/50 p-[var(--fluid-deck-form-p)] shadow-[0_10px_36px_rgba(0,0,0,0.42),0_0_0_1px_rgba(255,215,0,0.1),inset_0_1px_0_rgba(255,215,0,0.08)]";
 
 const FORM_MISSIONS = FORM_SHELL;
-const FORM_REMINDERS = FORM_SHELL;
 
 /** Inner list panels — match HeroStatusPanel / sidebar gold glass */
 const DECK_SUBPANEL =
-  "min-w-0 rounded-xl border border-[rgba(197,179,88,0.22)] bg-[#060606]/70 p-3 shadow-[0_12px_40px_rgba(0,0,0,0.4),0_0_0_1px_rgba(197,179,88,0.08),0_0_36px_rgba(197,179,88,0.06),inset_0_1px_0_rgba(197,179,88,0.06)] md:p-4";
-const DECK_SUBPANEL_TITLE = "text-[10px] font-black uppercase tracking-[0.16em] text-[color:var(--gold)]/90 md:text-[11px]";
+  "min-w-0 rounded-xl border border-[rgba(255,215,0,0.22)] bg-[#060606]/70 p-3 shadow-[0_12px_40px_rgba(0,0,0,0.4),0_0_0_1px_rgba(255,215,0,0.08),0_0_36px_rgba(255,215,0,0.06),inset_0_1px_0_rgba(255,215,0,0.06)] md:p-4";
+const DECK_SUBPANEL_TITLE =
+  "text-[10px] font-black uppercase tracking-[0.16em] text-[color:var(--goals-milestones-gold)]/92 md:text-[11px]";
 
 const FORM_NOTES =
   "mt-[clamp(0.65rem,1.5vw+0.2rem,1.35rem)] space-y-[clamp(0.4rem,1vw+0.15rem,0.75rem)] rounded-xl border-[rgba(255,215,0,0.4)] bg-black/50 p-[var(--fluid-deck-form-p)] shadow-[0_10px_36px_rgba(0,0,0,0.42),0_0_0_1px_rgba(255,215,0,0.12),inset_0_1px_0_rgba(255,215,0,0.09)]";
@@ -274,7 +313,7 @@ const DECK_TOAST_BTN =
   "inline-flex min-h-9 shrink-0 items-center justify-center rounded-md border px-2.5 py-1.5 text-[10px] font-black uppercase tracking-[0.1em] transition motion-safe:duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-[#050505]";
 
 const DECK_DUE_TOAST_WRAP =
-  "w-full max-w-full rounded-md border border-red-500/60 bg-[#0a0505]/96 px-2 py-2 sm:px-3 sm:py-2.5 min-h-[2.7rem] sm:min-h-[3.1rem] md:min-h-[3.35rem] shadow-[0_0_0_1px_rgba(250,204,21,0.42),inset_0_0_0_1px_rgba(239,68,68,0.35),0_10px_40px_rgba(0,0,0,0.55),0_0_36px_rgba(239,68,68,0.14)] sm:flex sm:items-center sm:gap-2";
+  "w-full max-w-full rounded-md border border-red-500/60 bg-[#0a0505]/96 px-2 py-2 sm:px-3 sm:py-2.5 min-h-[2.7rem] sm:min-h-[3.1rem] md:min-h-[3.35rem] shadow-[0_0_0_1px_rgba(255,215,0,0.42),inset_0_0_0_1px_rgba(239,68,68,0.35),0_10px_40px_rgba(0,0,0,0.55),0_0_36px_rgba(239,68,68,0.14)] sm:flex sm:items-center sm:gap-2";
 
 /** Single navbar slot for reminders: fixed height, one at a time (new replaces previous). */
 const REMINDER_NAV_SLOT_ID = "deck-reminder-due-slot";
@@ -323,7 +362,7 @@ function DeckEmptyCta({
       <button
         type="button"
         onClick={onAction}
-        className="mt-4 inline-flex min-h-[44px] w-full max-w-[16rem] items-center justify-center rounded-lg border border-white/18 bg-black/50 px-4 text-[11px] font-black uppercase tracking-[0.18em] text-white/90 shadow-[0_3px_0_rgba(0,0,0,0.35),inset_0_1px_0_rgba(255,255,255,0.06)] transition motion-safe:duration-200 hover:border-[rgba(197,179,88,0.45)] hover:bg-black/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(250,204,21,0.45)] focus-visible:ring-offset-2 focus-visible:ring-offset-[#050505]"
+        className="mt-4 inline-flex min-h-[44px] w-full max-w-[16rem] items-center justify-center rounded-lg border border-white/18 bg-black/50 px-4 text-[11px] font-black uppercase tracking-[0.18em] text-white/90 shadow-[0_3px_0_rgba(0,0,0,0.35),inset_0_1px_0_rgba(255,255,255,0.06)] transition motion-safe:duration-200 hover:border-[rgba(255,215,0,0.45)] hover:bg-black/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(255,215,0,0.45)] focus-visible:ring-offset-2 focus-visible:ring-offset-[#050505]"
       >
         {actionLabel}
       </button>
@@ -360,28 +399,17 @@ export function MissionCommandDeckCard({
   const [mSortA, setMSortA] = useState<DeckSortDir>("asc");
   const [mSortM, setMSortM] = useState<DeckSortDir>("desc");
 
-  const [rSearchAct, setRSearchAct] = useState("");
-  const [rSearchDone, setRSearchDone] = useState("");
-  const [rSortAct, setRSortAct] = useState<DeckSortDir>("desc");
-  const [rSortDone, setRSortDone] = useState<DeckSortDir>("desc");
-
   const [nSearch, setNSearch] = useState("");
   const [nSort, setNSort] = useState<DeckSortDir>("desc");
 
   const [mTitle, setMTitle] = useState("");
   const [mDate, setMDate] = useState("");
   const [mTime, setMTime] = useState("");
-  const [mPoints, setMPoints] = useState(10);
-
-  const [rTitle, setRTitle] = useState("");
-  const [rDate, setRDate] = useState("");
-  const [rTime, setRTime] = useState("");
 
   const [nTitle, setNTitle] = useState("");
   const [nBody, setNBody] = useState("");
 
   const missionTitleInputRef = useRef<HTMLInputElement>(null);
-  const reminderTitleInputRef = useRef<HTMLInputElement>(null);
   const noteTitleInputRef = useRef<HTMLInputElement>(null);
 
   /** Filter all deck lists to this calendar day (local). Null = show everything. */
@@ -411,12 +439,6 @@ export function MissionCommandDeckCard({
   const [deckAlarmHasCustomUi, setDeckAlarmHasCustomUi] = useState(false);
   const deckAlarmFileInputRef = useRef<HTMLInputElement>(null);
 
-  /** Banked XP: sum of `points` on missions marked done (no completion timestamp in model). */
-  const earnedMissionXp = useMemo(
-    () => missions.filter((m) => m.status === "done").reduce((sum, m) => sum + (Number(m.points) || 0), 0),
-    [missions]
-  );
-
   const scrollComposerIntoView = useCallback((id: string) => {
     const el = document.getElementById(id);
     if (!el) return;
@@ -428,11 +450,6 @@ export function MissionCommandDeckCard({
   const focusMissionComposer = useCallback(() => {
     scrollComposerIntoView("deck-mission-compose");
     window.setTimeout(() => missionTitleInputRef.current?.focus(), 200);
-  }, [scrollComposerIntoView]);
-
-  const focusReminderComposer = useCallback(() => {
-    scrollComposerIntoView("deck-reminder-compose");
-    window.setTimeout(() => reminderTitleInputRef.current?.focus(), 200);
   }, [scrollComposerIntoView]);
 
   const focusNoteComposer = useCallback(() => {
@@ -526,6 +543,42 @@ export function MissionCommandDeckCard({
     setReminders(next);
     window.localStorage.setItem(LS_REMINDERS, JSON.stringify(next));
   }, []);
+
+  /** Creates portal or local reminder rows leading up to a mission target (no UI). */
+  const postAutoRemindersForMission = useCallback(
+    async (missionTitle: string, targetIso: string) => {
+      const payloads = buildMissionAutoReminderPayloads(missionTitle, targetIso);
+      if (payloads.length === 0) return;
+      if (useApiDeck && canDeckWrite) {
+        for (const p of payloads) {
+          const res = await portalFetch(`/api/portal/reminders/`, {
+            method: "POST",
+            body: JSON.stringify({
+              title: p.title,
+              date: p.date,
+              time: timeForApi(p.time),
+              points: 0,
+              status: "active"
+            })
+          });
+          if (!res.ok) {
+            setPortalError("Could not create automatic mission reminder");
+            return;
+          }
+        }
+      } else {
+        const nextRows: ReminderRow[] = payloads.map((p) => ({
+          id: uid(),
+          title: p.title,
+          date: p.date,
+          time: p.time,
+          status: "active"
+        }));
+        persistReminders([...nextRows, ...remindersRef.current]);
+      }
+    },
+    [useApiDeck, canDeckWrite, persistReminders]
+  );
 
   const persistNotes = useCallback((next: NoteRow[]) => {
     const sorted = [...next].sort((a, b) => b.createdAt - a.createdAt);
@@ -889,7 +942,7 @@ export function MissionCommandDeckCard({
                     type="button"
                     className={cn(
                       DECK_TOAST_BTN,
-                      "border-[rgba(197,179,88,0.42)] bg-black/50 text-[rgba(255,248,220,0.92)] hover:border-[rgba(197,179,88,0.62)] focus-visible:ring-[rgba(250,204,21,0.45)]"
+                      "border-[rgba(255,215,0,0.42)] bg-black/50 text-[rgba(255,248,220,0.92)] hover:border-[rgba(255,215,0,0.62)] focus-visible:ring-[rgba(255,215,0,0.45)]"
                     )}
                     onClick={() => {
                       toast.dismiss(t.id);
@@ -950,29 +1003,6 @@ export function MissionCommandDeckCard({
     return [...rows].sort((a, b) => sortByTarget(a, b, mSortM));
   }, [missedMissions, mSearchM, mSortM, browseDate]);
 
-  const activeReminders = useMemo(() => reminders.filter((r) => r.status === "active"), [reminders]);
-  const doneReminders = useMemo(() => reminders.filter((r) => r.status === "completed"), [reminders]);
-
-  const reminderSortKey = (r: ReminderRow) => `${r.date}T${r.time.length === 5 ? r.time + ":00" : r.time}`;
-
-  const filteredActiveReminders = useMemo(() => {
-    let rows = filterBySearch(activeReminders, (r) => `${r.title} ${r.date} ${r.time}`, rSearchAct);
-    if (browseDate) rows = rows.filter((r) => r.date === browseDate);
-    return [...rows].sort((a, b) => {
-      const cmp = reminderSortKey(a).localeCompare(reminderSortKey(b));
-      return rSortAct === "desc" ? -cmp : cmp;
-    });
-  }, [activeReminders, rSearchAct, rSortAct, browseDate]);
-
-  const filteredDoneReminders = useMemo(() => {
-    let rows = filterBySearch(doneReminders, (r) => `${r.title} ${r.date} ${r.time}`, rSearchDone);
-    if (browseDate) rows = rows.filter((r) => r.date === browseDate);
-    return [...rows].sort((a, b) => {
-      const cmp = reminderSortKey(a).localeCompare(reminderSortKey(b));
-      return rSortDone === "desc" ? -cmp : cmp;
-    });
-  }, [doneReminders, rSearchDone, rSortDone, browseDate]);
-
   const filteredNotes = useMemo(() => {
     let rows = filterBySearch(notes, (n) => `${n.title} ${n.body}`, nSearch);
     if (browseDate) rows = rows.filter((n) => noteLocalDay(n.createdAt) === browseDate);
@@ -1003,7 +1033,7 @@ export function MissionCommandDeckCard({
         body: JSON.stringify({
           title,
           target_at: targetIso,
-          points: Math.max(0, Math.min(9999, Math.floor(mPoints))),
+          points: DEFAULT_MISSION_POINTS,
           status: "active"
         })
       });
@@ -1011,52 +1041,22 @@ export function MissionCommandDeckCard({
         setPortalError("Could not create mission");
         return;
       }
+      await postAutoRemindersForMission(title, targetIso);
       await refreshPortal();
     } else {
       const row: MissionRow = {
         id: uid(),
         title,
         targetIso,
-        points: Math.max(0, Math.min(9999, Math.floor(mPoints))),
+        points: DEFAULT_MISSION_POINTS,
         status: "active"
       };
       persistMissions([row, ...missions]);
+      await postAutoRemindersForMission(title, targetIso);
     }
     setMTitle("");
     setMDate("");
     setMTime("");
-    setMPoints(10);
-  };
-
-  const addReminder = async () => {
-    const title = rTitle.trim();
-    if (!title || !rDate || !rTime) return;
-    if (useApiDeck && canDeckWrite) {
-      const res = await portalFetch(`/api/portal/reminders/`, {
-        method: "POST",
-        body: JSON.stringify({
-          title,
-          date: rDate,
-          time: timeForApi(rTime),
-          points: 0,
-          status: "active"
-        })
-      });
-      if (!res.ok) setPortalError("Could not create reminder");
-      await refreshPortal();
-    } else {
-      const row: ReminderRow = {
-        id: uid(),
-        title,
-        date: rDate,
-        time: rTime,
-        status: "active"
-      };
-      persistReminders([row, ...reminders]);
-    }
-    setRTitle("");
-    setRDate("");
-    setRTime("");
   };
 
   const addNote = async () => {
@@ -1082,19 +1082,19 @@ export function MissionCommandDeckCard({
   };
 
   const notesLabel =
-    "text-[11px] font-extrabold uppercase tracking-[0.16em] text-[color:var(--gold)] md:text-[12px]";
+    "text-[11px] font-extrabold uppercase tracking-[0.16em] text-[color:var(--goals-milestones-gold)] md:text-[12px]";
   const notesInput =
-    "mt-1.5 w-full rounded-lg border-[rgba(255,215,0,0.46)] bg-[#0a0906] px-3 py-2.5 text-[15px] font-medium leading-relaxed text-[rgba(255,248,220,0.96)] outline-none placeholder:text-[rgba(255,230,150,0.22)] shadow-[inset_0_2px_8px_rgba(0,0,0,0.62),inset_0_1px_0_rgba(255,215,0,0.07)] focus:border-[rgba(255,230,120,0.78)] focus:shadow-[inset_0_2px_8px_rgba(0,0,0,0.5),0_0_0_1px_rgba(255,215,0,0.28),0_0_24px_rgba(255,200,0,0.2)] focus-visible:ring-2 focus-visible:ring-[rgba(250,204,21,0.5)] focus-visible:ring-offset-2 focus-visible:ring-offset-[#050505] md:py-3";
+    "mt-1.5 w-full rounded-lg border-[rgba(255,215,0,0.46)] bg-[#0a0906] px-3 py-2.5 text-[15px] font-medium leading-relaxed text-[rgba(255,248,220,0.96)] outline-none placeholder:text-[rgba(255,230,150,0.22)] shadow-[inset_0_2px_8px_rgba(0,0,0,0.62),inset_0_1px_0_rgba(255,215,0,0.07)] focus:border-[rgba(255,230,120,0.78)] focus:shadow-[inset_0_2px_8px_rgba(0,0,0,0.5),0_0_0_1px_rgba(255,215,0,0.28),0_0_24px_rgba(255,200,0,0.2)] focus-visible:ring-2 focus-visible:ring-[rgba(255,215,0,0.5)] focus-visible:ring-offset-2 focus-visible:ring-offset-[#050505] md:py-3";
 
   const missionsLabel = notesLabel;
   const missionsInput = notesInput;
-  const remindersLabel = notesLabel;
-  const remindersInput = notesInput;
 
   return (
     <Card
       themeMode={themeMode}
       frameVariant="shell"
+      shellAccent="goals"
+      titleTone="goals"
       disableHoverLift={layoutVariant === "fullscreen"}
       className={cn(
         "shadow-[0_18px_56px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.06)]",
@@ -1102,24 +1102,11 @@ export function MissionCommandDeckCard({
       )}
       title="Goals & Milestones"
       right={
-        <div className="flex flex-col items-end gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
-          <div
-            className="rounded-lg border border-[rgba(197,179,88,0.28)] bg-black/50 px-3 py-2 text-right shadow-[0_0_0_1px_rgba(197,179,88,0.12),0_0_20px_rgba(197,179,88,0.1),inset_0_1px_0_rgba(197,179,88,0.08)]"
-            title="Total points from missions marked complete"
-          >
-            <div className="font-mono text-[9px] font-black uppercase tracking-[0.2em] text-[color:var(--gold)]/85">Earned XP</div>
-            <div className="font-mono text-[18px] font-black tabular-nums leading-none text-[rgba(255,248,220,0.96)]">{earnedMissionXp}</div>
-          </div>
-          {portalBusy ? (
-            <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-neutral-300/88">Syncing…</span>
-          ) : null}
-          {useApiDeck ? (
-            <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[color:var(--gold)]/90">API</span>
-          ) : (
-            <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-neutral-300/85">Local</span>
-          )}
-          <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-neutral-300/85">Ops deck</div>
-        </div>
+        portalBusy ? (
+          <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[color:var(--goals-milestones-gold)]/80">
+            Syncing…
+          </span>
+        ) : undefined
       }
     >
       {portalError ? (
@@ -1144,11 +1131,12 @@ export function MissionCommandDeckCard({
         <div className={DECK_MISSIONS}>
           <DeckQuarterGlow />
           <div className="relative z-[1]">
-          <div className="text-[12px] font-black uppercase tracking-[0.2em] text-[color:var(--gold)] md:text-[13px] lg:text-[14px]">
+          <div className="text-[12px] font-black uppercase tracking-[0.2em] text-[color:var(--goals-milestones-gold)] md:text-[13px] lg:text-[14px]">
             Missions
           </div>
           <p className="mt-2 max-w-prose text-[15px] font-normal leading-relaxed text-neutral-200/90 md:text-[15px] md:leading-[1.55]">
-            Create a mission with a target time and point value. Track active and missed.
+            Create a mission with a target date and time. Reminders fire automatically at 1 week, 3 days, 24 hours, 12 hours,
+            6 hours, 1 hour, and 30 minutes before due. Track active and missed.
           </p>
 
           {useApiDeck && !canDeckWrite ? (
@@ -1169,7 +1157,7 @@ export function MissionCommandDeckCard({
                 disabled={useApiDeck && !canDeckWrite}
               />
             </div>
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               <DeckDateField
                 id="mission-target-date"
                 label="Target date"
@@ -1188,25 +1176,13 @@ export function MissionCommandDeckCard({
                 disabled={useApiDeck && !canDeckWrite}
                 tone="gold"
               />
-              <div>
-                <label className={missionsLabel}>Points</label>
-                <input
-                  className={missionsInput}
-                  type="number"
-                  min={0}
-                  max={9999}
-                  value={mPoints}
-                  onChange={(e) => setMPoints(Number(e.target.value))}
-                  disabled={useApiDeck && !canDeckWrite}
-                />
-              </div>
             </div>
             <motion.button
               type="button"
               whileTap={{ scale: 0.98 }}
               onClick={() => void addMission()}
               disabled={useApiDeck && !canDeckWrite}
-              className="w-full rounded-lg border-[rgba(255,215,0,0.58)] bg-[rgba(255,215,0,0.12)] py-3 text-[11px] font-black uppercase tracking-[0.15em] text-[color:var(--gold)] shadow-[0_4px_0_rgba(0,0,0,0.42),0_0_0_1px_rgba(255,215,0,0.26),0_8px_32px_rgba(255,200,0,0.2),inset_0_1px_0_rgba(255,248,220,0.1)] hover:border-[rgba(255,235,160,0.78)] hover:bg-[rgba(255,215,0,0.16)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(250,204,21,0.55)] focus-visible:ring-offset-2 focus-visible:ring-offset-[#050505] disabled:cursor-not-allowed disabled:opacity-40 md:min-h-[48px] md:text-[12px]"
+              className="w-full rounded-lg border-[rgba(255,215,0,0.58)] bg-[rgba(255,215,0,0.12)] py-3 text-[11px] font-black uppercase tracking-[0.15em] text-[color:var(--goals-milestones-gold)] shadow-[0_4px_0_rgba(0,0,0,0.42),0_0_0_1px_rgba(255,215,0,0.26),0_8px_32px_rgba(255,200,0,0.2),inset_0_1px_0_rgba(255,248,220,0.1)] hover:border-[rgba(255,235,160,0.78)] hover:bg-[rgba(255,215,0,0.16)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(255,215,0,0.55)] focus-visible:ring-offset-2 focus-visible:ring-offset-[#050505] disabled:cursor-not-allowed disabled:opacity-40 md:min-h-[48px] md:text-[12px]"
             >
               Create mission
             </motion.button>
@@ -1231,14 +1207,14 @@ export function MissionCommandDeckCard({
                       message="No active missions on this day."
                       actionLabel="Show all days"
                       onAction={() => setBrowseDate(null)}
-                      accentClass="border-[rgba(197,179,88,0.28)] bg-black/35"
+                      accentClass="border-[rgba(255,215,0,0.28)] bg-black/35"
                     />
                   ) : (
                     <DeckEmptyCta
                       message="Nothing in the active queue yet."
                       actionLabel="Create a mission"
                       onAction={focusMissionComposer}
-                      accentClass="border-[rgba(197,179,88,0.28)] bg-black/35"
+                      accentClass="border-[rgba(255,215,0,0.28)] bg-black/35"
                     />
                   )
                 ) : (
@@ -1252,16 +1228,11 @@ export function MissionCommandDeckCard({
                         title={m.title}
                         badge={<MissionStatusBadge status="active" />}
                         subtitle={
-                          <>
-                            <DueDateLine
-                              label="Due"
-                              value={new Date(m.targetIso).toLocaleString()}
-                              urgent={urgent}
-                            />
-                            <div className="mt-0.5">
-                              <PriorityPoints points={m.points} tone="gold" />
-                            </div>
-                          </>
+                          <DueDateLine
+                            label="Due"
+                            value={new Date(m.targetIso).toLocaleString()}
+                            urgent={urgent}
+                          />
                         }
                         footer={
                           (!useApiDeck || canDeckWrite) && (
@@ -1287,7 +1258,7 @@ export function MissionCommandDeckCard({
                                 type="button"
                                 className={cn(
                                   DECK_ROW_BTN_PRIMARY,
-                                  "border-[rgba(255,215,0,0.48)] bg-[rgba(255,215,0,0.14)] text-[color:var(--gold)] shadow-[0_2px_0_rgba(0,0,0,0.35),inset_0_1px_0_rgba(255,248,220,0.08)] hover:border-[rgba(255,235,160,0.72)] hover:bg-[rgba(255,215,0,0.2)] focus-visible:ring-[rgba(250,204,21,0.55)]"
+                                  "border-[rgba(255,215,0,0.48)] bg-[rgba(255,215,0,0.14)] text-[color:var(--goals-milestones-gold)] shadow-[0_2px_0_rgba(0,0,0,0.35),inset_0_1px_0_rgba(255,248,220,0.08)] hover:border-[rgba(255,235,160,0.72)] hover:bg-[rgba(255,215,0,0.2)] focus-visible:ring-[rgba(255,215,0,0.55)]"
                                 )}
                                 onClick={() => void patchMission(m.id, { status: "done" })}
                               >
@@ -1297,7 +1268,7 @@ export function MissionCommandDeckCard({
                                 type="button"
                                 className={cn(
                                   DECK_ROW_BTN_SECONDARY,
-                                  "border-[rgba(197,179,88,0.35)] bg-black/45 text-[rgba(255,248,220,0.88)] shadow-[0_2px_0_rgba(0,0,0,0.35)] hover:border-[rgba(197,179,88,0.55)] hover:bg-black/55 focus-visible:ring-[rgba(250,204,21,0.45)]"
+                                  "border-[rgba(255,215,0,0.35)] bg-black/45 text-[rgba(255,248,220,0.88)] shadow-[0_2px_0_rgba(0,0,0,0.35)] hover:border-[rgba(255,215,0,0.55)] hover:bg-black/55 focus-visible:ring-[rgba(255,215,0,0.45)]"
                                 )}
                                 onClick={() => void patchMission(m.id, { status: "missed" })}
                               >
@@ -1330,14 +1301,14 @@ export function MissionCommandDeckCard({
                       message="No missed missions on this day."
                       actionLabel="Show all days"
                       onAction={() => setBrowseDate(null)}
-                      accentClass="border-[rgba(197,179,88,0.28)] bg-black/35"
+                      accentClass="border-[rgba(255,215,0,0.28)] bg-black/35"
                     />
                   ) : (
                     <DeckEmptyCta
                       message="No missed missions in the deck."
                       actionLabel="Create a mission"
                       onAction={focusMissionComposer}
-                      accentClass="border-[rgba(197,179,88,0.28)] bg-black/35"
+                      accentClass="border-[rgba(255,215,0,0.28)] bg-black/35"
                     />
                   )
                 ) : (
@@ -1348,12 +1319,7 @@ export function MissionCommandDeckCard({
                       title={m.title}
                       badge={<MissionStatusBadge status="missed" />}
                       subtitle={
-                        <>
-                          <DueDateLine label="Was due" value={new Date(m.targetIso).toLocaleString()} />
-                          <div className="mt-1">
-                            <PriorityPoints points={m.points} tone="gold" />
-                          </div>
-                        </>
+                        <DueDateLine label="Was due" value={new Date(m.targetIso).toLocaleString()} />
                       }
                       footer={
                         (!useApiDeck || canDeckWrite) && (
@@ -1379,7 +1345,7 @@ export function MissionCommandDeckCard({
                               type="button"
                               className={cn(
                                 DECK_ROW_BTN_PRIMARY,
-                                "border-[rgba(255,215,0,0.48)] bg-[rgba(255,215,0,0.14)] text-[color:var(--gold)] shadow-[0_2px_0_rgba(0,0,0,0.35)] hover:border-[rgba(255,235,160,0.72)] focus-visible:ring-[rgba(250,204,21,0.55)]"
+                                "border-[rgba(255,215,0,0.48)] bg-[rgba(255,215,0,0.14)] text-[color:var(--goals-milestones-gold)] shadow-[0_2px_0_rgba(0,0,0,0.35)] hover:border-[rgba(255,235,160,0.72)] focus-visible:ring-[rgba(255,215,0,0.55)]"
                               )}
                               onClick={() => void patchMission(m.id, { status: "done" })}
                             >
@@ -1389,7 +1355,7 @@ export function MissionCommandDeckCard({
                               type="button"
                               className={cn(
                                 DECK_ROW_BTN_SECONDARY,
-                                "border-[rgba(197,179,88,0.38)] bg-black/45 text-[rgba(255,248,220,0.9)] shadow-[0_2px_0_rgba(0,0,0,0.35)] hover:border-[rgba(197,179,88,0.58)] hover:bg-black/55 focus-visible:ring-[rgba(250,204,21,0.45)]"
+                                "border-[rgba(255,215,0,0.38)] bg-black/45 text-[rgba(255,248,220,0.9)] shadow-[0_2px_0_rgba(0,0,0,0.35)] hover:border-[rgba(255,215,0,0.58)] hover:bg-black/55 focus-visible:ring-[rgba(255,215,0,0.45)]"
                               )}
                               onClick={() => void patchMission(m.id, { status: "active" })}
                             >
@@ -1404,30 +1370,15 @@ export function MissionCommandDeckCard({
               </div>
             </div>
           </div>
-          </div>
-        </div>
 
-        {/* 2 — Reminders (shell gold, matches navbar / sidebar) */}
-        <div className={DECK_REMINDERS}>
-          <DeckQuarterGlow />
-          <div className="relative z-[1]">
-          <div className="text-[12px] font-black uppercase tracking-[0.2em] text-[color:var(--gold)] md:text-[13px] lg:text-[14px]">
-            Reminders / schedules
-          </div>
-          <p className="mt-2 max-w-prose text-[15px] font-normal leading-relaxed text-neutral-200/90 md:leading-[1.55]">
-            Schedule with date and time. Separate active and completed.
-          </p>
-
-          {useApiDeck && !canDeckWrite ? (
-            <p className="mt-2 text-[12px] font-medium leading-snug text-amber-100/92">Read-only reminders for your role.</p>
-          ) : null}
-
-          <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border border-[rgba(197,179,88,0.22)] bg-black/45 px-3 py-2.5 text-[11px] font-medium text-[rgba(255,248,220,0.88)] shadow-[inset_0_1px_0_rgba(197,179,88,0.06)]">
-            <span className="font-black uppercase tracking-[0.14em] text-[color:var(--gold)]/95">Due alarm sound</span>
+          <div className="mt-5 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border border-[rgba(255,215,0,0.22)] bg-black/45 px-3 py-2.5 text-[11px] font-medium text-[rgba(255,248,220,0.88)] shadow-[inset_0_1px_0_rgba(255,215,0,0.06)]">
+            <span className="font-black uppercase tracking-[0.14em] text-[color:var(--goals-milestones-gold)]/95">
+              Due alarm sound
+            </span>
             <label className="inline-flex cursor-pointer items-center gap-2">
               <input
                 type="checkbox"
-                className="h-4 w-4 rounded border-[rgba(197,179,88,0.45)] bg-black/60 text-[color:var(--gold)] focus:ring-[rgba(250,204,21,0.45)]"
+                className="h-4 w-4 rounded border-[rgba(255,215,0,0.45)] bg-black/60 text-[color:var(--goals-milestones-gold)] focus:ring-[rgba(255,215,0,0.45)]"
                 checked={deckAlarmMutedUi}
                 onChange={(e) => {
                   const muted = e.target.checked;
@@ -1447,7 +1398,7 @@ export function MissionCommandDeckCard({
             />
             <button
               type="button"
-              className="rounded-md border border-[rgba(197,179,88,0.38)] bg-black/40 px-2.5 py-1.5 text-[10px] font-black uppercase tracking-[0.12em] text-[color:var(--gold)] hover:border-[rgba(197,179,88,0.58)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(250,204,21,0.45)]"
+              className="rounded-md border border-[rgba(255,215,0,0.38)] bg-black/40 px-2.5 py-1.5 text-[10px] font-black uppercase tracking-[0.12em] text-[color:var(--goals-milestones-gold)] hover:border-[rgba(255,215,0,0.58)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(255,215,0,0.45)]"
               onClick={() => deckAlarmFileInputRef.current?.click()}
             >
               Upload tone
@@ -1466,7 +1417,7 @@ export function MissionCommandDeckCard({
             ) : null}
             <button
               type="button"
-              className="rounded-md border border-[rgba(197,179,88,0.35)] bg-black/45 px-2.5 py-1.5 text-[10px] font-black uppercase tracking-[0.12em] text-[rgba(255,248,220,0.9)] hover:border-[rgba(197,179,88,0.55)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(250,204,21,0.45)]"
+              className="rounded-md border border-[rgba(255,215,0,0.35)] bg-black/45 px-2.5 py-1.5 text-[10px] font-black uppercase tracking-[0.12em] text-[rgba(255,248,220,0.9)] hover:border-[rgba(255,215,0,0.55)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(255,215,0,0.45)]"
               onClick={() => {
                 void unlockDeckAlarmAudio();
                 playDeckAlarmSound();
@@ -1478,230 +1429,14 @@ export function MissionCommandDeckCard({
               Default: HUD beep. Browsers may require a click or keypress on the page before due alarms can play.
             </span>
           </div>
-
-          <div id="deck-reminder-compose" className={FORM_REMINDERS}>
-            <div>
-              <label className={remindersLabel}>Reminder title</label>
-              <input
-                ref={reminderTitleInputRef}
-                className={remindersInput}
-                value={rTitle}
-                onChange={(e) => setRTitle(e.target.value)}
-                placeholder="e.g. Call mentor"
-                disabled={useApiDeck && !canDeckWrite}
-              />
-            </div>
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-              <DeckDateField
-                id="reminder-date"
-                label="Date"
-                labelClassName={remindersLabel}
-                value={rDate}
-                onValueChange={setRDate}
-                disabled={useApiDeck && !canDeckWrite}
-                tone="gold"
-              />
-              <DeckTimeField
-                id="reminder-time"
-                label="Time"
-                labelClassName={remindersLabel}
-                value={rTime}
-                onValueChange={setRTime}
-                disabled={useApiDeck && !canDeckWrite}
-                tone="gold"
-              />
-            </div>
-            <motion.button
-              type="button"
-              whileTap={{ scale: 0.98 }}
-              onClick={() => void addReminder()}
-              disabled={useApiDeck && !canDeckWrite}
-              className="w-full rounded-lg border-[rgba(255,215,0,0.58)] bg-[rgba(255,215,0,0.12)] py-3 text-[11px] font-black uppercase tracking-[0.16em] text-[color:var(--gold)] shadow-[0_4px_0_rgba(0,0,0,0.42),0_0_0_1px_rgba(255,215,0,0.26),0_8px_32px_rgba(255,200,0,0.2),inset_0_1px_0_rgba(255,248,220,0.1)] hover:border-[rgba(255,235,160,0.78)] hover:bg-[rgba(255,215,0,0.16)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(250,204,21,0.55)] focus-visible:ring-offset-2 focus-visible:ring-offset-[#050505] disabled:cursor-not-allowed disabled:opacity-40 md:min-h-[48px] md:text-[12px]"
-            >
-              Create reminder
-            </motion.button>
-          </div>
-
-          <div className="mt-5 grid w-full min-w-0 grid-cols-1 gap-4 md:grid-cols-2 md:gap-5">
-            <div className={DECK_SUBPANEL}>
-              <div className={DECK_SUBPANEL_TITLE}>Active reminders</div>
-              <DeckListToolbar
-                tone="gold"
-                search={rSearchAct}
-                onSearchChange={setRSearchAct}
-                sortLabel="When"
-                sortDir={rSortAct}
-                onSortDirToggle={() => setRSortAct((d) => (d === "desc" ? "asc" : "desc"))}
-                placeholder="Search active…"
-              />
-              <div className={cn(DECK_LIST_INNER_BASE, SCROLL_GOLD)}>
-                {filteredActiveReminders.length === 0 ? (
-                  browseDate ? (
-                    <DeckEmptyCta
-                      message="No active reminders on this day."
-                      actionLabel="Show all days"
-                      onAction={() => setBrowseDate(null)}
-                      accentClass="border-[rgba(197,179,88,0.28)] bg-black/35"
-                    />
-                  ) : (
-                    <DeckEmptyCta
-                      message="No reminders scheduled yet."
-                      actionLabel="Create a reminder"
-                      onAction={focusReminderComposer}
-                      accentClass="border-[rgba(197,179,88,0.28)] bg-black/35"
-                    />
-                  )
-                ) : (
-                  filteredActiveReminders.map((r) => {
-                    const timePart = r.time.length === 5 ? `${r.time}:00` : r.time;
-                    const whenMs = new Date(`${r.date}T${timePart}`).getTime();
-                    const now = Date.now();
-                    const isDue = Number.isFinite(whenMs) && whenMs <= now;
-                    const urgent =
-                      Number.isFinite(whenMs) && whenMs > now && whenMs - now < 864e5;
-                    return (
-                      <DeckListItem
-                        key={r.id}
-                        tone="gold"
-                        className={
-                          isDue
-                            ? "shadow-[0_0_0_1px_rgba(239,68,68,0.5),0_0_28px_rgba(239,68,68,0.22)]"
-                            : undefined
-                        }
-                        title={r.title}
-                        badge={<ReminderStatusBadge status="active" />}
-                        subtitle={
-                          <>
-                            {isDue ? (
-                              <div
-                                className="mb-1.5 flex items-center gap-1.5 rounded-md border border-red-500/55 bg-red-950/45 px-2 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-red-100"
-                                role="status"
-                              >
-                                <span className="deck-alarm-bell inline-block" aria-hidden>
-                                  🔔
-                                </span>
-                                Reminder due — snooze, edit time, or complete
-                              </div>
-                            ) : null}
-                            <DueDateLine
-                              label="When"
-                              value={`${r.date} · ${formatReminderTimeDisplay(r.time)}`}
-                              urgent={urgent}
-                            />
-                          </>
-                        }
-                        footer={
-                          canEditReminders && (
-                            <div className="flex flex-wrap gap-2">
-                              <button
-                                type="button"
-                                className={cn(
-                                  DECK_ROW_BTN_SECONDARY,
-                                  "border-white/22 bg-black/45 text-white/90 shadow-[0_2px_0_rgba(0,0,0,0.35)] hover:border-white/40 focus-visible:ring-white/35"
-                                )}
-                                onClick={() => {
-                                  if (reminderNavSlotTargetIdRef.current === r.id) {
-                                    reminderUserAcknowledgedRef.current = true;
-                                    clearReminderNavAutoTimeout();
-                                  }
-                                  setTimeEdit({
-                                    kind: "reminder",
-                                    id: r.id,
-                                    title: r.title,
-                                    date: r.date,
-                                    time: r.time
-                                  });
-                                }}
-                              >
-                                Edit time
-                              </button>
-                              {isDue ? (
-                                <button
-                                  type="button"
-                                  className={cn(
-                                    DECK_ROW_BTN_SECONDARY,
-                                    "border-red-500/48 bg-red-950/35 text-red-50 shadow-[0_2px_0_rgba(0,0,0,0.35)] hover:border-red-300/75 focus-visible:ring-red-400/55"
-                                  )}
-                                  onClick={() => void snoozeReminder10Min(r)}
-                                >
-                                  Snooze 10 min
-                                </button>
-                              ) : null}
-                              <button
-                                type="button"
-                                className={cn(
-                                  DECK_ROW_BTN_PRIMARY,
-                                  "border-[rgba(255,215,0,0.48)] bg-[rgba(255,215,0,0.14)] text-[color:var(--gold)] shadow-[0_2px_0_rgba(0,0,0,0.35)] hover:border-[rgba(255,235,160,0.72)] hover:bg-[rgba(255,215,0,0.2)] focus-visible:ring-[rgba(250,204,21,0.55)]"
-                                )}
-                                onClick={() => {
-                                  clearReminderToastKeysForId(r.id);
-                                  void patchReminder(r.id, { status: "completed" });
-                                }}
-                              >
-                                Mark completed
-                              </button>
-                            </div>
-                          )
-                        }
-                      />
-                    );
-                  })
-                )}
-              </div>
-            </div>
-            <div className={DECK_SUBPANEL}>
-              <div className={DECK_SUBPANEL_TITLE}>Completed reminders</div>
-              <DeckListToolbar
-                tone="gold"
-                search={rSearchDone}
-                onSearchChange={setRSearchDone}
-                sortLabel="When"
-                sortDir={rSortDone}
-                onSortDirToggle={() => setRSortDone((d) => (d === "desc" ? "asc" : "desc"))}
-                placeholder="Search completed…"
-              />
-              <div className={cn(DECK_LIST_INNER_BASE, SCROLL_GOLD)}>
-                {filteredDoneReminders.length === 0 ? (
-                  browseDate ? (
-                    <DeckEmptyCta
-                      message="No completed reminders on this day."
-                      actionLabel="Show all days"
-                      onAction={() => setBrowseDate(null)}
-                      accentClass="border-[rgba(197,179,88,0.28)] bg-black/35"
-                    />
-                  ) : (
-                    <DeckEmptyCta
-                      message="No completed reminders yet."
-                      actionLabel="Create a reminder"
-                      onAction={focusReminderComposer}
-                      accentClass="border-[rgba(197,179,88,0.28)] bg-black/35"
-                    />
-                  )
-                ) : (
-                  filteredDoneReminders.map((r) => (
-                    <DeckListItem
-                      key={r.id}
-                      tone="gold"
-                      title={r.title}
-                      dimmed
-                      badge={<ReminderStatusBadge status="completed" />}
-                      subtitle={
-                        <DueDateLine label="Was" value={`${r.date} ${r.time}`} />
-                      }
-                    />
-                  ))
-                )}
-              </div>
-            </div>
-          </div>
           </div>
         </div>
 
-        {/* 3 — Notes (full width, ledger gold deck) */}
+        {/* 2 — Notes (full width, ledger gold deck) */}
         <div className={DECK_NOTES}>
           <DeckGlowNotes />
           <div className="relative z-[1]">
-          <div className="text-[12px] font-black uppercase tracking-[0.2em] text-[color:var(--gold)] md:text-[13px] lg:text-[14px]">
+          <div className="text-[12px] font-black uppercase tracking-[0.2em] text-[color:var(--goals-milestones-gold)] md:text-[13px] lg:text-[14px]">
             Notes
           </div>
           <p className="mt-2 max-w-prose text-[15px] font-normal leading-relaxed text-neutral-200/90 md:leading-[1.55]">
@@ -1739,7 +1474,7 @@ export function MissionCommandDeckCard({
               whileTap={{ scale: 0.98 }}
               onClick={() => void addNote()}
               disabled={useApiDeck && !canDeckWrite}
-              className="w-full rounded-lg border-[rgba(255,215,0,0.58)] bg-[rgba(255,215,0,0.12)] py-3 text-[11px] font-black uppercase tracking-[0.16em] text-[color:var(--gold)] shadow-[0_4px_0_rgba(0,0,0,0.42),0_0_0_1px_rgba(255,215,0,0.26),0_8px_32px_rgba(255,200,0,0.2),inset_0_1px_0_rgba(255,248,220,0.1)] hover:border-[rgba(255,235,160,0.78)] hover:bg-[rgba(255,215,0,0.16)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(250,204,21,0.55)] focus-visible:ring-offset-2 focus-visible:ring-offset-[#050505] disabled:cursor-not-allowed disabled:opacity-40 md:min-h-[48px] md:text-[12px]"
+              className="w-full rounded-lg border-[rgba(255,215,0,0.58)] bg-[rgba(255,215,0,0.12)] py-3 text-[11px] font-black uppercase tracking-[0.16em] text-[color:var(--goals-milestones-gold)] shadow-[0_4px_0_rgba(0,0,0,0.42),0_0_0_1px_rgba(255,215,0,0.26),0_8px_32px_rgba(255,200,0,0.2),inset_0_1px_0_rgba(255,248,220,0.1)] hover:border-[rgba(255,235,160,0.78)] hover:bg-[rgba(255,215,0,0.16)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(255,215,0,0.55)] focus-visible:ring-offset-2 focus-visible:ring-offset-[#050505] disabled:cursor-not-allowed disabled:opacity-40 md:min-h-[48px] md:text-[12px]"
             >
               Save note
             </motion.button>
@@ -1768,7 +1503,7 @@ export function MissionCommandDeckCard({
               {/* Library column */}
               <div className="flex min-h-0 min-w-0 flex-col border-b border-[rgba(255,215,0,0.22)] lg:border-b-0 lg:border-r">
                 <div className="shrink-0 border-b border-[rgba(255,215,0,0.18)] bg-black/35 px-3 py-2.5 md:px-4">
-                  <div className="text-[10px] font-black uppercase tracking-[0.22em] text-[color:var(--gold)]/90">
+                  <div className="text-[10px] font-black uppercase tracking-[0.22em] text-[color:var(--goals-milestones-gold)]/90">
                     Note library
                   </div>
                   <p className="mt-0.5 text-[12px] font-normal leading-snug text-neutral-300/88">
@@ -1797,7 +1532,7 @@ export function MissionCommandDeckCard({
                         <button
                           type="button"
                           onClick={() => setNSearch("")}
-                          className="mt-4 inline-flex min-h-[44px] w-full max-w-[14rem] items-center justify-center rounded-lg border border-white/18 bg-black/45 text-[11px] font-black uppercase tracking-[0.16em] text-white/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(250,204,21,0.5)] focus-visible:ring-offset-2 focus-visible:ring-offset-[#050505]"
+                          className="mt-4 inline-flex min-h-[44px] w-full max-w-[14rem] items-center justify-center rounded-lg border border-white/18 bg-black/45 text-[11px] font-black uppercase tracking-[0.16em] text-white/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(255,215,0,0.5)] focus-visible:ring-offset-2 focus-visible:ring-offset-[#050505]"
                         >
                           Clear search
                         </button>
@@ -1822,7 +1557,7 @@ export function MissionCommandDeckCard({
                           title={n.title}
                           onClick={() => setSelectedNoteId(n.id)}
                           className={cn(
-                            "min-h-[44px] w-full rounded-lg border px-3 py-2.5 text-left motion-safe:transition-[box-shadow,border-color,background-color,transform] motion-safe:duration-200 motion-reduce:transform-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(250,204,21,0.45)] focus-visible:ring-offset-2 focus-visible:ring-offset-[#050505]",
+                            "min-h-[44px] w-full rounded-lg border px-3 py-2.5 text-left motion-safe:transition-[box-shadow,border-color,background-color,transform] motion-safe:duration-200 motion-reduce:transform-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(255,215,0,0.45)] focus-visible:ring-offset-2 focus-visible:ring-offset-[#050505]",
                             active
                               ? "border-sky-400/55 bg-gradient-to-r from-sky-500/20 via-sky-500/12 to-transparent shadow-[inset_0_0_0_1px_rgba(56,189,248,0.35),0_0_24px_rgba(56,189,248,0.25),0_0_48px_rgba(14,165,233,0.12)]"
                               : "border-[rgba(255,215,0,0.14)] bg-black/30 motion-safe:hover:-translate-y-px hover:border-[rgba(255,235,160,0.35)] hover:bg-black/45 hover:shadow-[0_0_18px_rgba(255,200,0,0.1)]"
@@ -1845,7 +1580,7 @@ export function MissionCommandDeckCard({
                       type="button"
                       whileTap={{ scale: 0.99 }}
                       onClick={() => setNotesExpanded(true)}
-                      className="mt-1 min-h-[44px] w-full rounded-lg border-[rgba(255,215,0,0.42)] bg-black/5 py-2.5 text-[10px] font-extrabold uppercase tracking-[0.14em] text-[color:var(--gold)]/92 shadow-[0_0_14px_rgba(255,200,0,0.12)] hover:border-[rgba(255,235,160,0.65)] hover:shadow-[0_0_22px_rgba(255,215,0,0.18)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(250,204,21,0.5)] focus-visible:ring-offset-2 focus-visible:ring-offset-[#050505]"
+                      className="mt-1 min-h-[44px] w-full rounded-lg border-[rgba(255,215,0,0.42)] bg-black/5 py-2.5 text-[10px] font-extrabold uppercase tracking-[0.14em] text-[color:var(--goals-milestones-gold)]/92 shadow-[0_0_14px_rgba(255,200,0,0.12)] hover:border-[rgba(255,235,160,0.65)] hover:shadow-[0_0_22px_rgba(255,215,0,0.18)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(255,215,0,0.5)] focus-visible:ring-offset-2 focus-visible:ring-offset-[#050505]"
                     >
                       Load more ({notesRemaining})
                     </motion.button>
@@ -1853,7 +1588,7 @@ export function MissionCommandDeckCard({
                   {notesExpanded && filteredNotes.length > 5 ? (
                     <button
                       type="button"
-                      className="w-full py-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-[rgba(255,230,180,0.5)] underline hover:text-[color:var(--gold)]/85"
+                      className="w-full py-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-[rgba(255,230,180,0.5)] underline hover:text-[color:var(--goals-milestones-gold)]/85"
                       onClick={() => setNotesExpanded(false)}
                     >
                       Collapse to recent five
@@ -1865,7 +1600,7 @@ export function MissionCommandDeckCard({
               {/* Reader column — body & meta only */}
               <div className="flex min-h-0 min-w-0 flex-col bg-black/25 lg:bg-black/20">
                 <div className="shrink-0 border-b border-[rgba(255,215,0,0.15)] px-4 py-2.5 md:px-5">
-                  <div className="text-[10px] font-black uppercase tracking-[0.22em] text-[color:var(--gold)]/75">
+                  <div className="text-[10px] font-black uppercase tracking-[0.22em] text-[color:var(--goals-milestones-gold)]/75">
                     Reader
                   </div>
                 </div>
@@ -1878,7 +1613,7 @@ export function MissionCommandDeckCard({
                   {selectedNote ? (
                     <div className="flex min-h-[12rem] flex-col pb-2">
                       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-[rgba(255,215,0,0.12)] pb-3 font-mono text-[12px] text-neutral-300/88">
-                        <span className="font-semibold text-[color:var(--gold)]/88">
+                        <span className="font-semibold text-[color:var(--goals-milestones-gold)]/88">
                           {new Date(selectedNote.createdAt).toLocaleString()}
                         </span>
                         {selectedNote.body?.trim() ? (
@@ -1906,7 +1641,7 @@ export function MissionCommandDeckCard({
           </div>
         </div>
 
-        {/* 4 — Quick access: full width & height below notes */}
+        {/* 3 — Quick access: full width & height below notes */}
         <section
           aria-label="Quick access tools"
           className="relative w-full min-w-0 flex-1 scroll-mt-4"
@@ -1938,8 +1673,8 @@ export function MissionCommandDeckCard({
             aria-label="Close"
             onClick={() => setTimeEdit(null)}
           />
-          <div className="relative z-[1] w-full max-w-md rounded-xl border border-[rgba(197,179,88,0.28)] bg-[#060606]/95 p-4 shadow-[0_0_0_1px_rgba(197,179,88,0.12),0_24px_64px_rgba(0,0,0,0.65)] backdrop-blur-md">
-            <h2 id="deck-time-edit-title" className="text-[12px] font-black uppercase tracking-[0.2em] text-[color:var(--gold)]/95">
+          <div className="relative z-[1] w-full max-w-md rounded-xl border border-[rgba(255,215,0,0.28)] bg-[#060606]/95 p-4 shadow-[0_0_0_1px_rgba(255,215,0,0.12),0_24px_64px_rgba(0,0,0,0.65)] backdrop-blur-md">
+            <h2 id="deck-time-edit-title" className="text-[12px] font-black uppercase tracking-[0.2em] text-[color:var(--goals-milestones-gold)]/95">
               Edit time
             </h2>
             <p className="mt-1 truncate text-[14px] font-semibold text-white/92" title={timeEdit.title}>
@@ -1980,7 +1715,7 @@ export function MissionCommandDeckCard({
                 type="button"
                 className={cn(
                   DECK_ROW_BTN_PRIMARY,
-                  "border-[rgba(255,215,0,0.52)] bg-[rgba(255,215,0,0.14)] text-[color:var(--gold)] hover:border-[rgba(255,235,160,0.78)] focus-visible:ring-[rgba(250,204,21,0.55)]"
+                  "border-[rgba(255,215,0,0.52)] bg-[rgba(255,215,0,0.14)] text-[color:var(--goals-milestones-gold)] hover:border-[rgba(255,235,160,0.78)] focus-visible:ring-[rgba(255,215,0,0.55)]"
                 )}
                 disabled={!timeEditDate?.trim() || !timeEditTime?.trim() || !localDateAndTimeToIso(timeEditDate, timeEditTime)}
                 onClick={() => void saveTimeEdit()}

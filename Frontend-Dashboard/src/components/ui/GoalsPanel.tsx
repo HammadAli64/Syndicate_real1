@@ -5,7 +5,7 @@ import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { X } from "lucide-react";
 import { MissionCommandDeckCard } from "@/components/dashboard/MissionCommandDeckCard";
-import { cn, themeAccent, type ThemeMode } from "@/components/dashboard/dashboardPrimitives";
+import { cn, type ThemeMode } from "@/components/dashboard/dashboardPrimitives";
 import { useGoalsPanel } from "@/contexts/GoalsPanelContext";
 
 /** Snappy motion — transform + opacity only, short durations */
@@ -27,7 +27,6 @@ function GoalsPanelOverlay({
   onClose: () => void;
   themeMode: ThemeMode;
 }) {
-  const t = themeAccent(themeMode);
   const isViewport = mode === "viewport";
 
   return (
@@ -58,30 +57,31 @@ function GoalsPanelOverlay({
           isViewport
             ? "inset-0 h-[100dvh] max-h-[100dvh] w-full max-w-full rounded-none"
             : "inset-0 md:h-full md:max-h-full",
-          "cut-frame cyber-frame gold-stroke border border-[rgba(197,179,88,0.35)] bg-[#060606]/98 shadow-[inset_0_1px_0_rgba(255,215,0,0.08)]",
+          "cut-frame cyber-frame gold-stroke border border-[rgba(255,215,0,0.42)] bg-[#060606]/98 shadow-[inset_0_1px_0_rgba(255,215,0,0.12),0_0_0_1px_rgba(255,215,0,0.2),0_24px_80px_rgba(0,0,0,0.55)]",
           isViewport &&
             "box-border pt-[env(safe-area-inset-top,0px)] pb-[env(safe-area-inset-bottom,0px)] pl-[env(safe-area-inset-left,0px)] pr-[env(safe-area-inset-right,0px)]"
         )}
         style={{
-          borderColor: t.border,
-          boxShadow: `inset 0 1px 0 ${t.glow}, 0 0 0 1px ${t.glow}, 0 24px 80px rgba(0,0,0,0.55)`
+          borderColor: "rgba(255, 215, 0, 0.5)",
+          boxShadow:
+            "inset 0 1px 0 rgba(255, 215, 0, 0.18), 0 0 0 1px rgba(255, 215, 0, 0.22), 0 24px 80px rgba(0,0,0,0.55)"
         }}
         initial={{ x: "100%" }}
         animate={{ x: 0 }}
         exit={{ x: "100%" }}
         transition={{ duration: SHEET_MS, ease: SHEET_EASE }}
       >
-        <div className="flex shrink-0 items-center justify-between gap-3 border-b border-white/10 bg-black/50 px-3 py-2.5 sm:px-4 sm:py-3 md:px-5">
+        <div className="flex shrink-0 items-center justify-between gap-3 border-b border-[rgba(255,215,0,0.22)] bg-black/50 px-3 py-2.5 sm:px-4 sm:py-3 md:px-5">
           <h2
             id="goals-panel-title"
-            className="min-w-0 flex-1 text-[11px] font-black uppercase leading-snug tracking-[0.14em] text-[color:var(--gold)]/95 sm:text-[12px] sm:tracking-[0.18em] md:tracking-[0.2em]"
+            className="min-w-0 flex-1 text-[11px] font-black uppercase leading-snug tracking-[0.14em] text-[color:var(--goals-milestones-gold)] [text-shadow:0_0_12px_rgba(255,215,0,0.28)] sm:text-[12px] sm:tracking-[0.18em] md:tracking-[0.2em]"
           >
-            {isViewport ? "Goals & Milestones" : "Goals & Milestones — Ops deck"}
+            Goals & Milestones
           </h2>
           <button
             type="button"
             onClick={onClose}
-            className="grid h-11 w-11 min-h-[44px] min-w-[44px] shrink-0 place-items-center rounded-lg border border-white/18 bg-black/45 text-neutral-200/95 transition hover:border-white/32 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(250,204,21,0.5)] focus-visible:ring-offset-2 focus-visible:ring-offset-[#060606]"
+            className="grid h-11 w-11 min-h-[44px] min-w-[44px] shrink-0 place-items-center rounded-lg border border-[rgba(255,215,0,0.45)] bg-black/45 text-[color:var(--goals-milestones-gold)] transition hover:border-[rgba(255,215,0,0.65)] hover:text-[color:var(--goals-milestones-gold)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(255,215,0,0.5)] focus-visible:ring-offset-2 focus-visible:ring-offset-[#060606]"
             aria-label="Close panel"
           >
             <X className="h-5 w-5" strokeWidth={2} />
@@ -90,7 +90,7 @@ function GoalsPanelOverlay({
         <div
           className={cn(
             "min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-y-contain p-3 sm:p-4 md:p-5",
-            "[scrollbar-color:rgba(197,179,88,0.45)_rgba(0,0,0,0.35)] [touch-action:pan-y]"
+            "[scrollbar-color:rgba(255,215,0,0.5)_rgba(0,0,0,0.35)] [touch-action:pan-y]"
           )}
         >
           <MissionCommandDeckCard themeMode={themeMode} layoutVariant={isViewport ? "fullscreen" : "embedded"} />

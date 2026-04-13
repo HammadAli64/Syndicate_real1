@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { Target } from "lucide-react";
 import type { DashboardNavKey } from "./types";
 
 export type ThemeMode = "default" | "danger" | "cyberpunk";
@@ -51,7 +52,9 @@ export function Card({
   accentKey,
   headerImageSrc,
   frameVariant = "default",
-  disableHoverLift = false
+  disableHoverLift = false,
+  titleTone = "default",
+  shellAccent = "default"
 }: {
   themeMode: ThemeMode;
   title: string;
@@ -64,10 +67,15 @@ export function Card({
   frameVariant?: "default" | "shell";
   /** Disable vertical nudge on hover (e.g. mobile fullscreen panels). */
   disableHoverLift?: boolean;
+  /** Goals & Milestones ops deck: target icon + #FFD700 title. */
+  titleTone?: "default" | "goals";
+  /** Vivid #FFD700 shell chrome (Goals & Milestones card). */
+  shellAccent?: "default" | "goals";
 }) {
   const t = themeAccent(themeMode);
   const a = accentKey ? accentByKey(accentKey) : null;
   const shell = frameVariant === "shell";
+  const goalsShell = shell && shellAccent === "goals";
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
@@ -77,16 +85,22 @@ export function Card({
       className={cn(
         "dashboard-card cyber-corners group relative overflow-hidden border transition",
         shell
-          ? "cut-frame cyber-frame gold-stroke w-full max-w-none border-[rgba(197,179,88,0.28)] bg-[#060606]/82 p-[var(--fluid-card-p-shell)] opacity-100 backdrop-blur-[12px]"
+          ? cn(
+              "cut-frame cyber-frame gold-stroke w-full max-w-none bg-[#060606]/82 p-[var(--fluid-card-p-shell)] opacity-100 backdrop-blur-[12px]",
+              goalsShell
+                ? "border-[rgba(255,215,0,0.38)]"
+                : "border-[rgba(197,179,88,0.28)]"
+            )
           : "bg-[rgba(10,10,10,0.70)] p-[var(--fluid-card-p)] opacity-70 backdrop-blur-[12px] hover:opacity-100",
         className
       )}
       style={
         shell
           ? {
-              borderColor: "rgba(197,179,88,0.32)",
-              boxShadow:
-                "0 0 0 1px rgba(197,179,88,0.08), 0 0 72px rgba(197,179,88,0.09), inset 0 1px 0 rgba(197,179,88,0.06)",
+              borderColor: goalsShell ? "rgba(255, 215, 0, 0.42)" : "rgba(197,179,88,0.32)",
+              boxShadow: goalsShell
+                ? "0 0 0 1px rgba(255, 215, 0, 0.12), 0 0 72px rgba(255, 215, 0, 0.14), inset 0 1px 0 rgba(255, 215, 0, 0.1)"
+                : "0 0 0 1px rgba(197,179,88,0.08), 0 0 72px rgba(197,179,88,0.09), inset 0 1px 0 rgba(197,179,88,0.06)",
               ["--card-accent-border" as any]: a?.border ?? t.border,
               ["--card-accent-glow" as any]: a?.glow ?? t.glow
             }
@@ -99,8 +113,22 @@ export function Card({
     >
       {shell ? (
         <>
-          <div className="pointer-events-none absolute inset-0 opacity-[0.9] [background:radial-gradient(920px_520px_at_22%_0%,rgba(197,179,88,0.13),rgba(0,0,0,0)_58%)]" />
-          <div className="pointer-events-none absolute inset-0 opacity-[0.35] [background:radial-gradient(640px_400px_at_92%_12%,rgba(197,179,88,0.06),rgba(0,0,0,0)_55%)]" />
+          <div
+            className={cn(
+              "pointer-events-none absolute inset-0 opacity-[0.9]",
+              goalsShell
+                ? "[background:radial-gradient(920px_520px_at_22%_0%,rgba(255,215,0,0.16),rgba(0,0,0,0)_58%)]"
+                : "[background:radial-gradient(920px_520px_at_22%_0%,rgba(197,179,88,0.13),rgba(0,0,0,0)_58%)]"
+            )}
+          />
+          <div
+            className={cn(
+              "pointer-events-none absolute inset-0 opacity-[0.35]",
+              goalsShell
+                ? "[background:radial-gradient(640px_400px_at_92%_12%,rgba(255,215,0,0.08),rgba(0,0,0,0)_55%)]"
+                : "[background:radial-gradient(640px_400px_at_92%_12%,rgba(197,179,88,0.06),rgba(0,0,0,0)_55%)]"
+            )}
+          />
         </>
       ) : (
         <>
@@ -121,11 +149,25 @@ export function Card({
       >
         <div
           className={cn(
-            "min-w-0 font-extrabold uppercase tracking-[0.2em] text-white/88 group-hover:text-white/95",
+            "min-w-0",
+            titleTone === "goals"
+              ? "flex items-center gap-2.5 sm:gap-3"
+              : "font-extrabold uppercase tracking-[0.2em] text-white/88 group-hover:text-white/95",
             shell ? "fluid-text-ui-sm" : "fluid-text-ui-sm"
           )}
         >
-          {title}
+          {titleTone === "goals" ? (
+            <>
+              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-md border border-[rgba(255,215,0,0.52)] bg-black/35 text-[color:var(--goals-milestones-gold)] shadow-[0_0_14px_rgba(255,215,0,0.22)] sm:h-9 sm:w-9">
+                <Target className="h-[17px] w-[17px] sm:h-[18px] sm:w-[18px]" strokeWidth={2.2} aria-hidden />
+              </span>
+              <span className="font-extrabold uppercase tracking-[0.2em] text-[color:var(--goals-milestones-gold)] [text-shadow:0_0_14px_rgba(255,215,0,0.32),0_1px_0_rgba(0,0,0,0.85)]">
+                {title}
+              </span>
+            </>
+          ) : (
+            title
+          )}
         </div>
         {right ? <div className="flex shrink-0 flex-wrap items-center gap-2 sm:justify-end">{right}</div> : null}
       </div>
