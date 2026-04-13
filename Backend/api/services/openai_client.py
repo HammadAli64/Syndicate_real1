@@ -723,6 +723,55 @@ def _pad_user_custom_description(user_title: str, existing: str) -> str:
     return f"{base}\n\n{filler}".strip() if base else filler
 
 
+def _user_custom_output_grounds_title(
+    title: str, description: str, example_tasks: list[str], benefits_list: list[str]
+) -> bool:
+    """True if description + examples + benefits clearly reference the user's title."""
+    t = (title or "").strip().lower()
+    if len(t) < 3:
+        return False
+    blob = f"{description} {' '.join(example_tasks)} {' '.join(benefits_list)}".lower()
+    if t in blob:
+        return True
+    tokens = re.findall(r"[a-z0-9]+", t)
+    significant = [x for x in tokens if len(x) >= 3]
+    if not significant:
+        collapsed_t = re.sub(r"\s+", "", t)
+        collapsed_b = re.sub(r"\s+", "", blob)
+        return bool(collapsed_t) and collapsed_t in collapsed_b
+    return all(x in blob for x in significant)
+
+
+def _force_title_grounding_on_user_custom(
+    title: str, description: str, example_tasks: list[str], benefits_list: list[str]
+) -> tuple[str, list[str], list[str]]:
+    """Ensure copy visibly ties to the user's title when the model drifted to generic themes."""
+    t = (title or "").strip()
+    if not t:
+        return description, list(example_tasks), list(benefits_list)
+    mark = f"«{t}»"
+    desc = (description or "").strip()
+    tasks = [str(x).strip() for x in (example_tasks or [])]
+    while len(tasks) < 3:
+        tasks.append("")
+    tasks = tasks[:3]
+    bens = [str(x).strip() for x in (benefits_list or [])]
+    while len(bens) < 3:
+        bens.append("")
+    bens = bens[:3]
+
+    lead = f"Everything below is about the mission you named {mark}. Use that as the only topic.\n\n"
+    desc = lead + desc
+    tasks = [
+        (f"Concrete step for {mark}: {x}" if x and t.lower() not in x.lower() else x) for x in tasks
+    ]
+    bens = [
+        (f"Aligned with {mark}: {x[0].lower()}{x[1:]}" if x and t.lower() not in x.lower() else x)
+        for x in bens
+    ]
+    return desc, tasks, bens
+
+
 def enrich_user_custom_challenge_payload(
     mindsets_payload: dict[str, Any],
     title: str,
@@ -739,46 +788,80 @@ def enrich_user_custom_challenge_payload(
     if diff not in ("easy", "medium", "hard"):
         diff = "medium"
 
-    user = json.dumps(
-        {
+    fix_note = ""
+    data: dict[str, Any] | None = None
+
+    for gen_pass in range(2):
+        payload: dict[str, Any] = {
             "stored_mindsets": mindsets_payload,
             "user_title": t,
             "chosen_difficulty": diff,
             "existing_user_mindset_summary": (user_mindset_summary or "").strip(),
-        },
-        ensure_ascii=False,
-    )
-    data: dict[str, Any] | None = None
-    for attempt in range(2):
-        try:
-            temp = 0.72 if attempt == 0 else 0.86
-            data = chat_json(USER_CUSTOM_CHALLENGE_EXPAND_SYSTEM, user, max_tokens=3600, temperature=temp)
+        }
+        if fix_note:
+            payload["fix_previous_attempt"] = fix_note
+        user = json.dumps(payload, ensure_ascii=False)
+
+        data = None
+        for parse_attempt in range(2):
+            try:
+                temp = 0.52 if gen_pass == 0 else 0.38
+                data = chat_json(
+                    USER_CUSTOM_CHALLENGE_EXPAND_SYSTEM,
+                    user,
+                    max_tokens=1800,
+                    temperature=temp,
+                )
+                break
+            except (json.JSONDecodeError, TypeError, ValueError) as e:
+                if parse_attempt == 1:
+                    raise RuntimeError(f"Invalid model response for custom task: {e}") from e
+            except Exception:
+                if parse_attempt == 1:
+                    raise
+        assert data is not None
+
+        desc = _pad_user_custom_description(t, str(data.get("challenge_description") or "").strip())
+        merged: dict[str, Any] = {
+            "challenge_title": t,
+            "challenge_description": desc,
+            "example_tasks": data.get("example_tasks"),
+            "benefits_list": data.get("benefits_list"),
+            "based_on_mindset": str(data.get("based_on_mindset") or "").strip(),
+            "suitable_moods": data.get("suitable_moods"),
+            "difficulty": diff,
+            "category": "personal",
+        }
+        ch = normalize_challenge_payload(merged)
+        ch["challenge_title"] = t
+        ch["challenge_description"] = desc
+        ch["difficulty"] = diff
+        ch["category"] = "personal"
+        tasks = ch.get("example_tasks") or ["", "", ""]
+        bens = ch.get("benefits_list") or ["", "", ""]
+        if _user_custom_output_grounds_title(t, desc, tasks, bens):
             break
-        except (json.JSONDecodeError, TypeError, ValueError) as e:
-            if attempt == 1:
-                raise RuntimeError(f"Invalid model response for custom task: {e}") from e
-        except Exception:
-            if attempt == 1:
-                raise
+        fix_note = (
+            "Your last answer was off-topic. Regenerate the whole JSON. "
+            "challenge_description, every example_tasks string, and every benefits_list string MUST include "
+            "the exact user_title text (copy it verbatim at least once in each field). "
+            "Do not write generic mindset or growth content unless user_title is literally about that."
+        )
+
     assert data is not None
+    desc = ch["challenge_description"]
+    tasks = list(ch.get("example_tasks") or ["", "", ""])
+    bens = list(ch.get("benefits_list") or ["", "", ""])
+    if not _user_custom_output_grounds_title(t, desc, tasks, bens):
+        desc, tasks, bens = _force_title_grounding_on_user_custom(t, desc, tasks, bens)
+        ch["challenge_description"] = _pad_user_custom_description(t, desc)
+        ch["example_tasks"] = tasks
+        ch["benefits_list"] = bens
+        ch = normalize_challenge_payload(ch)
+        ch["challenge_title"] = t
+        ch["difficulty"] = diff
+        ch["category"] = "personal"
 
-    desc = _pad_user_custom_description(t, str(data.get("challenge_description") or "").strip())
-
-    merged: dict[str, Any] = {
-        "challenge_title": t,
-        "challenge_description": desc,
-        "example_tasks": data.get("example_tasks"),
-        "benefits_list": data.get("benefits_list"),
-        "based_on_mindset": str(data.get("based_on_mindset") or "").strip(),
-        "suitable_moods": data.get("suitable_moods"),
-        "difficulty": diff,
-        "category": "personal",
-    }
-    ch = normalize_challenge_payload(merged)
-    ch["challenge_title"] = t
-    ch["challenge_description"] = desc
-    ch["difficulty"] = diff
-    ch["category"] = "personal"
     sm = ch.get("suitable_moods")
     if not isinstance(sm, list) or not sm:
         ch["suitable_moods"] = ["custom", "energetic"]

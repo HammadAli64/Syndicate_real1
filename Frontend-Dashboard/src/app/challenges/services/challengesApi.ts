@@ -245,6 +245,15 @@ export async function fetchChallengesTodayUntilComplete(
   return td;
 }
 
+function drfDetailMessage(detail: unknown): string | null {
+  if (typeof detail === "string") return detail;
+  if (Array.isArray(detail)) {
+    const parts = detail.map((x) => (typeof x === "string" ? x : String(x))).filter(Boolean);
+    return parts.length ? parts.join(" ") : null;
+  }
+  return null;
+}
+
 export async function postUserCustomChallenge(
   deviceId: string,
   title: string,
@@ -255,9 +264,9 @@ export async function postUserCustomChallenge(
     headers: getSyndicateAuthHeaders(true),
     body: JSON.stringify({ device_id: deviceId, title: title.trim(), difficulty })
   });
-  const j = (await r.json()) as { result?: ChallengeRow; detail?: string };
+  const j = (await r.json()) as { result?: ChallengeRow; detail?: unknown };
   if (!r.ok) {
-    throw new Error(typeof j.detail === "string" ? j.detail : "Could not create mission");
+    throw new Error(drfDetailMessage(j.detail) ?? "Could not create mission");
   }
   if (!j.result) {
     throw new Error("Invalid response");

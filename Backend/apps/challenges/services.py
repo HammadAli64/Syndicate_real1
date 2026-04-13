@@ -22,7 +22,6 @@ from api.services.openai_client import (
     generate_daily_category_happy_tired_pair,
     generate_daily_category_moods_batch,
     generate_mood_category_challenges_batch,
-    merge_user_device_mindset_summary,
     normalize_challenge_payload,
     validate_unique_challenge_titles,
 )
@@ -100,6 +99,22 @@ def _points_from_difficulty(diff: str) -> int:
     if d == "hard":
         return 7 + secrets.randbelow(4)  # 7..10
     return 4 + secrets.randbelow(4)  # medium: 4..7
+
+
+def _points_for_user_custom_mission() -> int:
+    """Points for user-created missions only: inclusive 3..5."""
+    return 3 + secrets.randbelow(3)
+
+
+def _quick_merge_user_device_summary(previous: str, title: str, difficulty: str, one_line: str) -> str:
+    """Rolling device summary without a second LLM call (keeps daily personalization snappy)."""
+    focus = (one_line or "").strip()[:200]
+    piece = f"{difficulty}: {title}" + (f" — {focus}" if focus else "")
+    prev = (previous or "").strip()
+    out = piece if not prev else f"{prev}\n• {piece}"
+    if len(out) > 1200:
+        out = out[-1200:]
+    return out
 
 
 def validate_mood_challenge_item(item: dict, mood: str, category: str) -> tuple[bool, str | None]:
@@ -478,9 +493,9 @@ def _fallback_user_custom_payload(title: str, difficulty: str) -> dict:
                 "File the takeaway where your future self will see it tomorrow morning.",
             ],
             "benefits_list": [
-                "You train momentum on your own terms without waiting for external assignments.",
-                "You collect proof that small execution beats large intentions.",
-                "You keep agency over how discipline shows up in your day.",
+                f"You prove you can move «{t[:100]}» forward without needing a perfect plan before you start.",
+                f"Each rep on «{t[:100]}» builds evidence that your own titles can become real work, not just ideas.",
+                f"Staying honest about «{t[:100]}» keeps the mission aligned with what you actually chose to pursue.",
             ],
             "based_on_mindset": "User-authored custom mission (saved without live AI expansion).",
             "suitable_moods": ["custom", "energetic"],
@@ -495,7 +510,7 @@ def _fallback_user_custom_payload(title: str, difficulty: str) -> dict:
 
 
 def create_user_custom_challenge(device_id: str, title: str, difficulty: str) -> tuple[bool, dict | None, str | None]:
-    """Up to 2 user tasks per device per calendar day; AI expands title; random points 0–9."""
+    """Up to 2 user tasks per device per calendar day; AI expands title; points 3–5."""
     device_id = (device_id or "").strip()
     if not device_id or len(device_id) > 128:
         return False, None, "device_id required"
@@ -524,11 +539,11 @@ def create_user_custom_challenge(device_id: str, title: str, difficulty: str) ->
     except Exception:
         payload = _fallback_user_custom_payload(title, diff)
 
-    points = _points_from_difficulty(diff)
+    points = _points_for_user_custom_mission()
     one_line = (payload.get("based_on_mindset") or "").strip()[:240] or (payload.get("challenge_description") or "")[:200]
 
     try:
-        ctx.summary = merge_user_device_mindset_summary(ctx.summary, title, diff, one_line)
+        ctx.summary = _quick_merge_user_device_summary(ctx.summary, title, diff, one_line)
         ctx.save(update_fields=["summary", "updated_at"])
     except Exception:
         pass

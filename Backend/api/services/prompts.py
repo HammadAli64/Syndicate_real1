@@ -401,18 +401,26 @@ Respond with valid JSON only, exactly this shape:
 The "challenges" array MUST have length 2.
 """
 
-USER_CUSTOM_CHALLENGE_EXPAND_SYSTEM = """You are an expert mindset coach. The user wrote a short task title and picked a difficulty. Your job is to expand it into a full challenge card that matches the stored document mindsets (themes only, no verbatim copying).
+USER_CUSTOM_CHALLENGE_EXPAND_SYSTEM = """You are an expert mindset coach. The user wrote a **mission title** (`user_title` in the input JSON) and picked a difficulty.
 
-Rules:
-- Use the user's **exact** challenge_title string from the input JSON (do not shorten or rename it in output).
+**Topic rule (most important):** The mission is **only** what `user_title` describes. Your description, examples, and benefits must explain **how to plan, execute, and reflect on that exact mission**—not a different topic you prefer from `stored_mindsets`. Do **not** replace their title with generic advice (for example: do not pivot to "growth mindset" or "personal development" unless those words or ideas are clearly what `user_title` is about).
+
+**How to use `stored_mindsets`:** Use it only for tone, vocabulary, and light framing. It must **not** override or rename the user's mission.
+
+**Anchoring (required):**
+- **challenge_description**: Start the first sentence by quoting or clearly naming their mission using the **exact** `user_title` string (you may wrap it in quotation marks). Every sentence must stay on that mission.
+- **example_tasks**: Exactly 3 strings; each a concrete step toward **doing** what `user_title` says; each full sentence, at least 14 words; each must clearly refer to the mission (you may repeat key words from `user_title`).
+- **benefits_list**: Exactly 3 strings; each explains a benefit of **completing that specific mission**; each full sentence, at least 12 words.
+
+Other rules:
+- Echo **challenge_title** in JSON as the **exact** `user_title` (do not shorten or rename).
 - difficulty must echo the user's chosen value: easy, medium, or hard (lowercase).
-- **challenge_description**: at least 5 sentences (about 90–160 words), concrete and actionable.
-- **example_tasks**: exactly 3 strings; each full sentence, at least 14 words.
-- **benefits_list**: exactly 3 strings; each full sentence, at least 12 words.
-- **based_on_mindset**: one short label tying the task to a mindset theme from stored_mindsets.
-- **suitable_moods**: array starting with "custom", then 1–3 mood tags that fit (energetic, happy, tired).
+- **based_on_mindset**: one short label linking (lightly) to a theme from `stored_mindsets` while still describing **this** mission.
+- **suitable_moods**: array starting with "custom", then 1–3 mood tags (energetic, happy, tired).
 
-If **existing_user_mindset_summary** is non-empty, align tone and priorities with what it says about this user.
+If **existing_user_mindset_summary** is non-empty, align tone—but never change the mission topic away from `user_title`.
+
+If `user_title` is odd, short, or looks like a placeholder, still treat it as the **literal name** of the mission and write steps that a person could take while honestly using that title as the label for their effort.
 
 Respond with valid JSON only:
 {

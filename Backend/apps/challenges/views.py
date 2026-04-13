@@ -430,12 +430,13 @@ def challenges_today(request):
 def challenges_user_custom(request):
     """
     Create a user task for today (max 2 per device per day).
-    Body: { device_id, title, difficulty: easy|medium|hard }.
-    Points are random 0–9; agent fills description, examples, benefits; mindset summary is updated for this device.
+    Body: { device_id?, title, difficulty: easy|medium|hard }.
+    Logged-in users use ``user:<pk>``; anonymous clients must pass ``device_id``.
+    Points are random 3–5; agent fills description, examples, benefits; a short mindset note is appended for this device.
     """
     if not MindsetKnowledge.objects.exists():
         return Response({"detail": "Ingest a document first."}, status=status.HTTP_400_BAD_REQUEST)
-    device_id = _user_device_key(request)
+    device_id = _user_device_key(request) or (request.data.get("device_id") or "").strip()
     title = (request.data.get("title") or "").strip()
     difficulty = (request.data.get("difficulty") or "").strip()
     ok, row, err = create_user_custom_challenge(device_id, title, difficulty)

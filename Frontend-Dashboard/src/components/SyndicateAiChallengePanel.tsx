@@ -266,6 +266,8 @@ const SYNDICATE_DATE_INPUT =
 /** Max agent-generated missions completable per day (not how many appear on the board). */
 const MAX_AGENT_COMPLETIONS_PER_DAY = 4;
 const MAX_CUSTOM_COMPLETIONS_PER_DAY = 2;
+/** Matches backend `create_user_custom_challenge` limit message for create-mission UI. */
+const CREATE_MISSION_DAILY_LIMIT_MSG = `Maximum ${MAX_CUSTOM_COMPLETIONS_PER_DAY} custom missions per calendar day.`;
 const POINTS_PER_10_POUNDS = 100;
 const POUNDS_PER_100_POINTS = 10;
 const DEFAULT_PROFILE_NAME = "Operator";
@@ -537,7 +539,7 @@ function SyndicateHelpContent({ topic }: { topic: SyndicateHelpTopic }) {
                 You can create up to <strong className="text-white">two custom missions per calendar day</strong> (resets at local midnight with your other daily data). Each needs a title (at least three characters) and a difficulty you choose.
               </p>
               <p>
-                The server fills in points in the <strong className="text-white">0–9</strong> range, plus description, examples, and benefits, and stores a short mindset summary that can shape your next{" "}
+                The server fills in points in the <strong className="text-white">3–5</strong> range, plus description, examples, and benefits, and stores a short mindset note that can shape your next{" "}
                 <strong className="text-white">custom missions</strong> and <strong className="text-white">mood + category</strong> picks.
               </p>
               <p>Finishing a custom mission uses the same daily completion limits as the main mission board.</p>
@@ -1994,6 +1996,8 @@ export function SyndicateAiChallengePanel() {
   const [customDifficulty, setCustomDifficulty] = useState<"easy" | "medium" | "hard">("medium");
   /** “Create your mission” form — modal on Missions tab only (not inline). */
   const [createMissionModalOpen, setCreateMissionModalOpen] = useState(false);
+  /** Shown inside the create-mission modal (global `error` sits under the overlay and is easy to miss). */
+  const [createMissionError, setCreateMissionError] = useState<string | null>(null);
   const [profileName, setProfileName] = useState(DEFAULT_PROFILE_NAME);
   const [profileImageSaved, setProfileImageSaved] = useState("");
   const [profileImageDraft, setProfileImageDraft] = useState("");
@@ -2998,17 +3002,18 @@ export function SyndicateAiChallengePanel() {
   const createUserCustomTask = useCallback(async () => {
     const t = customTitle.trim();
     if (t.length < 3) {
-      setError("Title must be at least 3 characters.");
+      setCreateMissionError("Title must be at least 3 characters.");
       return;
     }
     if (userCustomCount >= MAX_CUSTOM_COMPLETIONS_PER_DAY) {
-      setError(`Maximum ${MAX_CUSTOM_COMPLETIONS_PER_DAY} custom missions per calendar day.`);
+      setCreateMissionError(CREATE_MISSION_DAILY_LIMIT_MSG);
       return;
     }
-    setError(null);
+    setCreateMissionError(null);
     setBusy("custom");
     try {
       const { result } = await postUserCustomChallenge(getDeviceId(), t, customDifficulty);
+      setCreateMissionError(null);
       setRows((prev) => [...prev, result]);
       setCustomTitle("");
       setChallengeLogVersion((v) => v + 1);
@@ -3016,14 +3021,17 @@ export function SyndicateAiChallengePanel() {
       openMissionDetail(result);
     } catch (e) {
       if (e instanceof SyndicateSessionLostError) return;
-      setError(e instanceof Error ? e.message : "Could not create mission");
+      setCreateMissionError(e instanceof Error ? e.message : "Could not create mission");
     } finally {
       setBusy(null);
     }
   }, [customTitle, customDifficulty, userCustomCount, openMissionDetail]);
 
   useEffect(() => {
-    if (syndicateView !== "challenges" || showStatsProfile) setCreateMissionModalOpen(false);
+    if (syndicateView !== "challenges" || showStatsProfile) {
+      setCreateMissionModalOpen(false);
+      setCreateMissionError(null);
+    }
   }, [syndicateView, showStatsProfile]);
 
   useEffect(() => {
@@ -5146,6 +5154,7 @@ export function SyndicateAiChallengePanel() {
                             openSyndicateHelp("custom-mission", helpEl as HTMLElement);
                             return;
                           }
+                          setCreateMissionError(null);
                           setCreateMissionModalOpen(true);
                         }}
                         className={cn(
@@ -5179,7 +5188,10 @@ export function SyndicateAiChallengePanel() {
                         <div
                           className="fixed inset-0 z-[181] bg-black/60 backdrop-blur-[2px]"
                           onClick={() => {
-                            if (busy !== "custom") setCreateMissionModalOpen(false);
+                            if (busy !== "custom") {
+                              setCreateMissionError(null);
+                              setCreateMissionModalOpen(false);
+                            }
                           }}
                           aria-hidden
                         />
@@ -5205,15 +5217,26 @@ export function SyndicateAiChallengePanel() {
                               <button
                                 type="button"
                                 disabled={busy === "custom"}
-                                onClick={() => setCreateMissionModalOpen(false)}
+                                onClick={() => {
+                                  setCreateMissionError(null);
+                                  setCreateMissionModalOpen(false);
+                                }}
                                 className="shrink-0 rounded-md border border-white/25 px-2.5 py-1.5 text-[11px] font-bold uppercase tracking-wider text-white/85 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
                               >
                                 Close
                               </button>
                             </div>
+                            {createMissionError ? (
+                              <div
+                                className="syndicate-readable mt-3 rounded-md border border-[rgba(255,59,59,0.55)] bg-[linear-gradient(180deg,rgba(255,59,59,0.16),rgba(255,59,59,0.08))] px-3 py-2 text-[13px] text-[#ffc9c9]"
+                                role="alert"
+                              >
+                                {createMissionError}
+                              </div>
+                            ) : null}
                             <p className="syndicate-readable mt-2 max-w-[56rem] text-[13px] leading-relaxed text-white/78 sm:text-[14px]">
                               Up to <strong className="text-[#fde047]/95">two</strong> per day. You set the title and difficulty; the server fills in{" "}
-                              <strong className="text-white/88">random points from 0–9</strong>, description, examples, and benefits, and keeps a short mindset summary for your next{" "}
+                              <strong className="text-white/88">random points from 3–5</strong>, description, examples, and benefits, and keeps a short mindset note for your next{" "}
                               <strong className="text-white/88">custom missions</strong> and <strong className="text-white/88">mood + category</strong> picks.
                             </p>
                             <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_10.5rem_auto] sm:items-end sm:gap-3">
