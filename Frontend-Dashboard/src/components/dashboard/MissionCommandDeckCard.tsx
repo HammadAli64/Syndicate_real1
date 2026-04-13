@@ -210,36 +210,18 @@ type DeckTimeEditTarget =
   | { kind: "reminder"; id: string; title: string; date: string; time: string }
   | { kind: "mission"; id: string; title: string; targetIso: string };
 
-/** Quick Access–aligned deck shells: colored border, gradient fill, outer glow + material lift */
-const DECK_MISSIONS =
-  "relative w-full min-w-0 shrink-0 overflow-hidden rounded-xl border border-cyan-400/44 bg-gradient-to-b from-cyan-950/44 via-[#060606]/96 to-[#050505] p-[var(--fluid-deck-p)] shadow-[0_14px_48px_rgba(0,0,0,0.48),0_0_0_1px_rgba(34,211,238,0.16),0_0_40px_rgba(34,211,238,0.16),0_0_72px_rgba(34,211,238,0.07),inset_0_1px_0_rgba(255,255,255,0.07)]";
+/** Same shell chrome as Quick Access + navbar/sidebar: gold frame, #060606 glass */
+const DECK_SHELL =
+  "relative w-full min-w-0 shrink-0 overflow-hidden rounded-xl border border-[rgba(197,179,88,0.26)] bg-[#060606]/78 p-[var(--fluid-deck-p)] shadow-[0_0_0_1px_rgba(197,179,88,0.08),0_0_52px_rgba(197,179,88,0.08),inset_0_1px_0_rgba(197,179,88,0.08)] backdrop-blur-[10px]";
 
-const DECK_REMINDERS =
-  "relative w-full min-w-0 shrink-0 overflow-hidden rounded-xl border border-fuchsia-500/42 bg-gradient-to-b from-purple-950/46 via-[#07060c]/96 to-[#050505] p-[var(--fluid-deck-p)] shadow-[0_14px_48px_rgba(0,0,0,0.48),0_0_0_1px_rgba(192,132,252,0.18),0_0_40px_rgba(168,85,247,0.16),0_0_72px_rgba(147,51,234,0.08),inset_0_1px_0_rgba(255,255,255,0.06)]";
+const DECK_MISSIONS = DECK_SHELL;
+const DECK_REMINDERS = DECK_SHELL;
 
 const DECK_NOTES =
   "relative w-full min-w-0 shrink-0 overflow-hidden rounded-xl border-[rgba(255,215,0,0.46)] bg-gradient-to-b from-[rgba(255,215,0,0.1)] via-[#060606]/96 to-[#050505] p-[var(--fluid-deck-p)] shadow-[0_14px_48px_rgba(0,0,0,0.48),0_0_0_1px_rgba(255,215,0,0.16),0_0_44px_rgba(255,215,0,0.12),0_0_72px_rgba(255,200,0,0.06),inset_0_1px_0_rgba(255,255,255,0.06)]";
 
 const DECK_QUICK_WRAP =
   "relative overflow-hidden rounded-xl border border-[rgba(197,179,88,0.26)] bg-[#060606]/78 p-[var(--fluid-deck-p)] shadow-[0_0_0_1px_rgba(197,179,88,0.08),0_0_52px_rgba(197,179,88,0.08),inset_0_1px_0_rgba(197,179,88,0.08)]";
-
-function DeckGlowMissions() {
-  return (
-    <div
-      className="pointer-events-none absolute inset-0 opacity-[0.92] [background:radial-gradient(780px_300px_at_22%_0%,rgba(34,211,238,0.28),rgba(0,0,0,0)_58%)]"
-      aria-hidden
-    />
-  );
-}
-
-function DeckGlowReminders() {
-  return (
-    <div
-      className="pointer-events-none absolute inset-0 opacity-[0.9] [background:radial-gradient(780px_300px_at_22%_0%,rgba(192,132,252,0.3),rgba(0,0,0,0)_58%)]"
-      aria-hidden
-    />
-  );
-}
 
 function DeckGlowNotes() {
   return (
@@ -259,25 +241,23 @@ function DeckQuarterGlow() {
   );
 }
 
-const SCROLL_CYAN =
-  "[scrollbar-color:rgba(34,211,238,0.55)_rgba(0,0,0,0.35)]";
-const SCROLL_FUCHSIA =
-  "[scrollbar-color:rgba(192,132,252,0.55)_rgba(0,0,0,0.35)]";
 const SCROLL_GOLD =
-  "[scrollbar-color:rgba(255,215,0,0.5)_rgba(0,0,0,0.35)]";
-const SCROLL_EMERALD =
-  "[scrollbar-color:rgba(52,211,153,0.55)_rgba(0,0,0,0.35)]";
-const SCROLL_ROSE = "[scrollbar-color:rgba(251,113,133,0.55)_rgba(0,0,0,0.35)]";
+  "[scrollbar-color:rgba(197,179,88,0.45)_rgba(0,0,0,0.35)]";
 
 /** Sub-panels inside missions/reminders (active/missed lists) */
 const DECK_LIST_INNER_BASE =
   "mt-2 min-h-[clamp(12rem,34vh,17.5rem)] max-h-[min(68vh,720px)] space-y-[clamp(0.4rem,1vw+0.15rem,0.65rem)] overflow-y-auto overflow-x-hidden py-1 pr-[clamp(0.25rem,0.8vw+0.1rem,0.45rem)]";
 
-const FORM_MISSIONS =
-  "mt-[clamp(0.65rem,1.5vw+0.2rem,1.35rem)] space-y-[clamp(0.4rem,1vw+0.15rem,0.75rem)] rounded-xl border border-cyan-400/36 bg-black/50 p-[var(--fluid-deck-form-p)] shadow-[0_10px_36px_rgba(0,0,0,0.42),0_0_0_1px_rgba(34,211,238,0.14),inset_0_1px_0_rgba(34,211,238,0.12)]";
+const FORM_SHELL =
+  "mt-[clamp(0.65rem,1.5vw+0.2rem,1.35rem)] space-y-[clamp(0.4rem,1vw+0.15rem,0.75rem)] rounded-xl border border-[rgba(197,179,88,0.22)] bg-black/50 p-[var(--fluid-deck-form-p)] shadow-[0_10px_36px_rgba(0,0,0,0.42),0_0_0_1px_rgba(197,179,88,0.1),inset_0_1px_0_rgba(197,179,88,0.08)]";
 
-const FORM_REMINDERS =
-  "mt-[clamp(0.65rem,1.5vw+0.2rem,1.35rem)] space-y-[clamp(0.4rem,1vw+0.15rem,0.75rem)] rounded-xl border border-fuchsia-400/38 bg-black/50 p-[var(--fluid-deck-form-p)] shadow-[0_10px_36px_rgba(0,0,0,0.42),0_0_0_1px_rgba(192,132,252,0.14),inset_0_1px_0_rgba(192,132,252,0.11)]";
+const FORM_MISSIONS = FORM_SHELL;
+const FORM_REMINDERS = FORM_SHELL;
+
+/** Inner list panels — match HeroStatusPanel / sidebar gold glass */
+const DECK_SUBPANEL =
+  "min-w-0 rounded-xl border border-[rgba(197,179,88,0.22)] bg-[#060606]/70 p-3 shadow-[0_12px_40px_rgba(0,0,0,0.4),0_0_0_1px_rgba(197,179,88,0.08),0_0_36px_rgba(197,179,88,0.06),inset_0_1px_0_rgba(197,179,88,0.06)] md:p-4";
+const DECK_SUBPANEL_TITLE = "text-[10px] font-black uppercase tracking-[0.16em] text-[color:var(--gold)]/90 md:text-[11px]";
 
 const FORM_NOTES =
   "mt-[clamp(0.65rem,1.5vw+0.2rem,1.35rem)] space-y-[clamp(0.4rem,1vw+0.15rem,0.75rem)] rounded-xl border-[rgba(255,215,0,0.4)] bg-black/50 p-[var(--fluid-deck-form-p)] shadow-[0_10px_36px_rgba(0,0,0,0.42),0_0_0_1px_rgba(255,215,0,0.12),inset_0_1px_0_rgba(255,215,0,0.09)]";
@@ -343,7 +323,7 @@ function DeckEmptyCta({
       <button
         type="button"
         onClick={onAction}
-        className="mt-4 inline-flex min-h-[44px] w-full max-w-[16rem] items-center justify-center rounded-lg border border-white/18 bg-black/50 px-4 text-[11px] font-black uppercase tracking-[0.18em] text-white/90 shadow-[0_3px_0_rgba(0,0,0,0.35),inset_0_1px_0_rgba(255,255,255,0.06)] transition motion-safe:duration-200 hover:border-white/28 hover:bg-black/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/55 focus-visible:ring-offset-2 focus-visible:ring-offset-[#050505]"
+        className="mt-4 inline-flex min-h-[44px] w-full max-w-[16rem] items-center justify-center rounded-lg border border-white/18 bg-black/50 px-4 text-[11px] font-black uppercase tracking-[0.18em] text-white/90 shadow-[0_3px_0_rgba(0,0,0,0.35),inset_0_1px_0_rgba(255,255,255,0.06)] transition motion-safe:duration-200 hover:border-[rgba(197,179,88,0.45)] hover:bg-black/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(250,204,21,0.45)] focus-visible:ring-offset-2 focus-visible:ring-offset-[#050505]"
       >
         {actionLabel}
       </button>
@@ -909,7 +889,7 @@ export function MissionCommandDeckCard({
                     type="button"
                     className={cn(
                       DECK_TOAST_BTN,
-                      "border-cyan-500/45 bg-black/50 text-cyan-100 hover:border-cyan-300/65 focus-visible:ring-cyan-400/55"
+                      "border-[rgba(197,179,88,0.42)] bg-black/50 text-[rgba(255,248,220,0.92)] hover:border-[rgba(197,179,88,0.62)] focus-visible:ring-[rgba(250,204,21,0.45)]"
                     )}
                     onClick={() => {
                       toast.dismiss(t.id);
@@ -1101,20 +1081,15 @@ export function MissionCommandDeckCard({
     setNBody("");
   };
 
-  const missionsLabel =
-    "text-[11px] font-extrabold uppercase tracking-[0.16em] text-cyan-200 md:text-[12px]";
-  const missionsInput =
-    "mt-1.5 w-full rounded-lg border border-cyan-400/42 bg-[#050a0c] px-3 py-2.5 text-[15px] font-medium leading-relaxed text-cyan-50/96 outline-none placeholder:text-cyan-200/22 shadow-[inset_0_2px_8px_rgba(0,0,0,0.62),inset_0_1px_0_rgba(34,211,238,0.07)] focus:border-cyan-300/82 focus:shadow-[inset_0_2px_8px_rgba(0,0,0,0.5),0_0_0_1px_rgba(34,211,238,0.32),0_0_22px_rgba(34,211,238,0.22)] focus-visible:ring-2 focus-visible:ring-cyan-400/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[#050505] md:py-3";
-
-  const remindersLabel =
-    "text-[11px] font-extrabold uppercase tracking-[0.16em] text-fuchsia-200 md:text-[12px]";
-  const remindersInput =
-    "mt-1.5 w-full rounded-lg border border-fuchsia-400/44 bg-[#0a060c] px-3 py-2.5 text-[15px] font-medium leading-relaxed text-fuchsia-50/96 outline-none placeholder:text-fuchsia-200/22 shadow-[inset_0_2px_8px_rgba(0,0,0,0.62),inset_0_1px_0_rgba(192,132,252,0.08)] focus:border-fuchsia-300/78 focus:shadow-[inset_0_2px_8px_rgba(0,0,0,0.5),0_0_0_1px_rgba(192,132,252,0.3),0_0_22px_rgba(168,85,247,0.22)] focus-visible:ring-2 focus-visible:ring-fuchsia-400/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[#050505] md:py-3";
-
   const notesLabel =
     "text-[11px] font-extrabold uppercase tracking-[0.16em] text-[color:var(--gold)] md:text-[12px]";
   const notesInput =
     "mt-1.5 w-full rounded-lg border-[rgba(255,215,0,0.46)] bg-[#0a0906] px-3 py-2.5 text-[15px] font-medium leading-relaxed text-[rgba(255,248,220,0.96)] outline-none placeholder:text-[rgba(255,230,150,0.22)] shadow-[inset_0_2px_8px_rgba(0,0,0,0.62),inset_0_1px_0_rgba(255,215,0,0.07)] focus:border-[rgba(255,230,120,0.78)] focus:shadow-[inset_0_2px_8px_rgba(0,0,0,0.5),0_0_0_1px_rgba(255,215,0,0.28),0_0_24px_rgba(255,200,0,0.2)] focus-visible:ring-2 focus-visible:ring-[rgba(250,204,21,0.5)] focus-visible:ring-offset-2 focus-visible:ring-offset-[#050505] md:py-3";
+
+  const missionsLabel = notesLabel;
+  const missionsInput = notesInput;
+  const remindersLabel = notesLabel;
+  const remindersInput = notesInput;
 
   return (
     <Card
@@ -1129,17 +1104,17 @@ export function MissionCommandDeckCard({
       right={
         <div className="flex flex-col items-end gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
           <div
-            className="rounded-lg border border-cyan-400/45 bg-[#050a0c]/90 px-3 py-2 text-right shadow-[0_0_0_1px_rgba(34,211,238,0.2),0_0_20px_rgba(34,211,238,0.18),inset_0_1px_0_rgba(34,211,238,0.12)]"
+            className="rounded-lg border border-[rgba(197,179,88,0.28)] bg-black/50 px-3 py-2 text-right shadow-[0_0_0_1px_rgba(197,179,88,0.12),0_0_20px_rgba(197,179,88,0.1),inset_0_1px_0_rgba(197,179,88,0.08)]"
             title="Total points from missions marked complete"
           >
-            <div className="font-mono text-[9px] font-black uppercase tracking-[0.2em] text-cyan-200/85">Earned XP</div>
-            <div className="font-mono text-[18px] font-black tabular-nums leading-none text-cyan-50">{earnedMissionXp}</div>
+            <div className="font-mono text-[9px] font-black uppercase tracking-[0.2em] text-[color:var(--gold)]/85">Earned XP</div>
+            <div className="font-mono text-[18px] font-black tabular-nums leading-none text-[rgba(255,248,220,0.96)]">{earnedMissionXp}</div>
           </div>
           {portalBusy ? (
             <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-neutral-300/88">Syncing…</span>
           ) : null}
           {useApiDeck ? (
-            <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-emerald-200/90">API</span>
+            <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[color:var(--gold)]/90">API</span>
           ) : (
             <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-neutral-300/85">Local</span>
           )}
@@ -1165,11 +1140,11 @@ export function MissionCommandDeckCard({
       </div>
 
       <div className="flex w-full max-w-none min-w-0 flex-col gap-6 min-[1400px]:gap-8 lg:gap-7 xl:gap-8">
-        {/* 1 — Missions (full width, cyan strike deck) */}
+        {/* 1 — Missions (shell gold, matches navbar / sidebar) */}
         <div className={DECK_MISSIONS}>
-          <DeckGlowMissions />
+          <DeckQuarterGlow />
           <div className="relative z-[1]">
-          <div className="text-[12px] font-black uppercase tracking-[0.2em] text-cyan-200 md:text-[13px] lg:text-[14px]">
+          <div className="text-[12px] font-black uppercase tracking-[0.2em] text-[color:var(--gold)] md:text-[13px] lg:text-[14px]">
             Missions
           </div>
           <p className="mt-2 max-w-prose text-[15px] font-normal leading-relaxed text-neutral-200/90 md:text-[15px] md:leading-[1.55]">
@@ -1202,7 +1177,7 @@ export function MissionCommandDeckCard({
                 value={mDate}
                 onValueChange={setMDate}
                 disabled={useApiDeck && !canDeckWrite}
-                tone="cyan"
+                tone="gold"
               />
               <DeckTimeField
                 id="mission-target-time"
@@ -1211,7 +1186,7 @@ export function MissionCommandDeckCard({
                 value={mTime}
                 onValueChange={setMTime}
                 disabled={useApiDeck && !canDeckWrite}
-                tone="cyan"
+                tone="gold"
               />
               <div>
                 <label className={missionsLabel}>Points</label>
@@ -1231,19 +1206,17 @@ export function MissionCommandDeckCard({
               whileTap={{ scale: 0.98 }}
               onClick={() => void addMission()}
               disabled={useApiDeck && !canDeckWrite}
-              className="w-full rounded-lg border border-emerald-400/58 bg-emerald-950/38 py-3 text-[11px] font-black uppercase tracking-[0.15em] text-emerald-50 shadow-[0_4px_0_rgba(0,0,0,0.42),0_0_0_1px_rgba(52,211,153,0.28),0_8px_32px_rgba(16,185,129,0.32),inset_0_1px_0_rgba(167,243,208,0.12)] hover:border-emerald-300/78 hover:bg-emerald-950/52 hover:shadow-[0_5px_0_rgba(0,0,0,0.38),0_0_0_1px_rgba(52,211,153,0.42),0_12px_40px_rgba(16,185,129,0.38)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/55 focus-visible:ring-offset-2 focus-visible:ring-offset-[#050505] disabled:cursor-not-allowed disabled:opacity-40 md:min-h-[48px] md:text-[12px]"
+              className="w-full rounded-lg border-[rgba(255,215,0,0.58)] bg-[rgba(255,215,0,0.12)] py-3 text-[11px] font-black uppercase tracking-[0.15em] text-[color:var(--gold)] shadow-[0_4px_0_rgba(0,0,0,0.42),0_0_0_1px_rgba(255,215,0,0.26),0_8px_32px_rgba(255,200,0,0.2),inset_0_1px_0_rgba(255,248,220,0.1)] hover:border-[rgba(255,235,160,0.78)] hover:bg-[rgba(255,215,0,0.16)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(250,204,21,0.55)] focus-visible:ring-offset-2 focus-visible:ring-offset-[#050505] disabled:cursor-not-allowed disabled:opacity-40 md:min-h-[48px] md:text-[12px]"
             >
               Create mission
             </motion.button>
           </div>
 
           <div className="mt-5 grid w-full min-w-0 grid-cols-1 gap-4 md:grid-cols-2 md:gap-5">
-            <div className="min-w-0 rounded-xl border border-emerald-400/48 bg-gradient-to-b from-emerald-950/42 to-black/58 p-3 shadow-[0_12px_40px_rgba(0,0,0,0.4),0_0_0_1px_rgba(52,211,153,0.2),0_0_36px_rgba(16,185,129,0.24),inset_0_1px_0_rgba(167,243,208,0.08)] md:p-4">
-              <div className="text-[10px] font-black uppercase tracking-[0.16em] text-emerald-200">
-                Active missions
-              </div>
+            <div className={DECK_SUBPANEL}>
+              <div className={DECK_SUBPANEL_TITLE}>Active missions</div>
               <DeckListToolbar
-                tone="emerald"
+                tone="gold"
                 search={mSearchA}
                 onSearchChange={setMSearchA}
                 sortLabel="Due"
@@ -1251,21 +1224,21 @@ export function MissionCommandDeckCard({
                 onSortDirToggle={() => setMSortA((d) => (d === "desc" ? "asc" : "desc"))}
                 placeholder="Search active…"
               />
-              <div className={cn(DECK_LIST_INNER_BASE, SCROLL_EMERALD)}>
+              <div className={cn(DECK_LIST_INNER_BASE, SCROLL_GOLD)}>
                 {filteredActiveMissions.length === 0 ? (
                   browseDate ? (
                     <DeckEmptyCta
                       message="No active missions on this day."
                       actionLabel="Show all days"
                       onAction={() => setBrowseDate(null)}
-                      accentClass="border-emerald-500/35 bg-black/35"
+                      accentClass="border-[rgba(197,179,88,0.28)] bg-black/35"
                     />
                   ) : (
                     <DeckEmptyCta
                       message="Nothing in the active queue yet."
                       actionLabel="Create a mission"
                       onAction={focusMissionComposer}
-                      accentClass="border-emerald-500/35 bg-black/35"
+                      accentClass="border-[rgba(197,179,88,0.28)] bg-black/35"
                     />
                   )
                 ) : (
@@ -1275,7 +1248,7 @@ export function MissionCommandDeckCard({
                     return (
                       <DeckListItem
                         key={m.id}
-                        tone="emerald"
+                        tone="gold"
                         title={m.title}
                         badge={<MissionStatusBadge status="active" />}
                         subtitle={
@@ -1286,7 +1259,7 @@ export function MissionCommandDeckCard({
                               urgent={urgent}
                             />
                             <div className="mt-0.5">
-                              <PriorityPoints points={m.points} tone="ice" />
+                              <PriorityPoints points={m.points} tone="gold" />
                             </div>
                           </>
                         }
@@ -1314,7 +1287,7 @@ export function MissionCommandDeckCard({
                                 type="button"
                                 className={cn(
                                   DECK_ROW_BTN_PRIMARY,
-                                  "border-emerald-500/48 bg-emerald-950/45 text-emerald-50 shadow-[0_2px_0_rgba(0,0,0,0.35),inset_0_1px_0_rgba(167,243,208,0.1)] hover:border-emerald-300/75 hover:bg-emerald-950/55 focus-visible:ring-emerald-400/55"
+                                  "border-[rgba(255,215,0,0.48)] bg-[rgba(255,215,0,0.14)] text-[color:var(--gold)] shadow-[0_2px_0_rgba(0,0,0,0.35),inset_0_1px_0_rgba(255,248,220,0.08)] hover:border-[rgba(255,235,160,0.72)] hover:bg-[rgba(255,215,0,0.2)] focus-visible:ring-[rgba(250,204,21,0.55)]"
                                 )}
                                 onClick={() => void patchMission(m.id, { status: "done" })}
                               >
@@ -1324,7 +1297,7 @@ export function MissionCommandDeckCard({
                                 type="button"
                                 className={cn(
                                   DECK_ROW_BTN_SECONDARY,
-                                  "border-rose-500/42 bg-black/45 text-rose-100 shadow-[0_2px_0_rgba(0,0,0,0.35)] hover:border-rose-400/65 hover:bg-rose-950/30 focus-visible:ring-rose-400/55"
+                                  "border-[rgba(197,179,88,0.35)] bg-black/45 text-[rgba(255,248,220,0.88)] shadow-[0_2px_0_rgba(0,0,0,0.35)] hover:border-[rgba(197,179,88,0.55)] hover:bg-black/55 focus-visible:ring-[rgba(250,204,21,0.45)]"
                                 )}
                                 onClick={() => void patchMission(m.id, { status: "missed" })}
                               >
@@ -1339,10 +1312,10 @@ export function MissionCommandDeckCard({
                 )}
               </div>
             </div>
-            <div className="min-w-0 rounded-xl border border-rose-500/48 bg-gradient-to-b from-rose-950/40 to-black/58 p-3 shadow-[0_12px_40px_rgba(0,0,0,0.4),0_0_0_1px_rgba(251,113,133,0.22),0_0_36px_rgba(251,113,133,0.24),inset_0_1px_0_rgba(254,205,211,0.07)] md:p-4">
-              <div className="text-[10px] font-black uppercase tracking-[0.16em] text-rose-200">Missed missions</div>
+            <div className={DECK_SUBPANEL}>
+              <div className={DECK_SUBPANEL_TITLE}>Missed missions</div>
               <DeckListToolbar
-                tone="rose"
+                tone="gold"
                 search={mSearchM}
                 onSearchChange={setMSearchM}
                 sortLabel="Due"
@@ -1350,35 +1323,35 @@ export function MissionCommandDeckCard({
                 onSortDirToggle={() => setMSortM((d) => (d === "desc" ? "asc" : "desc"))}
                 placeholder="Search missed…"
               />
-              <div className={cn(DECK_LIST_INNER_BASE, SCROLL_ROSE)}>
+              <div className={cn(DECK_LIST_INNER_BASE, SCROLL_GOLD)}>
                 {filteredMissedMissions.length === 0 ? (
                   browseDate ? (
                     <DeckEmptyCta
                       message="No missed missions on this day."
                       actionLabel="Show all days"
                       onAction={() => setBrowseDate(null)}
-                      accentClass="border-rose-500/35 bg-black/35"
+                      accentClass="border-[rgba(197,179,88,0.28)] bg-black/35"
                     />
                   ) : (
                     <DeckEmptyCta
                       message="No missed missions in the deck."
                       actionLabel="Create a mission"
                       onAction={focusMissionComposer}
-                      accentClass="border-rose-500/35 bg-black/35"
+                      accentClass="border-[rgba(197,179,88,0.28)] bg-black/35"
                     />
                   )
                 ) : (
                   filteredMissedMissions.map((m) => (
                     <DeckListItem
                       key={m.id}
-                      tone="rose"
+                      tone="gold"
                       title={m.title}
                       badge={<MissionStatusBadge status="missed" />}
                       subtitle={
                         <>
                           <DueDateLine label="Was due" value={new Date(m.targetIso).toLocaleString()} />
                           <div className="mt-1">
-                            <PriorityPoints points={m.points} tone="ice" />
+                            <PriorityPoints points={m.points} tone="gold" />
                           </div>
                         </>
                       }
@@ -1406,7 +1379,7 @@ export function MissionCommandDeckCard({
                               type="button"
                               className={cn(
                                 DECK_ROW_BTN_PRIMARY,
-                                "border-emerald-500/48 bg-emerald-950/45 text-emerald-50 shadow-[0_2px_0_rgba(0,0,0,0.35)] hover:border-emerald-300/75 focus-visible:ring-emerald-400/55"
+                                "border-[rgba(255,215,0,0.48)] bg-[rgba(255,215,0,0.14)] text-[color:var(--gold)] shadow-[0_2px_0_rgba(0,0,0,0.35)] hover:border-[rgba(255,235,160,0.72)] focus-visible:ring-[rgba(250,204,21,0.55)]"
                               )}
                               onClick={() => void patchMission(m.id, { status: "done" })}
                             >
@@ -1416,7 +1389,7 @@ export function MissionCommandDeckCard({
                               type="button"
                               className={cn(
                                 DECK_ROW_BTN_SECONDARY,
-                                "border-cyan-500/42 bg-black/45 text-cyan-100 shadow-[0_2px_0_rgba(0,0,0,0.35)] hover:border-cyan-300/65 hover:bg-cyan-950/35 focus-visible:ring-cyan-400/55"
+                                "border-[rgba(197,179,88,0.38)] bg-black/45 text-[rgba(255,248,220,0.9)] shadow-[0_2px_0_rgba(0,0,0,0.35)] hover:border-[rgba(197,179,88,0.58)] hover:bg-black/55 focus-visible:ring-[rgba(250,204,21,0.45)]"
                               )}
                               onClick={() => void patchMission(m.id, { status: "active" })}
                             >
@@ -1434,11 +1407,11 @@ export function MissionCommandDeckCard({
           </div>
         </div>
 
-        {/* 2 — Reminders (full width, fuchsia ops deck) */}
+        {/* 2 — Reminders (shell gold, matches navbar / sidebar) */}
         <div className={DECK_REMINDERS}>
-          <DeckGlowReminders />
+          <DeckQuarterGlow />
           <div className="relative z-[1]">
-          <div className="text-[12px] font-black uppercase tracking-[0.2em] text-fuchsia-200 md:text-[13px] lg:text-[14px]">
+          <div className="text-[12px] font-black uppercase tracking-[0.2em] text-[color:var(--gold)] md:text-[13px] lg:text-[14px]">
             Reminders / schedules
           </div>
           <p className="mt-2 max-w-prose text-[15px] font-normal leading-relaxed text-neutral-200/90 md:leading-[1.55]">
@@ -1449,12 +1422,12 @@ export function MissionCommandDeckCard({
             <p className="mt-2 text-[12px] font-medium leading-snug text-amber-100/92">Read-only reminders for your role.</p>
           ) : null}
 
-          <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border border-fuchsia-500/35 bg-black/45 px-3 py-2.5 text-[11px] font-medium text-fuchsia-100/90 shadow-[inset_0_1px_0_rgba(233,213,255,0.06)]">
-            <span className="font-black uppercase tracking-[0.14em] text-fuchsia-200/95">Due alarm sound</span>
+          <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border border-[rgba(197,179,88,0.22)] bg-black/45 px-3 py-2.5 text-[11px] font-medium text-[rgba(255,248,220,0.88)] shadow-[inset_0_1px_0_rgba(197,179,88,0.06)]">
+            <span className="font-black uppercase tracking-[0.14em] text-[color:var(--gold)]/95">Due alarm sound</span>
             <label className="inline-flex cursor-pointer items-center gap-2">
               <input
                 type="checkbox"
-                className="h-4 w-4 rounded border-fuchsia-500/50 bg-black/60 text-fuchsia-500 focus:ring-fuchsia-400/50"
+                className="h-4 w-4 rounded border-[rgba(197,179,88,0.45)] bg-black/60 text-[color:var(--gold)] focus:ring-[rgba(250,204,21,0.45)]"
                 checked={deckAlarmMutedUi}
                 onChange={(e) => {
                   const muted = e.target.checked;
@@ -1474,7 +1447,7 @@ export function MissionCommandDeckCard({
             />
             <button
               type="button"
-              className="rounded-md border border-fuchsia-500/45 bg-fuchsia-950/35 px-2.5 py-1.5 text-[10px] font-black uppercase tracking-[0.12em] text-fuchsia-50 hover:border-fuchsia-300/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fuchsia-400/55"
+              className="rounded-md border border-[rgba(197,179,88,0.38)] bg-black/40 px-2.5 py-1.5 text-[10px] font-black uppercase tracking-[0.12em] text-[color:var(--gold)] hover:border-[rgba(197,179,88,0.58)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(250,204,21,0.45)]"
               onClick={() => deckAlarmFileInputRef.current?.click()}
             >
               Upload tone
@@ -1493,7 +1466,7 @@ export function MissionCommandDeckCard({
             ) : null}
             <button
               type="button"
-              className="rounded-md border border-cyan-500/40 bg-black/45 px-2.5 py-1.5 text-[10px] font-black uppercase tracking-[0.12em] text-cyan-100 hover:border-cyan-300/65 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50"
+              className="rounded-md border border-[rgba(197,179,88,0.35)] bg-black/45 px-2.5 py-1.5 text-[10px] font-black uppercase tracking-[0.12em] text-[rgba(255,248,220,0.9)] hover:border-[rgba(197,179,88,0.55)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(250,204,21,0.45)]"
               onClick={() => {
                 void unlockDeckAlarmAudio();
                 playDeckAlarmSound();
@@ -1526,7 +1499,7 @@ export function MissionCommandDeckCard({
                 value={rDate}
                 onValueChange={setRDate}
                 disabled={useApiDeck && !canDeckWrite}
-                tone="fuchsia"
+                tone="gold"
               />
               <DeckTimeField
                 id="reminder-time"
@@ -1535,7 +1508,7 @@ export function MissionCommandDeckCard({
                 value={rTime}
                 onValueChange={setRTime}
                 disabled={useApiDeck && !canDeckWrite}
-                tone="fuchsia"
+                tone="gold"
               />
             </div>
             <motion.button
@@ -1543,19 +1516,17 @@ export function MissionCommandDeckCard({
               whileTap={{ scale: 0.98 }}
               onClick={() => void addReminder()}
               disabled={useApiDeck && !canDeckWrite}
-              className="w-full rounded-lg border border-fuchsia-400/58 bg-fuchsia-950/38 py-3 text-[11px] font-black uppercase tracking-[0.16em] text-fuchsia-50 shadow-[0_4px_0_rgba(0,0,0,0.42),0_0_0_1px_rgba(192,132,252,0.3),0_8px_32px_rgba(168,85,247,0.32),inset_0_1px_0_rgba(233,213,255,0.1)] hover:border-fuchsia-300/78 hover:bg-fuchsia-950/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fuchsia-400/55 focus-visible:ring-offset-2 focus-visible:ring-offset-[#050505] disabled:cursor-not-allowed disabled:opacity-40 md:min-h-[48px] md:text-[12px]"
+              className="w-full rounded-lg border-[rgba(255,215,0,0.58)] bg-[rgba(255,215,0,0.12)] py-3 text-[11px] font-black uppercase tracking-[0.16em] text-[color:var(--gold)] shadow-[0_4px_0_rgba(0,0,0,0.42),0_0_0_1px_rgba(255,215,0,0.26),0_8px_32px_rgba(255,200,0,0.2),inset_0_1px_0_rgba(255,248,220,0.1)] hover:border-[rgba(255,235,160,0.78)] hover:bg-[rgba(255,215,0,0.16)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(250,204,21,0.55)] focus-visible:ring-offset-2 focus-visible:ring-offset-[#050505] disabled:cursor-not-allowed disabled:opacity-40 md:min-h-[48px] md:text-[12px]"
             >
               Create reminder
             </motion.button>
           </div>
 
           <div className="mt-5 grid w-full min-w-0 grid-cols-1 gap-4 md:grid-cols-2 md:gap-5">
-            <div className="min-w-0 rounded-xl border border-cyan-400/48 bg-gradient-to-b from-cyan-950/40 to-black/58 p-3 shadow-[0_12px_40px_rgba(0,0,0,0.4),0_0_0_1px_rgba(34,211,238,0.22),0_0_34px_rgba(34,211,238,0.22),inset_0_1px_0_rgba(165,243,252,0.08)] md:p-4">
-              <div className="text-[10px] font-black uppercase tracking-[0.16em] text-cyan-200">
-                Active reminders
-              </div>
+            <div className={DECK_SUBPANEL}>
+              <div className={DECK_SUBPANEL_TITLE}>Active reminders</div>
               <DeckListToolbar
-                tone="cyan"
+                tone="gold"
                 search={rSearchAct}
                 onSearchChange={setRSearchAct}
                 sortLabel="When"
@@ -1563,21 +1534,21 @@ export function MissionCommandDeckCard({
                 onSortDirToggle={() => setRSortAct((d) => (d === "desc" ? "asc" : "desc"))}
                 placeholder="Search active…"
               />
-              <div className={cn(DECK_LIST_INNER_BASE, SCROLL_CYAN)}>
+              <div className={cn(DECK_LIST_INNER_BASE, SCROLL_GOLD)}>
                 {filteredActiveReminders.length === 0 ? (
                   browseDate ? (
                     <DeckEmptyCta
                       message="No active reminders on this day."
                       actionLabel="Show all days"
                       onAction={() => setBrowseDate(null)}
-                      accentClass="border-cyan-500/35 bg-black/35"
+                      accentClass="border-[rgba(197,179,88,0.28)] bg-black/35"
                     />
                   ) : (
                     <DeckEmptyCta
                       message="No reminders scheduled yet."
                       actionLabel="Create a reminder"
                       onAction={focusReminderComposer}
-                      accentClass="border-cyan-500/35 bg-black/35"
+                      accentClass="border-[rgba(197,179,88,0.28)] bg-black/35"
                     />
                   )
                 ) : (
@@ -1591,7 +1562,7 @@ export function MissionCommandDeckCard({
                     return (
                       <DeckListItem
                         key={r.id}
-                        tone="cyan"
+                        tone="gold"
                         className={
                           isDue
                             ? "shadow-[0_0_0_1px_rgba(239,68,68,0.5),0_0_28px_rgba(239,68,68,0.22)]"
@@ -1660,7 +1631,7 @@ export function MissionCommandDeckCard({
                                 type="button"
                                 className={cn(
                                   DECK_ROW_BTN_PRIMARY,
-                                  "border-cyan-500/48 bg-cyan-950/45 text-cyan-50 shadow-[0_2px_0_rgba(0,0,0,0.35)] hover:border-cyan-300/75 hover:bg-cyan-950/55 focus-visible:ring-cyan-400/55"
+                                  "border-[rgba(255,215,0,0.48)] bg-[rgba(255,215,0,0.14)] text-[color:var(--gold)] shadow-[0_2px_0_rgba(0,0,0,0.35)] hover:border-[rgba(255,235,160,0.72)] hover:bg-[rgba(255,215,0,0.2)] focus-visible:ring-[rgba(250,204,21,0.55)]"
                                 )}
                                 onClick={() => {
                                   clearReminderToastKeysForId(r.id);
@@ -1678,12 +1649,10 @@ export function MissionCommandDeckCard({
                 )}
               </div>
             </div>
-            <div className="min-w-0 rounded-xl border border-fuchsia-400/45 bg-gradient-to-b from-fuchsia-950/36 to-black/58 p-3 shadow-[0_12px_40px_rgba(0,0,0,0.4),0_0_0_1px_rgba(192,132,252,0.24),0_0_34px_rgba(168,85,247,0.26),inset_0_1px_0_rgba(233,213,255,0.07)] md:p-4">
-              <div className="text-[10px] font-black uppercase tracking-[0.18em] text-fuchsia-200 md:text-[11px]">
-                Completed reminders
-              </div>
+            <div className={DECK_SUBPANEL}>
+              <div className={DECK_SUBPANEL_TITLE}>Completed reminders</div>
               <DeckListToolbar
-                tone="fuchsia"
+                tone="gold"
                 search={rSearchDone}
                 onSearchChange={setRSearchDone}
                 sortLabel="When"
@@ -1691,28 +1660,28 @@ export function MissionCommandDeckCard({
                 onSortDirToggle={() => setRSortDone((d) => (d === "desc" ? "asc" : "desc"))}
                 placeholder="Search completed…"
               />
-              <div className={cn(DECK_LIST_INNER_BASE, SCROLL_FUCHSIA)}>
+              <div className={cn(DECK_LIST_INNER_BASE, SCROLL_GOLD)}>
                 {filteredDoneReminders.length === 0 ? (
                   browseDate ? (
                     <DeckEmptyCta
                       message="No completed reminders on this day."
                       actionLabel="Show all days"
                       onAction={() => setBrowseDate(null)}
-                      accentClass="border-fuchsia-500/35 bg-black/35"
+                      accentClass="border-[rgba(197,179,88,0.28)] bg-black/35"
                     />
                   ) : (
                     <DeckEmptyCta
                       message="No completed reminders yet."
                       actionLabel="Create a reminder"
                       onAction={focusReminderComposer}
-                      accentClass="border-fuchsia-500/35 bg-black/35"
+                      accentClass="border-[rgba(197,179,88,0.28)] bg-black/35"
                     />
                   )
                 ) : (
                   filteredDoneReminders.map((r) => (
                     <DeckListItem
                       key={r.id}
-                      tone="fuchsia"
+                      tone="gold"
                       title={r.title}
                       dimmed
                       badge={<ReminderStatusBadge status="completed" />}
@@ -1969,8 +1938,8 @@ export function MissionCommandDeckCard({
             aria-label="Close"
             onClick={() => setTimeEdit(null)}
           />
-          <div className="relative z-[1] w-full max-w-md rounded-xl border border-red-500/45 bg-[#0a0606] p-4 shadow-[0_0_0_1px_rgba(239,68,68,0.2),0_24px_64px_rgba(0,0,0,0.65)]">
-            <h2 id="deck-time-edit-title" className="text-[12px] font-black uppercase tracking-[0.2em] text-red-200/95">
+          <div className="relative z-[1] w-full max-w-md rounded-xl border border-[rgba(197,179,88,0.28)] bg-[#060606]/95 p-4 shadow-[0_0_0_1px_rgba(197,179,88,0.12),0_24px_64px_rgba(0,0,0,0.65)] backdrop-blur-md">
+            <h2 id="deck-time-edit-title" className="text-[12px] font-black uppercase tracking-[0.2em] text-[color:var(--gold)]/95">
               Edit time
             </h2>
             <p className="mt-1 truncate text-[14px] font-semibold text-white/92" title={timeEdit.title}>
@@ -1984,7 +1953,7 @@ export function MissionCommandDeckCard({
                 value={timeEditDate}
                 onValueChange={setTimeEditDate}
                 disabled={false}
-                tone={timeEdit.kind === "mission" ? "cyan" : "fuchsia"}
+                tone="gold"
               />
               <DeckTimeField
                 id="deck-time-edit-time"
@@ -1993,7 +1962,7 @@ export function MissionCommandDeckCard({
                 value={timeEditTime}
                 onValueChange={setTimeEditTime}
                 disabled={false}
-                tone={timeEdit.kind === "mission" ? "cyan" : "fuchsia"}
+                tone="gold"
               />
             </div>
             <div className="mt-5 flex flex-wrap justify-end gap-2">
@@ -2011,7 +1980,7 @@ export function MissionCommandDeckCard({
                 type="button"
                 className={cn(
                   DECK_ROW_BTN_PRIMARY,
-                  "border-red-500/55 bg-red-950/45 text-red-50 hover:border-red-300/75 focus-visible:ring-red-400/55"
+                  "border-[rgba(255,215,0,0.52)] bg-[rgba(255,215,0,0.14)] text-[color:var(--gold)] hover:border-[rgba(255,235,160,0.78)] focus-visible:ring-[rgba(250,204,21,0.55)]"
                 )}
                 disabled={!timeEditDate?.trim() || !timeEditTime?.trim() || !localDateAndTimeToIso(timeEditDate, timeEditTime)}
                 onClick={() => void saveTimeEdit()}

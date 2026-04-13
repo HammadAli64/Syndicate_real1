@@ -8,6 +8,8 @@ import { AnimatePresence, motion } from "framer-motion";
 import ChromaGrid, { type ChromaItem } from "../components/ChromaGrid";
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import DashboardControlCenter from "../components/dashboard/DashboardControlCenter";
+import { NavbarNotificationBell } from "../components/dashboard/NotificationBell";
+import type { DashboardNavKey } from "../components/dashboard/types";
 import { useGoalsPanel } from "@/contexts/GoalsPanelContext";
 import { GoalsPanel } from "@/components/ui/GoalsPanel";
 import { SyndicateAiChallengePanel } from "../components/SyndicateAiChallengePanel";
@@ -59,6 +61,14 @@ const menuMotion = {
   animate: { opacity: 1, y: 0, scale: 1 },
   exit: { opacity: 0, y: -8, scale: 0.98 },
   transition: { duration: 0.22, ease: [0.22, 1, 0.36, 1] as const }
+};
+
+const sidebarMotion = {
+  initial: { opacity: 0, x: -28 },
+  animate: { opacity: 1, x: 0 },
+  /** Match initial x so open/close are mirrored (was -32 on exit, which felt asymmetric). */
+  exit: { opacity: 0, x: -28 },
+  transition: { duration: 0.34, ease: [0.22, 1, 0.36, 1] as const }
 };
 
 function cn(...parts: Array<string | false | null | undefined>) {
@@ -145,6 +155,51 @@ function CheckboxSlot({ active }: { active?: boolean }) {
           active && "opacity-100 [box-shadow:0_0_0_1px_rgba(255,59,59,0.52),0_0_22px_rgba(255,59,59,0.22)]"
         )}
       />
+    </div>
+  );
+}
+
+function SidebarNavRailList({
+  nav,
+  selectedNavKey,
+  setSelectedNavKey,
+  onItemActivate
+}: {
+  nav: NavItem[];
+  selectedNavKey: string;
+  setSelectedNavKey: (key: string) => void;
+  onItemActivate?: () => void;
+}) {
+  return (
+    <div className="sidebar-nav-list">
+      {nav.map((item) => (
+        <button
+          key={item.label}
+          type="button"
+          onClick={() => {
+            setSelectedNavKey(item.key);
+            onItemActivate?.();
+          }}
+          data-dock-item="sidebar"
+          className={cn(
+            "sidebar-nav-item nav-item group relative flex w-full items-center text-left",
+            "cut-frame-sm hud-hover-glow glass-dark premium-gold-border gold-glow-hover transition",
+            "hover:bg-black/45",
+            selectedNavKey === item.key &&
+              "is-selected glow-edge-strong hud-selected-glow border-[color:var(--gold-neon-border)] bg-[rgba(250,204,21,0.08)]"
+          )}
+        >
+          <CheckboxSlot active={selectedNavKey === item.key} />
+          <span className="sidebar-nav-icon-frame grid shrink-0 place-items-center border border-[color:var(--gold-neon-border-soft)] bg-black/25 text-[color:var(--gold-neon)]/90 group-hover:text-[color:var(--gold-neon)]">
+            <NavIcon k={item.key} />
+          </span>
+          <span className="sidebar-nav-label nav-label min-w-0 flex-1 font-extrabold uppercase text-[color:var(--gold-neon)]/92 group-hover:text-[color:var(--gold-neon)]">
+            <SidebarNavLabel text={item.label} />
+            <span className="nav-glitch" aria-hidden="true" />
+          </span>
+          <span className="sidebar-nav-accent-line ml-auto hidden h-px shrink-0 bg-[linear-gradient(90deg,rgba(250,204,21,0),rgba(250,204,21,0.45))] opacity-0 transition group-hover:opacity-100 md:block" />
+        </button>
+      ))}
     </div>
   );
 }
@@ -1371,10 +1426,7 @@ export default function Page() {
   const dockMouseY = useRef<number>(Infinity);
   const topMouseX = useRef<number>(Infinity);
   const topbarRef = useRef<HTMLDivElement | null>(null);
-  const featuresSearchBtnRef = useRef<HTMLButtonElement | null>(null);
-  const featuresMenuPanelRef = useRef<HTMLDivElement | null>(null);
   const [overlayMount, setOverlayMount] = useState(false);
-  const [featuresMenuFixedStyle, setFeaturesMenuFixedStyle] = useState<CSSProperties | null>(null);
   const [profileMenuFixedStyle, setProfileMenuFixedStyle] = useState<CSSProperties | null>(null);
 
   const nav: NavItem[] = useMemo(
@@ -1448,11 +1500,15 @@ export default function Page() {
       /* ignore */
     }
   }, []);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  /** Desktop (lg+): opens for dashboard via layout effect + nav sync. Overlay (max-lg): starts closed until user opens menu. */
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   /** Below md (768px): main + sidebar sit side-by-side; nav column is 5/12 (~42% width). */
   const [isNarrowViewport, setIsNarrowViewport] = useState(false);
-  const [featuresMenuOpen, setFeaturesMenuOpen] = useState(false);
-  const [featureSearchQuery, setFeatureSearchQuery] = useState("");
+  /** max-lg: sidebar is a fixed overlay; main stays full width and only dims. */
+  const [isOverlaySidebarBp, setIsOverlaySidebarBp] = useState(false);
+  /** ≤820px: in-navbar menu under search + overlay rail behavior (tablet/desktop unchanged). */
+  const [isMobileNavUi, setIsMobileNavUi] = useState(false);
+  const [navQuickSearch, setNavQuickSearch] = useState("");
 
   /** Fixed-position overlays portaled to document.body — float above main/instructor without affecting navbar size. */
   useLayoutEffect(() => {
@@ -1462,27 +1518,6 @@ export default function Page() {
     const z = 130;
 
     const update = () => {
-      if (featuresMenuOpen && featuresSearchBtnRef.current) {
-        const r = featuresSearchBtnRef.current.getBoundingClientRect();
-        const w = Math.min(window.innerWidth * 0.92, 320);
-        let left = r.right - w;
-        left = Math.max(pad, Math.min(left, window.innerWidth - w - pad));
-        const top = r.bottom + GAP;
-        const maxH = Math.max(120, window.innerHeight - top - pad);
-        setFeaturesMenuFixedStyle({
-          position: "fixed",
-          top,
-          left,
-          width: w,
-          zIndex: z,
-          maxHeight: Math.min(maxH, Math.floor(window.innerHeight * 0.72)),
-          display: "flex",
-          flexDirection: "column",
-          overflow: "hidden",
-          transformOrigin: "top right"
-        });
-      }
-
       if (profileOpen && profileBtnRef.current) {
         const r = profileBtnRef.current.getBoundingClientRect();
         const w = Math.min(window.innerWidth * 0.92, 360);
@@ -1517,7 +1552,7 @@ export default function Page() {
       window.removeEventListener("resize", update);
       document.removeEventListener("scroll", update, true);
     };
-  }, [overlayMount, featuresMenuOpen, profileOpen]);
+  }, [overlayMount, profileOpen]);
 
   useEffect(() => {
     setShellSectionKey(selectedNavKey);
@@ -1545,50 +1580,74 @@ export default function Page() {
     setOverlayMount(true);
   }, []);
 
-  /** Mobile (max-width 767px): auto-collapse sidebar 2s after it opens (including initial load). */
   useEffect(() => {
-    if (!isNarrowViewport || !sidebarOpen) return;
-    const id = window.setTimeout(() => setSidebarOpen(false), 2000);
-    return () => window.clearTimeout(id);
-  }, [isNarrowViewport, sidebarOpen]);
+    if (typeof window === "undefined") return;
+    const mq = window.matchMedia("(max-width: 1023px)");
+    const apply = () => setIsOverlaySidebarBp(mq.matches);
+    apply();
+    mq.addEventListener("change", apply);
+    return () => mq.removeEventListener("change", apply);
+  }, []);
 
-  const featureMenuGrouped = useMemo(() => {
-    const q = featureSearchQuery.trim().toLowerCase();
-    const list = q
-      ? FEATURE_MENU_ENTRIES.filter(
-          (e) => e.label.toLowerCase().includes(q) || e.section.toLowerCase().includes(q)
-        )
-      : FEATURE_MENU_ENTRIES;
-    const map = new Map<string, FeatureMenuEntry[]>();
-    for (const e of list) {
-      const arr = map.get(e.section) ?? [];
-      arr.push(e);
-      map.set(e.section, arr);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mq = window.matchMedia("(max-width: 820px)");
+    const apply = () => setIsMobileNavUi(mq.matches);
+    apply();
+    mq.addEventListener("change", apply);
+    return () => mq.removeEventListener("change", apply);
+  }, []);
+
+  /** lg+ on first paint: mirror dashboard default (sidebar open on dashboard). Overlay bp stays closed until user taps menu. */
+  useLayoutEffect(() => {
+    if (typeof window === "undefined") return;
+    if (!window.matchMedia("(max-width: 1023px)").matches) {
+      setSidebarOpen(selectedNavKey === "dashboard");
     }
-    return Array.from(map.entries());
-  }, [featureSearchQuery]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- bootstrap only; key is dashboard on first load
+  }, []);
 
+  /** Desktop: dashboard keeps sidebar in grid; other sections collapse. Overlay: hide when leaving dashboard; do not force-open over content. */
   useEffect(() => {
-    if (!featuresMenuOpen) {
-      setFeatureSearchQuery("");
+    if (isOverlaySidebarBp) {
+      if (selectedNavKey !== "dashboard") setSidebarOpen(false);
       return;
     }
-    const onDoc = (e: MouseEvent) => {
-      const t = e.target as Node;
-      if (featuresSearchBtnRef.current?.contains(t)) return;
-      if (featuresMenuPanelRef.current?.contains(t)) return;
-      setFeaturesMenuOpen(false);
-    };
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setFeaturesMenuOpen(false);
-    };
-    document.addEventListener("mousedown", onDoc);
-    document.addEventListener("keydown", onKey);
+    setSidebarOpen(selectedNavKey === "dashboard");
+  }, [selectedNavKey, isOverlaySidebarBp]);
+
+  /** Overlay: auto-collapse a few seconds after open (not on dashboard). */
+  useEffect(() => {
+    if (!isOverlaySidebarBp || !sidebarOpen || selectedNavKey === "dashboard") return;
+    const id = window.setTimeout(() => setSidebarOpen(false), 2000);
+    return () => window.clearTimeout(id);
+  }, [isOverlaySidebarBp, sidebarOpen, selectedNavKey]);
+
+  /** Overlay menu open: lock scroll so the page feels fixed behind the panel. */
+  useEffect(() => {
+    if (!isOverlaySidebarBp || !sidebarOpen) return;
+    const prevBody = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const root = rootRef.current;
+    const prevRoot = root?.style.overflow ?? "";
+    if (root) root.style.overflow = "hidden";
     return () => {
-      document.removeEventListener("mousedown", onDoc);
-      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prevBody;
+      if (root) root.style.overflow = prevRoot;
     };
-  }, [featuresMenuOpen]);
+  }, [isOverlaySidebarBp, sidebarOpen]);
+
+  const sidebarOccupiesGrid = useMemo(() => sidebarOpen && !isOverlaySidebarBp, [sidebarOpen, isOverlaySidebarBp]);
+
+  /** Narrow overlay (≤820px): in-navbar dock + slide; wider tablet keeps short motion on fixed rail. */
+  const useMobileOverlaySidebarMotion = isOverlaySidebarBp && isMobileNavUi;
+
+  /** Same off-screen X for enter + exit so open mirrors close (avoids % width timing quirks). */
+  const MOBILE_SIDEBAR_OFF_X = -320;
+  const mobileOverlaySidebarTransition = useMemo(
+    () => ({ duration: 0.38, ease: [0.22, 1, 0.36, 1] as const }),
+    []
+  );
 
   const courses: Course[] = useMemo(
     () => [
@@ -1909,71 +1968,6 @@ export default function Page() {
         });
       }
 
-      // Sidebar nav hover glitch (character cycling, not marquee)
-      const randToken = () => {
-        const t = ["+", "-", "--", "++", "+-", "-+", "—", "_"];
-        return t[Math.floor(Math.random() * t.length)];
-      };
-      const buildGlitch = (targetLen: number) => {
-        let out = "";
-        while (out.length < targetLen) out += randToken();
-        return out.slice(0, targetLen);
-      };
-
-      const navItems = gsap.utils.toArray<HTMLElement>(".nav-item");
-      navItems.forEach((item) => {
-        const labelText = item.querySelector<HTMLElement>(".nav-label-text");
-        const glitch = item.querySelector<HTMLElement>(".nav-glitch");
-        if (!labelText || !glitch) return;
-
-        let last = 0;
-        const tick: gsap.TickerCallback = () => {
-          const now = performance.now();
-          if (now - last < 40) return; // faster hover glitch (~25fps)
-          last = now;
-          const len = Math.max(12, Math.min(22, (labelText.textContent ?? "").length + 8));
-          glitch.textContent = buildGlitch(len);
-          // micro jitter for glitch feel
-          gsap.set(glitch, { x: gsap.utils.random(-1.2, 1.2), filter: `brightness(${gsap.utils.random(1, 1.12)})` });
-        };
-
-        const stopNow = () => {
-          item.classList.remove("is-hover-glitch");
-          const t = navGlitchTickersRef.current.get(item);
-          if (t) gsap.ticker.remove(t);
-          navGlitchTickersRef.current.delete(item);
-          const timer = navGlitchTimersRef.current.get(item);
-          if (timer) window.clearTimeout(timer);
-          navGlitchTimersRef.current.delete(item);
-          gsap.set(glitch, { clearProps: "x,filter" });
-          glitch.textContent = "";
-        };
-
-        const start = () => {
-          stopNow(); // reset (so re-hover restarts from beginning)
-          item.classList.add("is-hover-glitch");
-          last = 0;
-          // Render first frame immediately so it's always visible.
-          const len = Math.max(12, Math.min(22, (labelText.textContent ?? "").length + 8));
-          glitch.textContent = buildGlitch(len);
-          gsap.set(glitch, { x: gsap.utils.random(-1.2, 1.2), filter: `brightness(${gsap.utils.random(1, 1.12)})` });
-          navGlitchTickersRef.current.set(item, tick);
-          gsap.ticker.add(tick);
-
-          // Run once for 0.4s then stop automatically
-          const timer = window.setTimeout(() => {
-            stopNow();
-          }, 400);
-          navGlitchTimersRef.current.set(item, timer);
-        };
-        const stop = () => stopNow();
-
-        item.addEventListener("mouseenter", start);
-        item.addEventListener("mouseleave", stop);
-        item.addEventListener("focus", start);
-        item.addEventListener("blur", stop);
-      });
-
       // Click-outside to close profile panel
       const onDocDown = (e: MouseEvent) => {
         if (!profileOpen) return;
@@ -1997,15 +1991,109 @@ export default function Page() {
     return () => ctx.revert();
   }, [profileOpen]);
 
+  /** Nav glitch must attach when the rail exists; gsap.context only re-ran on profileOpen, so closed sidebars never got listeners. */
   useLayoutEffect(() => {
+    if (!sidebarOpen) return;
+    const aside = sidebarRef.current;
+    if (!aside) return;
+
+    const randToken = () => {
+      const t = ["+", "-", "|", "/", "\\", "·", "--", "++", "+-", "-+", "—", "_", "¦"];
+      return t[Math.floor(Math.random() * t.length)];
+    };
+    const buildGlitch = (targetLen: number) => {
+      let out = "";
+      while (out.length < targetLen) out += randToken();
+      return out.slice(0, targetLen);
+    };
+
+    const navItems = Array.from(aside.querySelectorAll<HTMLElement>(".nav-item"));
+    const disposers: Array<() => void> = [];
+
+    navItems.forEach((item) => {
+      const labelText = item.querySelector<HTMLElement>(".nav-label-text");
+      const glitch = item.querySelector<HTMLElement>(".nav-glitch");
+      if (!labelText || !glitch) return;
+
+      let last = 0;
+      const tick: gsap.TickerCallback = () => {
+        const now = performance.now();
+        if (now - last < 26) return;
+        last = now;
+        const raw = (labelText.textContent ?? "").replace(/\s+/g, " ").trim();
+        const len = Math.max(14, Math.min(26, raw.length + 6));
+        glitch.textContent = buildGlitch(len);
+        gsap.set(glitch, { x: gsap.utils.random(-1.4, 1.4), filter: `brightness(${gsap.utils.random(1, 1.14)})` });
+      };
+
+      const stopNow = () => {
+        item.classList.remove("is-hover-glitch");
+        const tcb = navGlitchTickersRef.current.get(item);
+        if (tcb) gsap.ticker.remove(tcb);
+        navGlitchTickersRef.current.delete(item);
+        const timer = navGlitchTimersRef.current.get(item);
+        if (timer) window.clearTimeout(timer);
+        navGlitchTimersRef.current.delete(item);
+        gsap.set(glitch, { clearProps: "x,filter" });
+        glitch.textContent = "";
+      };
+
+      const start = () => {
+        stopNow();
+        item.classList.add("is-hover-glitch");
+        last = 0;
+        const raw = (labelText.textContent ?? "").replace(/\s+/g, " ").trim();
+        const len = Math.max(14, Math.min(26, raw.length + 6));
+        glitch.textContent = buildGlitch(len);
+        gsap.set(glitch, { x: gsap.utils.random(-1.4, 1.4), filter: `brightness(${gsap.utils.random(1, 1.14)})` });
+        navGlitchTickersRef.current.set(item, tick);
+        gsap.ticker.add(tick);
+        const timer = window.setTimeout(() => stopNow(), 280);
+        navGlitchTimersRef.current.set(item, timer);
+      };
+
+      const stop = () => stopNow();
+
+      item.addEventListener("pointerenter", start);
+      item.addEventListener("pointerleave", stop);
+      item.addEventListener("pointercancel", stop);
+      item.addEventListener("focus", start);
+      item.addEventListener("blur", stop);
+
+      disposers.push(() => {
+        stopNow();
+        item.removeEventListener("pointerenter", start);
+        item.removeEventListener("pointerleave", stop);
+        item.removeEventListener("pointercancel", stop);
+        item.removeEventListener("focus", start);
+        item.removeEventListener("blur", stop);
+      });
+    });
+
+    return () => {
+      disposers.forEach((d) => d());
+    };
+  }, [sidebarOpen]);
+
+  useLayoutEffect(() => {
+    const el = topbarRef.current;
+    if (!el) return;
     const update = () => {
-      if (!rootRef.current || !topbarRef.current) return;
-      const h = Math.round(topbarRef.current.getBoundingClientRect().height);
-      rootRef.current.style.setProperty("--topbarH", `${h}px`);
+      if (!topbarRef.current) return;
+      const h = topbarRef.current.getBoundingClientRect().height;
+      const v = `${h}px`;
+      if (rootRef.current) rootRef.current.style.setProperty("--topbarH", v);
+      document.documentElement.style.setProperty("--topbarH", v);
     };
     update();
+    const ro = new ResizeObserver(() => update());
+    ro.observe(el);
     window.addEventListener("resize", update);
-    return () => window.removeEventListener("resize", update);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", update);
+      document.documentElement.style.removeProperty("--topbarH");
+    };
   }, []);
 
   useLayoutEffect(() => {
@@ -2056,11 +2144,6 @@ export default function Page() {
         (selectedNavKey === "monk" || selectedNavKey === "affiliate") && "syndicate-mood-context"
       )}
     >
-      <div className="bg-video" aria-hidden="true">
-        <video autoPlay muted loop playsInline preload="metadata">
-          <source src="/assets/bg-video.mp4" type="video/mp4" />
-        </video>
-      </div>
       <div className="hud-ambient-glow" aria-hidden="true" />
       <div className="relative flex min-h-screen w-full max-w-[100vw] flex-col fluid-page-px fluid-page-pb lg:h-full">
         {/* Sticky shell has no GSAP transform; inner bar uses data-anim (transform breaks sticky on same node). */}
@@ -2069,133 +2152,164 @@ export default function Page() {
             ref={topbarRef}
             data-anim="in"
             className={cn(
-              "shell-neon-yellow cut-frame cyber-frame gold-stroke-strong premium-navbar overflow-visible border bg-[#070707]/80 fluid-nav-py fluid-nav-pl fluid-nav-pr",
-              "flex items-center fluid-nav-gap lg:overflow-visible"
+              "shell-neon-yellow cut-frame cyber-frame gold-stroke-strong premium-navbar relative overflow-visible border bg-[#070707]/80 fluid-nav-pl fluid-nav-pr fluid-nav-py",
+              "grid max-lg:grid-cols-[auto_minmax(0,1fr)_auto] max-lg:items-center max-lg:gap-x-2 max-lg:gap-y-2",
+              isMobileNavUi ? "max-lg:grid-rows-[auto_auto_auto]" : "max-lg:grid-rows-[auto_auto]",
+              "lg:flex lg:items-center lg:gap-[var(--fluid-nav-gap)] lg:overflow-visible"
             )}
           >
-          <div className="absolute inset-0 opacity-80 [background:radial-gradient(900px_280px_at_30%_0%,rgba(250,204,21,0.14),rgba(0,0,0,0)_55%)]" />
-          <div
-            ref={topDockRef}
-            onMouseMove={(e) => {
-              topMouseX.current = e.clientX;
-            }}
-            onMouseLeave={() => {
-              topMouseX.current = Infinity;
-            }}
-            className="relative flex min-w-0 shrink-0 items-center fluid-dock-gap"
-          >
-            <button
-              type="button"
-              onClick={() => setSidebarOpen((v) => !v)}
-              className="navbar-chrome-btn cut-frame-sm cyber-frame gold-stroke grid h-8 w-8 shrink-0 place-items-center border bg-black/70 text-[color:var(--gold-neon)]/95 sm:h-9 sm:w-9 md:h-10 md:w-10"
-              aria-label={sidebarOpen ? "Hide sidebar" : "Show sidebar"}
+            <div className="pointer-events-none absolute inset-0 z-0 opacity-80 [background:radial-gradient(900px_280px_at_30%_0%,rgba(250,204,21,0.14),rgba(0,0,0,0)_55%)]" />
+            <div
+              ref={topDockRef}
+              onMouseMove={(e) => {
+                topMouseX.current = e.clientX;
+              }}
+              onMouseLeave={() => {
+                topMouseX.current = Infinity;
+              }}
+              className="relative z-[1] flex min-w-0 shrink-0 items-center fluid-dock-gap max-lg:col-start-1 max-lg:row-start-1 max-lg:self-center"
             >
-              <IconToggle open={sidebarOpen} />
-            </button>
-            {/* Logo: glow on hover/press only — excluded from top dock scale */}
-            <div className="relative min-w-0 max-w-[min(100%,200px)] md:max-w-[220px]">
               <button
-                ref={logoWrapRef}
                 type="button"
-                aria-label="Syndicate"
+                onClick={() => setSidebarOpen((v) => !v)}
+                className="navbar-chrome-btn cut-frame-sm cyber-frame gold-stroke grid h-8 w-8 shrink-0 place-items-center border bg-black/70 text-[color:var(--gold-neon)]/95 sm:h-9 sm:w-9 md:h-10 md:w-10"
+                aria-label={sidebarOpen ? "Hide sidebar" : "Show sidebar"}
+              >
+                <IconToggle open={sidebarOpen} />
+              </button>
+              <div className="relative min-w-0 max-w-[min(100%,148px)] sm:max-w-[min(100%,180px)] md:max-w-[200px] lg:max-w-[220px]">
+                <button
+                  ref={logoWrapRef}
+                  type="button"
+                  aria-label="Syndicate"
+                  className={cn(
+                    "logo-glow-shell cut-frame-sm cyber-frame gold-stroke relative z-[1] mx-auto grid w-full max-w-[min(100%,160px)] place-items-center overflow-hidden sm:mx-0 sm:max-w-[188px] md:max-w-[200px] lg:max-w-[218px]",
+                    "border border-[color:var(--gold-neon-border-mid)] bg-black/70",
+                    "px-[clamp(0.28rem,0.9vw+0.08rem,0.6rem)] py-[clamp(0.12rem,0.45vw+0.04rem,0.4rem)] max-lg:min-h-[2.35rem] lg:min-h-[var(--fluid-logo-min-h)]"
+                  )}
+                >
+                  <img
+                    src="/assets/logo.png"
+                    alt=""
+                    className="pointer-events-none relative z-[1] h-[26px] w-auto max-w-[min(100%,100px)] object-contain opacity-[0.96] [filter:drop-shadow(0_0_14px_rgba(250,204,21,0.32))] sm:h-[34px] sm:max-w-[130px] md:h-[44px] md:max-w-[160px] lg:h-[60px] lg:max-w-[200px]"
+                    onError={(e) => {
+                      (e.currentTarget as HTMLImageElement).style.display = "none";
+                    }}
+                  />
+                </button>
+              </div>
+            </div>
+
+            <div className="relative z-[2] flex max-h-[2.75rem] min-h-0 min-w-0 flex-1 items-stretch justify-center overflow-hidden px-1 max-lg:col-start-2 max-lg:row-start-1 max-lg:max-h-[2.5rem] lg:h-[var(--fluid-logo-min-h)] lg:max-h-[var(--fluid-logo-min-h)] lg:min-w-0 lg:flex-1 lg:px-[clamp(0.2rem,1.1vw+0.1rem,0.75rem)]">
+              <Toaster
+                position="top-center"
+                containerStyle={{
+                  position: "relative",
+                  top: "auto",
+                  left: "auto",
+                  right: "auto",
+                  bottom: "auto",
+                  width: "100%",
+                  maxWidth: "100%",
+                  height: "100%",
+                  minHeight: "2rem",
+                  maxHeight: "2.75rem",
+                  alignSelf: "stretch",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  pointerEvents: "none",
+                  overflow: "hidden"
+                }}
+                toastOptions={{
+                  duration: 8000,
+                  className: "!bg-transparent !p-0 !shadow-none !m-0 !w-full !max-w-full"
+                }}
+              />
+            </div>
+
+            <div className="relative z-[2] min-w-0 w-full max-lg:col-span-3 max-lg:col-start-1 max-lg:row-start-2 lg:w-[min(248px,34vw)] lg:shrink-0">
+              <label htmlFor="nav-quick-search" className="sr-only">
+                Quick navigation search
+              </label>
+              <div
                 className={cn(
-                  "logo-glow-shell cut-frame-sm cyber-frame gold-stroke relative z-[1] mx-auto grid w-full max-w-[min(100%,188px)] place-items-center overflow-hidden sm:mx-0 sm:max-w-[200px] md:max-w-[218px]",
-                  "border border-[color:var(--gold-neon-border-mid)] bg-black/70",
-                  "px-[clamp(0.35rem,1vw+0.1rem,0.65rem)] py-[clamp(0.15rem,0.5vw+0.05rem,0.45rem)]",
-                  "min-h-[var(--fluid-logo-min-h)]"
+                  "navbar-chrome-panel cut-frame-sm cyber-frame gold-stroke flex h-8 min-h-8 w-full items-center gap-1.5 border bg-black/70 px-2 sm:h-9 sm:min-h-9 sm:gap-2 sm:px-2.5 md:h-10 md:min-h-10 md:px-3",
+                  "shadow-[inset_0_1px_0_rgba(197,179,88,0.08)]"
                 )}
               >
-                <img
-                  src="/assets/logo.png"
-                  alt=""
-                  className="pointer-events-none relative z-[1] h-[30px] w-auto max-w-[min(100%,118px)] object-contain opacity-[0.96] [filter:drop-shadow(0_0_14px_rgba(250,204,21,0.32))] sm:h-[40px] sm:max-w-[148px] md:h-[52px] md:max-w-[182px] lg:h-[60px] lg:max-w-[200px]"
-                  onError={(e) => {
-                    (e.currentTarget as HTMLImageElement).style.display = "none";
-                  }}
-                />
-              </button>
-            </div>
-          </div>
-
-          {/* Due alerts (react-hot-toast): centered between logo and search — matches logo row height */}
-          <div className="relative z-[2] flex h-[var(--fluid-logo-min-h)] min-h-0 min-w-0 max-h-[var(--fluid-logo-min-h)] flex-1 items-stretch justify-center overflow-hidden px-[clamp(0.2rem,1.1vw+0.1rem,0.75rem)]">
-            <Toaster
-              position="top-center"
-              containerStyle={{
-                position: "relative",
-                top: "auto",
-                left: "auto",
-                right: "auto",
-                bottom: "auto",
-                width: "100%",
-                maxWidth: "100%",
-                height: "var(--fluid-logo-min-h)",
-                minHeight: "var(--fluid-logo-min-h)",
-                maxHeight: "var(--fluid-logo-min-h)",
-                alignSelf: "stretch",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                pointerEvents: "none",
-                overflow: "hidden"
-              }}
-              toastOptions={{
-                duration: 8000,
-                className: "!bg-transparent !p-0 !shadow-none !m-0 !w-full !max-w-full"
-              }}
-            />
-          </div>
-
-          <div className="relative z-[2] flex shrink-0 items-center fluid-nav-gap">
-            <div className="relative flex items-center justify-end fluid-nav-gap">
-              <div className="relative">
-                <button
-                  ref={featuresSearchBtnRef}
-                  type="button"
-                  onClick={() => {
-                    setFeaturesMenuOpen((v) => {
-                      const next = !v;
-                      if (next) setProfileOpen(false);
-                      return next;
-                    });
-                  }}
-                  className={cn(
-                    "navbar-chrome-btn cut-frame-sm cyber-frame gold-stroke grid h-8 w-8 place-items-center border bg-black/70 text-[color:var(--gold-neon)]/95 sm:h-9 sm:w-9 md:h-10 md:w-10",
-                    "origin-center transition-[transform,box-shadow,border-color] duration-200 ease-out motion-reduce:transition-none",
-                    featuresMenuOpen && "hud-selected-glow border-[color:var(--gold-neon-border)] scale-[1.04]"
-                  )}
-                  aria-label="Search and site menu"
-                  aria-expanded={featuresMenuOpen}
-                  aria-haspopup="menu"
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  className="pointer-events-none h-3 w-3 shrink-0 text-[color:var(--gold-neon)]/85 sm:h-[14px] sm:w-[14px] md:h-4 md:w-4"
+                  aria-hidden="true"
                 >
-                  <svg viewBox="0 0 24 24" fill="none" className="h-[14px] w-[14px] sm:h-[17px] sm:w-[17px] md:h-5 md:w-5" aria-hidden="true">
-                    <path
-                      d="M10.5 18.2a7.7 7.7 0 1 1 0-15.4a7.7 7.7 0 0 1 0 15.4Z"
-                      stroke="currentColor"
-                      strokeWidth="1.8"
-                    />
-                    <path d="M16.2 16.2L20.4 20.4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-                  </svg>
-                </button>
-
+                  <path
+                    d="M10.5 18.2a7.7 7.7 0 1 1 0-15.4a7.7 7.7 0 0 1 0 15.4Z"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                  />
+                  <path d="M16.2 16.2L20.4 20.4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                </svg>
+                <input
+                  id="nav-quick-search"
+                  type="search"
+                  value={navQuickSearch}
+                  onChange={(e) => setNavQuickSearch(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key !== "Enter") return;
+                    e.preventDefault();
+                    const q = navQuickSearch.trim().toLowerCase();
+                    if (!q) return;
+                    const hit = FEATURE_MENU_ENTRIES.find(
+                      (ent) =>
+                        ent.label.toLowerCase().includes(q) ||
+                        ent.section.toLowerCase().includes(q) ||
+                        ent.navKey.toLowerCase().includes(q)
+                    );
+                    if (hit) {
+                      setSelectedNavKey(hit.navKey);
+                      setNavQuickSearch("");
+                    }
+                  }}
+                  placeholder="SEARCH SECTIONS"
+                  autoComplete="off"
+                  className="min-w-0 flex-1 bg-transparent py-0.5 text-[8px] font-black uppercase tracking-[0.14em] text-[color:var(--gold-neon)]/95 outline-none placeholder:text-[color:var(--gold-neon)]/38 sm:text-[9px] sm:tracking-[0.16em] md:text-[10px] md:tracking-[0.18em]"
+                />
               </div>
+            </div>
 
-              {/* Profile / Avatar button */}
-              <div className="relative">
+            <div className="relative z-[2] flex shrink-0 items-center gap-x-1.5 max-lg:col-start-3 max-lg:row-start-1 max-lg:justify-end sm:gap-x-2 lg:shrink-0">
+              <NavbarNotificationBell
+                themeMode={themeMode}
+                userName={profileName}
+                courses={dashboardCoursesForSnapshots}
+                onNavigate={(nav: DashboardNavKey) => {
+                  if (nav === "programs") setSelectedNavKey("programs");
+                  else if (nav === "monk") setSelectedNavKey("monk");
+                  else if (nav === "affiliate") setSelectedNavKey("affiliate");
+                  else if (nav === "resources") setSelectedNavKey("resources");
+                  else if (nav === "support") setSelectedNavKey("support");
+                  else if (nav === "settings") setSelectedNavKey("settings");
+                  else setSelectedNavKey("dashboard");
+                }}
+                onOpenChange={(open) => {
+                  if (open) setProfileOpen(false);
+                }}
+              />
+
+              <div className="relative shrink-0">
                 <button
                   ref={profileBtnRef}
                   data-dock-item="top"
                   type="button"
                   onClick={() => {
-                    setProfileOpen((v) => {
-                      const next = !v;
-                      if (next) setFeaturesMenuOpen(false);
-                      return next;
-                    });
+                    setProfileOpen((v) => !v);
                   }}
                   className={cn(
-                    "navbar-chrome-panel cut-frame-sm cyber-frame gold-stroke glass-dark premium-button inline-flex w-full max-w-[min(100%,188px)] items-center gap-[clamp(0.35rem,1vw+0.1rem,0.55rem)] rounded-md border px-[clamp(0.35rem,1vw+0.1rem,0.65rem)] py-[clamp(0.15rem,0.45vw+0.08rem,0.45rem)] sm:mx-0 sm:max-w-[200px] md:max-w-[218px]",
-                    "min-h-[var(--fluid-profile-btn-h)] h-[var(--fluid-profile-btn-h)]",
+                    "navbar-chrome-panel cut-frame-sm cyber-frame gold-stroke glass-dark premium-button inline-flex max-w-[min(100%,188px)] items-center gap-[clamp(0.35rem,1vw+0.1rem,0.55rem)] rounded-md border px-[clamp(0.35rem,1vw+0.1rem,0.65rem)] py-[clamp(0.15rem,0.45vw+0.08rem,0.45rem)] sm:max-w-[200px] md:max-w-[218px]",
+                    "max-lg:h-10 max-lg:min-h-10 max-lg:max-w-none max-lg:justify-center max-lg:px-2 max-lg:py-1.5",
+                    "min-h-[var(--fluid-profile-btn-h)] h-[var(--fluid-profile-btn-h)] lg:w-full",
                     "origin-right transition-[transform,box-shadow,border-color] duration-200 ease-out motion-reduce:transition-none",
                     profileOpen && "hud-selected-glow scale-[1.02]"
                   )}
@@ -2213,7 +2327,7 @@ export default function Page() {
                       (e.currentTarget as HTMLImageElement).style.display = "none";
                     }}
                   />
-                  <div className="min-w-0 flex-1 text-left leading-none">
+                  <div className="min-w-0 flex-1 text-left leading-none max-lg:hidden">
                     <div className="truncate text-[9px] font-black uppercase tracking-[0.08em] text-[color:var(--gold-neon)]/95 sm:text-[11px] sm:tracking-[0.1em] md:text-[12px] md:tracking-[0.11em] lg:text-[13px] lg:tracking-[0.12em]">
                       {profileName}
                     </div>
@@ -2222,73 +2336,50 @@ export default function Page() {
                     </div>
                   </div>
                 </button>
-
               </div>
             </div>
-          </div>
+
+            {isMobileNavUi ? (
+              <div className="relative z-[3] min-h-0 max-lg:col-span-3 max-lg:col-start-1 max-lg:row-start-3 max-lg:w-full">
+                <AnimatePresence initial={true} mode="sync">
+                  {sidebarOpen && isOverlaySidebarBp ? (
+                    <motion.div
+                      key="navbar-mobile-nav"
+                      initial={{ height: 0, opacity: 1 }}
+                      animate={{ height: "auto", opacity: 1 }}
+                      exit={{ height: 0, opacity: 1 }}
+                      transition={mobileOverlaySidebarTransition}
+                      className="overflow-hidden border-t border-[color:var(--gold-neon-border-mid)] bg-black/35"
+                    >
+                      <motion.div
+                        initial={{ x: MOBILE_SIDEBAR_OFF_X, opacity: 1 }}
+                        animate={{ x: 0, opacity: 1 }}
+                        exit={{ x: MOBILE_SIDEBAR_OFF_X, opacity: 1 }}
+                        transition={mobileOverlaySidebarTransition}
+                        className="w-full will-change-transform"
+                      >
+                        <div
+                          ref={sidebarRef as unknown as React.Ref<HTMLDivElement>}
+                          className="sidebar-nav-dock mobile-sidebar-rail cut-frame shell-neon-yellow cyber-frame gold-stroke relative max-h-[min(52vh,440px)] overflow-y-auto border-0 bg-[#060606]/92 pb-2 pt-1.5 no-scrollbar shadow-[inset_0_1px_0_rgba(197,179,88,0.08)]"
+                        >
+                          <div className="pointer-events-none absolute inset-0 opacity-50 [background:radial-gradient(520px_220px_at_20%_0%,rgba(250,204,21,0.1),rgba(0,0,0,0)_62%)]" />
+                          <div className="relative min-w-0 px-1">
+                            <SidebarNavRailList
+                              nav={nav}
+                              selectedNavKey={selectedNavKey}
+                              setSelectedNavKey={setSelectedNavKey}
+                              onItemActivate={() => setSidebarOpen(false)}
+                            />
+                          </div>
+                        </div>
+                      </motion.div>
+                    </motion.div>
+                  ) : null}
+                </AnimatePresence>
+              </div>
+            ) : null}
           </div>
         </div>
-
-        {overlayMount
-          ? createPortal(
-              <AnimatePresence onExitComplete={() => setFeaturesMenuFixedStyle(null)}>
-                {featuresMenuOpen && featuresMenuFixedStyle ? (
-                  <motion.div
-                    key="features-menu"
-                    ref={featuresMenuPanelRef}
-                    style={featuresMenuFixedStyle}
-                    initial={menuMotion.initial}
-                    animate={menuMotion.animate}
-                    exit={menuMotion.exit}
-                    transition={menuMotion.transition}
-                    className="compact-card-ui cut-frame cyber-frame gold-stroke glass-dark pointer-events-auto overflow-hidden border border-[color:var(--gold-neon-border-mid)] p-3 shadow-[0_0_24px_rgba(250,204,21,0.12)] sm:p-4"
-                    role="menu"
-                  >
-                    <div className="pointer-events-none absolute inset-0 opacity-70 [background:radial-gradient(520px_220px_at_20%_0%,rgba(250,204,21,0.1),rgba(0,0,0,0)_62%)]" />
-                    <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
-                      <div className="text-[10px] font-extrabold uppercase tracking-[0.22em] text-white/50">Find & navigate</div>
-                      <input
-                        type="search"
-                        value={featureSearchQuery}
-                        onChange={(e) => setFeatureSearchQuery(e.target.value)}
-                        placeholder="Filter features…"
-                        className="mt-2 w-full rounded-md border border-white/12 bg-black/40 px-3 py-2 text-[12px] text-white/85 placeholder:text-white/35 outline-none focus:border-[rgba(255,215,0,0.45)]"
-                        autoFocus
-                      />
-                      <div className="mt-3 min-h-0 flex-1 space-y-4 overflow-y-auto pr-1 no-scrollbar">
-                        {featureMenuGrouped.length === 0 ? (
-                          <div className="text-[12px] text-white/50">No matches.</div>
-                        ) : (
-                          featureMenuGrouped.map(([section, entries]) => (
-                            <div key={section}>
-                              <div className="text-[9px] font-black uppercase tracking-[0.2em] text-white/40">{section}</div>
-                              <div className="mt-1.5 space-y-1">
-                                {entries.map((entry, i) => (
-                                  <button
-                                    key={`${section}-${entry.navKey}-${i}`}
-                                    type="button"
-                                    role="menuitem"
-                                    onClick={() => {
-                                      setSelectedNavKey(entry.navKey);
-                                      setFeaturesMenuOpen(false);
-                                    }}
-                                    className="flex w-full rounded-md border border-white/10 bg-black/30 px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-white/75 transition hover:border-[rgba(255,215,0,0.35)] hover:bg-black/50 hover:text-white/90"
-                                  >
-                                    {entry.label}
-                                  </button>
-                                ))}
-                              </div>
-                            </div>
-                          ))
-                        )}
-                      </div>
-                    </div>
-                  </motion.div>
-                ) : null}
-              </AnimatePresence>,
-              document.body
-            )
-          : null}
 
         {overlayMount
           ? createPortal(
@@ -2405,62 +2496,108 @@ export default function Page() {
             )
           : null}
 
-        {/* Main frame */}
-        <div className="mt-0 grid min-h-0 w-full max-w-none flex-1 grid-cols-12 fluid-main-grid max-md:items-start">
-          {/* Sidebar */}
-          {sidebarOpen ? (
-            <aside
-              data-anim="left"
-              ref={sidebarRef as unknown as React.RefObject<HTMLElement>}
-              onMouseMove={(e) => {
-                dockMouseY.current = e.clientY;
-              }}
-              onMouseLeave={() => {
-                dockMouseY.current = Infinity;
-              }}
+        <AnimatePresence>
+          {isOverlaySidebarBp && sidebarOpen ? (
+            <motion.button
+              key="overlay-sidebar-dismiss"
+              type="button"
+              aria-label="Close menu"
               className={cn(
-                "sidebar-nav-dock shell-neon-yellow cut-frame cyber-frame gold-stroke relative col-span-5 overflow-x-visible overflow-y-auto border bg-[#060606]/70 md:col-span-2 lg:col-span-2",
-                "max-md:max-h-[min(calc(100dvh-4.5rem),92vh)] max-md:self-start max-md:overflow-y-auto max-md:overflow-x-hidden",
-                "h-auto max-h-none md:overflow-visible lg:sticky lg:top-0 lg:h-full lg:max-h-none lg:overflow-auto no-scrollbar"
+                "fixed border-0 p-0 max-lg:block lg:hidden",
+                isMobileNavUi
+                  ? "z-[55] cursor-pointer bg-[rgba(0,0,0,0.4)]"
+                  : "z-[88] bottom-0 cursor-default bg-transparent"
               )}
-            >
-              <div className="absolute inset-0 opacity-70 [background:radial-gradient(680px_320px_at_20%_10%,rgba(250,204,21,0.1),rgba(0,0,0,0)_62%)]" />
-              <div className="relative min-w-0">
-                <div className="sidebar-nav-list">
-                {nav.map((item) => (
-                  <button
-                    key={item.label}
-                    onClick={() => setSelectedNavKey(item.key)}
-                    data-dock-item="sidebar"
-                    className={cn(
-                      "sidebar-nav-item nav-item group relative flex w-full items-center text-left",
-                      "cut-frame-sm hud-hover-glow glass-dark premium-gold-border gold-glow-hover transition",
-                      "hover:bg-black/45",
-                      selectedNavKey === item.key &&
-                        "is-selected glow-edge-strong hud-selected-glow border-[color:var(--gold-neon-border)] bg-[rgba(250,204,21,0.08)]"
-                    )}
-                    type="button"
-                  >
-                    <CheckboxSlot active={selectedNavKey === item.key} />
-                    <span className="sidebar-nav-icon-frame grid shrink-0 place-items-center border border-[color:var(--gold-neon-border-soft)] bg-black/25 text-[color:var(--gold-neon)]/90 group-hover:text-[color:var(--gold-neon)]">
-                      <NavIcon k={item.key} />
-                    </span>
-                    <span className="sidebar-nav-label nav-label min-w-0 flex-1 font-extrabold uppercase text-[color:var(--gold-neon)]/92 group-hover:text-[color:var(--gold-neon)]">
-                      <SidebarNavLabel text={item.label} />
-                      <span className="nav-glitch max-md:hidden" aria-hidden="true" />
-                    </span>
-                    <span className="sidebar-nav-accent-line ml-auto hidden h-px shrink-0 bg-[linear-gradient(90deg,rgba(250,204,21,0),rgba(250,204,21,0.45))] opacity-0 transition group-hover:opacity-100 md:block" />
-                  </button>
-                ))}
-                </div>
-              </div>
-            </aside>
+              style={
+                isMobileNavUi
+                  ? {
+                      top: "var(--topbarH, 4.5rem)",
+                      left: 0,
+                      right: 0,
+                      height: "calc(100dvh - var(--topbarH, 4.5rem))"
+                    }
+                  : {
+                      top: "calc(var(--topbarH, 4.5rem) + var(--fluid-main-grid-pt))",
+                      bottom: 0,
+                      left: 0,
+                      right: 0
+                    }
+              }
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={
+                isMobileNavUi ? mobileOverlaySidebarTransition : { duration: 0.15 }
+              }
+              onClick={() => setSidebarOpen(false)}
+            />
           ) : null}
+        </AnimatePresence>
+
+        {/* Main frame — `relative` + popLayout: exiting sidebar leaves grid flow so main shell does not wrap to row 2 (14 cols) during close. */}
+        <div className="relative mt-0 grid min-h-0 w-full max-w-none flex-1 grid-cols-12 fluid-main-grid max-md:items-start">
+          <AnimatePresence initial={true} mode="popLayout">
+            {sidebarOpen && (!isOverlaySidebarBp || !isMobileNavUi) ? (
+              <motion.aside
+                key="main-sidebar"
+                ref={sidebarRef as unknown as React.Ref<HTMLElement>}
+                initial={
+                  useMobileOverlaySidebarMotion
+                    ? { x: MOBILE_SIDEBAR_OFF_X, opacity: 1 }
+                    : sidebarMotion.initial
+                }
+                animate={useMobileOverlaySidebarMotion ? { x: 0, opacity: 1 } : sidebarMotion.animate}
+                exit={
+                  useMobileOverlaySidebarMotion
+                    ? { x: MOBILE_SIDEBAR_OFF_X, opacity: 1 }
+                    : sidebarMotion.exit
+                }
+                transition={useMobileOverlaySidebarMotion ? mobileOverlaySidebarTransition : sidebarMotion.transition}
+                onMouseMove={(e) => {
+                  dockMouseY.current = e.clientY;
+                }}
+                onMouseLeave={() => {
+                  dockMouseY.current = Infinity;
+                }}
+                className={cn(
+                  "sidebar-nav-dock shell-neon-yellow cut-frame cyber-frame gold-stroke overflow-y-auto border bg-[#060606]/70 no-scrollbar",
+                  isMobileNavUi && "mobile-sidebar-rail",
+                  "max-lg:fixed max-lg:left-0 max-lg:z-[95] max-lg:w-[min(88vw,300px)] max-lg:max-w-[300px] max-lg:rounded-r-lg max-lg:border-r max-lg:shadow-[0_12px_48px_rgba(0,0,0,0.55)]",
+                  "max-lg:top-[calc(var(--topbarH,4.5rem)+var(--fluid-main-grid-pt))] max-lg:h-[calc(100dvh-var(--topbarH,4.5rem)-var(--fluid-main-grid-pt))]",
+                  /* Mobile: shorter rail (~52px + safe-area) above bottom chrome / FAB; tablet (max-lg) unchanged */
+                  "max-[820px]:!top-[calc(var(--topbarH,4.5rem)+3px)] max-[820px]:!h-[calc(100dvh-var(--topbarH,4.5rem)-3px-3.25rem-env(safe-area-inset-bottom))] max-[820px]:box-border max-[820px]:overflow-x-hidden max-[820px]:rounded-br-lg max-[820px]:pb-2",
+                  "lg:relative lg:col-span-2 lg:sticky lg:top-0 lg:z-20 lg:h-full lg:w-auto lg:max-w-none lg:rounded-none lg:shadow-none lg:overflow-x-visible lg:overflow-auto"
+                )}
+              >
+                <div className="absolute inset-0 opacity-70 [background:radial-gradient(680px_320px_at_20%_10%,rgba(250,204,21,0.1),rgba(0,0,0,0)_62%)]" />
+                <div className="relative min-w-0">
+                  <SidebarNavRailList
+                    nav={nav}
+                    selectedNavKey={selectedNavKey}
+                    setSelectedNavKey={setSelectedNavKey}
+                    onItemActivate={() => {
+                      if (isOverlaySidebarBp) setSidebarOpen(false);
+                    }}
+                  />
+                </div>
+              </motion.aside>
+            ) : null}
+          </AnimatePresence>
 
           {/* Courses grid */}
-          <section
+          <motion.section
+            layout={!isOverlaySidebarBp ? "size" : false}
+            transition={{ duration: 0.36, ease: [0.22, 1, 0.36, 1] }}
             data-anim="in"
             className={cn(
+              "shell-neon-yellow cut-frame cyber-frame gold-stroke relative flex min-h-0 w-full min-w-0 max-w-none flex-col overflow-hidden border bg-[#060606]/70 fluid-section-p",
+              "col-span-12",
+              sidebarOccupiesGrid ? "lg:col-span-10" : "lg:col-span-12",
+              isOverlaySidebarBp &&
+                sidebarOpen &&
+                !isMobileNavUi &&
+                "max-lg:pointer-events-none max-lg:opacity-[0.42] max-lg:transition-opacity max-lg:duration-200 max-lg:ease-out",
+              "lg:h-full lg:min-h-0"
               "shell-neon-yellow cut-frame cyber-frame gold-stroke relative flex min-h-0 w-full min-w-0 max-w-none flex-col overflow-hidden border bg-[#060606]/70",
               sidebarOpen ? "col-span-7 md:col-span-10 lg:col-span-10" : "col-span-12",
               "lg:h-full lg:min-h-0",
@@ -2475,6 +2612,8 @@ export default function Page() {
             <div
               data-main-shell-scroll
               className={cn(
+                "relative flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden pr-1 no-scrollbar",
+                !sidebarOccupiesGrid && "lg:pl-14"
                 "relative flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden no-scrollbar",
                 selectedNavKey === "monk" || selectedNavKey === "affiliate"
                   ? "px-[clamp(0.4rem,1.1vw+0.2rem,0.85rem)]"
@@ -2521,7 +2660,7 @@ export default function Page() {
                     <div
                       className={cn(
                         "relative",
-                        sidebarOpen ? "min-h-[min(52vh,560px)] sm:min-h-[min(58vh,640px)]" : "min-h-[min(56vh,620px)] sm:min-h-[min(64vh,720px)]"
+                        sidebarOccupiesGrid ? "min-h-[min(52vh,560px)] sm:min-h-[min(58vh,640px)]" : "min-h-[min(56vh,620px)] sm:min-h-[min(64vh,720px)]"
                       )}
                     >
                       <ChromaGrid
@@ -2529,16 +2668,16 @@ export default function Page() {
                         selectedId={selectedCourseId}
                         onSelect={(id) => setSelectedCourseId(id)}
                         columns={
-                          sidebarOpen ? (isNarrowViewport ? 2 : 3) : 4
+                          sidebarOccupiesGrid ? (isNarrowViewport ? 2 : 3) : 4
                         }
                         radius={
-                          sidebarOpen ? (isNarrowViewport ? 280 : 380) : 440
+                          sidebarOccupiesGrid ? (isNarrowViewport ? 280 : 380) : 440
                         }
                         damping={0.45}
                         fadeOut={0.6}
                         ease="power3.out"
                         interactionDisabled={isGoalsPanelOpen}
-                        className={cn(sidebarOpen ? "py-2" : "py-4")}
+                        className={cn(sidebarOccupiesGrid ? "py-2" : "py-4")}
                       />
                     </div>
 
@@ -2594,7 +2733,7 @@ export default function Page() {
               )}
             </div>
             <GoalsPanel />
-          </section>
+          </motion.section>
 
           {/* Details now live inside the courses panel (scrollable). */}
         </div>
