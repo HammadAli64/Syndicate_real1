@@ -85,14 +85,11 @@ export function DeckListToolbar({
 const BADGE_BASE = "inline-flex items-center rounded px-1.5 py-0.5 text-[8px] font-black uppercase tracking-[0.14em]";
 
 export function MissionStatusBadge({ status }: { status: "active" | "missed" | "done" }) {
+  const shell =
+    "border-[rgba(197,179,88,0.45)] bg-black/70 text-[color:var(--gold)] shadow-[0_0_0_1px_rgba(197,179,88,0.2),0_0_14px_rgba(197,179,88,0.18)]";
   if (status === "active")
     return (
-      <span
-        className={cn(
-          BADGE_BASE,
-          "border border-emerald-300/65 bg-emerald-950/80 text-emerald-100 shadow-[0_0_0_1px_rgba(52,211,153,0.35),0_0_16px_rgba(16,185,129,0.45),0_0_28px_rgba(52,211,153,0.2)]"
-        )}
-      >
+      <span className={cn(BADGE_BASE, "border", shell)}>
         Active
       </span>
     );
@@ -101,19 +98,14 @@ export function MissionStatusBadge({ status }: { status: "active" | "missed" | "
       <span
         className={cn(
           BADGE_BASE,
-          "border border-rose-400/60 bg-rose-950/75 text-rose-100 shadow-[0_0_0_1px_rgba(251,113,133,0.4),0_0_18px_rgba(251,113,133,0.42),0_0_32px_rgba(244,63,94,0.2)]"
+          "border border-[rgba(197,179,88,0.38)] bg-black/65 text-[rgba(255,248,220,0.78)] shadow-[0_0_0_1px_rgba(197,179,88,0.15),0_0_12px_rgba(197,179,88,0.12)]"
         )}
       >
         Missed
       </span>
     );
   return (
-    <span
-      className={cn(
-        BADGE_BASE,
-        "border border-cyan-400/45 bg-cyan-950/70 text-cyan-100 shadow-[0_0_14px_rgba(34,211,238,0.28)]"
-      )}
-    >
+    <span className={cn(BADGE_BASE, "border", shell)}>
       Complete
     </span>
   );
@@ -125,7 +117,7 @@ export function ReminderStatusBadge({ status }: { status: "active" | "completed"
       <span
         className={cn(
           BADGE_BASE,
-          "border border-cyan-400/55 bg-cyan-950/75 text-cyan-100 shadow-[0_0_0_1px_rgba(34,211,238,0.35),0_0_16px_rgba(34,211,238,0.4),0_0_28px_rgba(6,182,212,0.15)]"
+          "border border-[rgba(197,179,88,0.45)] bg-black/70 text-[color:var(--gold)] shadow-[0_0_0_1px_rgba(197,179,88,0.2),0_0_16px_rgba(197,179,88,0.2)]"
         )}
       >
         Incomplete
@@ -135,7 +127,7 @@ export function ReminderStatusBadge({ status }: { status: "active" | "completed"
     <span
       className={cn(
         BADGE_BASE,
-        "border border-fuchsia-400/50 bg-fuchsia-950/70 text-fuchsia-100 shadow-[0_0_0_1px_rgba(192,132,252,0.35),0_0_16px_rgba(168,85,247,0.38)]"
+        "border border-[rgba(197,179,88,0.4)] bg-black/65 text-[rgba(255,248,220,0.82)] shadow-[0_0_0_1px_rgba(197,179,88,0.18),0_0_14px_rgba(197,179,88,0.15)]"
       )}
     >
       Complete

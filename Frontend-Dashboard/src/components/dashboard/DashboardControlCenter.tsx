@@ -1,14 +1,13 @@
 "use client";
 
-import { useRef, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
-import type { DashboardNavKey, DashboardSnapshots, NotificationItem } from "./types";
+import { useState } from "react";
+import { motion } from "framer-motion";
+import type { DashboardNavKey, DashboardSnapshots } from "./types";
 import { useDashboardSnapshots, type DashboardCourseLike } from "./useDashboardSnapshots";
 import { accentByKey, Card, cn, ProgressBar, themeAccent, type ThemeMode } from "./dashboardPrimitives";
 import { PortalSessionControls } from "../auth/PortalSessionControls";
 import { GoalPathSystem } from "./path/GoalPathSystem";
 import { MissionCommandDeckCard } from "./MissionCommandDeckCard";
-
 export type { ThemeMode };
 
 function timeAgo(ts: number) {
@@ -20,109 +19,6 @@ function timeAgo(ts: number) {
   if (h < 24) return `${h}h ago`;
   const d = Math.floor(h / 24);
   return `${d}d ago`;
-}
-
-function NotificationBell({
-  themeMode,
-  notifications,
-  onNavigate
-}: {
-  themeMode: ThemeMode;
-  notifications: NotificationItem[];
-  onNavigate: (nav: DashboardNavKey) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const unread = notifications.filter((n) => !n.read).length;
-  const t = themeAccent(themeMode);
-  const panelRef = useRef<HTMLDivElement | null>(null);
-
-  return (
-    <div className="relative">
-      <motion.button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        whileHover={{ scale: 1.04 }}
-        whileTap={{ scale: 0.98 }}
-        className="cut-frame-sm cyber-frame gold-stroke hud-hover-glow grid h-10 w-10 place-items-center border bg-black/50 text-white/80 hover:text-white"
-        style={{ borderColor: t.border }}
-        aria-label="Notifications"
-        aria-expanded={open}
-      >
-        <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" aria-hidden="true">
-          <path
-            d="M12 20.2a2.2 2.2 0 0 0 2.2-2.2H9.8A2.2 2.2 0 0 0 12 20.2Z"
-            stroke="currentColor"
-            strokeWidth="1.8"
-          />
-          <path
-            d="M18.2 16.2H5.8l1.1-1.3V11a5.1 5.1 0 0 1 10.2 0v3.9l1.1 1.3Z"
-            stroke="currentColor"
-            strokeWidth="1.8"
-            strokeLinejoin="round"
-          />
-        </svg>
-        {unread > 0 ? (
-          <span className="absolute -right-1 -top-1 grid h-5 w-5 place-items-center rounded-full border border-white/10 bg-[rgba(255,59,59,0.95)] text-[10px] font-black text-white shadow-[0_0_16px_rgba(255,59,59,0.35)]">
-            {unread > 9 ? "9+" : unread}
-          </span>
-        ) : null}
-      </motion.button>
-
-      <AnimatePresence>
-        {open ? (
-          <motion.div
-            ref={panelRef}
-            initial={{ opacity: 0, y: -8, scale: 0.98 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -8, scale: 0.98 }}
-            transition={{ duration: 0.18, ease: "easeOut" }}
-            className="cut-frame cyber-frame gold-stroke absolute right-0 top-[calc(100%+10px)] z-50 w-[min(420px,92vw)] overflow-hidden border bg-[#060606]/95 p-3 backdrop-blur-md"
-            style={{ borderColor: t.border, boxShadow: `0 0 0 1px ${t.glow}, 0 0 26px ${t.glow}` }}
-            role="menu"
-          >
-            <div className="flex items-center justify-between gap-3">
-              <div className="text-[11px] font-extrabold uppercase tracking-[0.22em] text-white/60">
-                Notifications
-              </div>
-              <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-white/45">
-                {unread} unread
-              </div>
-            </div>
-
-            <div className="mt-3 space-y-2">
-              {notifications.slice(0, 6).map((n) => (
-                <button
-                  key={n.id}
-                  type="button"
-                  onClick={() => {
-                    if (n.cta?.nav) onNavigate(n.cta.nav);
-                    setOpen(false);
-                  }}
-                  className={cn(
-                    "w-full rounded-md border bg-black/35 px-3 py-2 text-left transition hover:bg-black/55",
-                    n.read ? "border-white/10" : "border-[rgba(255,215,0,0.30)]"
-                  )}
-                >
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="text-[12px] font-bold text-white/80">{n.title}</div>
-                    <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-white/45">
-                      {timeAgo(n.ts)}
-                    </div>
-                  </div>
-                  {n.message ? <div className="mt-1 text-[12px] text-white/60">{n.message}</div> : null}
-                  {n.cta?.label ? (
-                    <div className="mt-2 text-[10px] font-black uppercase tracking-[0.16em] text-[color:var(--gold)]/90">
-                      {n.cta.label} →
-                    </div>
-                  ) : null}
-                </button>
-              ))}
-            </div>
-          </motion.div>
-        ) : null}
-      </AnimatePresence>
-    </div>
-  );
 }
 
 function HeroStatusPanel({
@@ -267,7 +163,6 @@ function HeroStatusPanel({
           </div>
           <div className="flex shrink-0 flex-wrap items-center gap-2 pl-1">
             <PortalSessionControls themeMode={themeMode} />
-            <NotificationBell themeMode={themeMode} notifications={s.notifications} onNavigate={onNavigate} />
           </div>
         </div>
       </div>
@@ -327,7 +222,6 @@ function AffiliateSnapshotCard({
     <Card
       themeMode={themeMode}
       title="Affiliate Portal Snapshot"
-      accentKey="affiliate"
       frameVariant="shell"
       headerImageSrc="/assets/dashboard/affiliate.svg"
       right={
@@ -336,7 +230,7 @@ function AffiliateSnapshotCard({
           onClick={() => onNavigate("affiliate")}
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.98 }}
-          className="text-[10px] font-black uppercase tracking-[0.14em] text-[#b4ffd8]"
+          className="text-[10px] font-black uppercase tracking-[0.14em] text-[color:var(--gold)]/90"
         >
           Open →
         </motion.button>
@@ -353,7 +247,7 @@ function AffiliateSnapshotCard({
             }}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.98 }}
-            className="rounded-md border border-white/10 bg-black/20 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.14em] text-white/70 hover:border-[rgba(0,255,122,0.45)] hover:text-[#b4ffd8]"
+            className="rounded-md border border-white/10 bg-black/20 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.14em] text-white/70 hover:border-[rgba(197,179,88,0.45)] hover:text-[color:var(--gold)]/95"
           >
             Copy
           </motion.button>
@@ -361,18 +255,18 @@ function AffiliateSnapshotCard({
       </div>
 
       {/* Mini funnel visualization (hoverable) */}
-      <div className="mt-3 rounded-md border border-[rgba(0,255,122,0.18)] bg-black/30 p-3">
+      <div className="mt-3 rounded-md border border-[rgba(197,179,88,0.2)] bg-black/30 p-3">
         <div className="flex items-center justify-between">
           <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-white/55">Funnel</div>
-          <div className="text-[10px] font-black uppercase tracking-[0.14em] text-[#b4ffd8]">
+          <div className="text-[10px] font-black uppercase tracking-[0.14em] text-[color:var(--gold)]/90">
             {hoverMetric ? hoverMetric : "hover"}
           </div>
         </div>
         <div className="mt-3 grid grid-cols-3 gap-2">
           {[
-            { k: "Infiltrations", v: a.clicks, pct: 100, tone: "rgba(0,255,122,0.55)" },
-            { k: "Operatives", v: a.conversions, pct: Math.max(4, Math.min(100, Math.round((a.conversions / Math.max(1, a.clicks)) * 100))), tone: "rgba(255,215,0,0.55)" },
-            { k: "Credits", v: `${a.earnings}`, pct: Math.max(8, Math.min(100, Math.round((a.earnings / 1200) * 100))), tone: "rgba(196,126,255,0.55)" }
+            { k: "Infiltrations", v: a.clicks, pct: 100, tone: "rgba(197,179,88,0.65)" },
+            { k: "Operatives", v: a.conversions, pct: Math.max(4, Math.min(100, Math.round((a.conversions / Math.max(1, a.clicks)) * 100))), tone: "rgba(255,215,0,0.5)" },
+            { k: "Credits", v: `${a.earnings}`, pct: Math.max(8, Math.min(100, Math.round((a.earnings / 1200) * 100))), tone: "rgba(197,179,88,0.42)" }
           ].map((m) => (
             <motion.div
               key={m.k}
@@ -400,7 +294,7 @@ function AffiliateSnapshotCard({
           <motion.div
             key={String(k)}
             whileHover={{ y: -2 }}
-            className="rounded-md border border-white/10 bg-black/35 px-3 py-2 transition hover:border-[rgba(0,255,122,0.35)] hover:bg-black/60"
+            className="rounded-md border border-white/10 bg-black/35 px-3 py-2 transition hover:border-[rgba(197,179,88,0.35)] hover:bg-black/60"
           >
             <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-white/55">{k}</div>
             <div className="mt-1 font-mono text-[14px] font-black tabular-nums text-white/92">{String(v)}</div>
@@ -415,7 +309,7 @@ function AffiliateSnapshotCard({
             <motion.div
               key={r.who + r.ts}
               whileHover={{ y: -2 }}
-              className="flex items-center justify-between gap-3 rounded-md border border-white/10 bg-black/30 px-3 py-2 transition hover:border-[rgba(0,255,122,0.35)] hover:bg-black/60"
+              className="flex items-center justify-between gap-3 rounded-md border border-white/10 bg-black/30 px-3 py-2 transition hover:border-[rgba(197,179,88,0.35)] hover:bg-black/60"
             >
               <div className="text-[12px] font-semibold text-white/80">
                 {r.who} •{" "}
@@ -424,13 +318,13 @@ function AffiliateSnapshotCard({
                   style={{
                     borderColor:
                       r.status === "purchased"
-                        ? "rgba(0,255,122,0.45)"
+                        ? "rgba(197,179,88,0.55)"
                         : r.status === "joined"
-                          ? "rgba(255,215,0,0.35)"
+                          ? "rgba(255,215,0,0.42)"
                           : "rgba(255,255,255,0.18)",
                     color:
                       r.status === "purchased"
-                        ? "#b4ffd8"
+                        ? "rgba(255,248,220,0.95)"
                         : r.status === "joined"
                           ? "#ffe7a1"
                           : "rgba(255,255,255,0.72)"
@@ -466,13 +360,7 @@ function ActivityTimelineCard({
   themeMode: ThemeMode;
   snapshots: DashboardSnapshots;
 }) {
-  const icon = (cat: string) => {
-    if (cat === "program") return "rgba(255,215,0,0.75)";
-    if (cat === "syndicate") return "rgba(0,255,255,0.55)";
-    if (cat === "affiliate") return "rgba(0,255,122,0.55)";
-    if (cat === "system") return "rgba(196,126,255,0.55)";
-    return "rgba(255,255,255,0.25)";
-  };
+  const icon = (_cat: string) => "rgba(197,179,88,0.78)";
 
   return (
     <Card
