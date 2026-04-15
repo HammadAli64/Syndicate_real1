@@ -1,7 +1,3 @@
-from .vdocipher import (
-    VdoCipherError,
-    create_upload_credentials,
-    create_otp,
-)
+"""Courses app service helpers (optional)."""
 
-__all__ = ["VdoCipherError", "create_upload_credentials", "create_otp"]
+__all__: list[str] = []

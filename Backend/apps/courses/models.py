@@ -13,7 +13,7 @@ def video_thumbnail_upload_to(instance: "Video", filename: str) -> str:
 
 
 class Course(models.Model):
-    """Course container for ordered VdoCipher-backed videos."""
+    """Course container for ordered lessons (each lesson has a playback URL)."""
 
     title = models.CharField(max_length=255)
     slug = models.SlugField(max_length=280, unique=True, db_index=True)
@@ -68,7 +68,7 @@ class CourseEnrollment(models.Model):
 
 
 class Video(models.Model):
-    """Metadata only — bytes live on VdoCipher (vdocipher_id)."""
+    """Lesson row: title, optional thumbnail, and a URL used for playback in the dashboard."""
 
     class Status(models.TextChoices):
         PENDING = "pending", "Pending"
@@ -83,12 +83,13 @@ class Video(models.Model):
         upload_to=video_thumbnail_upload_to,
         blank=True,
         null=True,
-        help_text="Optional. Shown in the lesson list; VdoCipher poster is separate.",
+        help_text="Optional. Shown in the lesson list.",
     )
-    vdocipher_id = models.CharField(
-        max_length=64,
-        db_index=True,
-        help_text="VdoCipher video id from upload credentials / dashboard.",
+    video_url = models.URLField(
+        max_length=2048,
+        blank=True,
+        default="",
+        help_text="Direct file URL (MP4/WebM) or a normal watch link (e.g. YouTube). Set in Django admin.",
     )
     order = models.PositiveIntegerField(default=0, db_index=True)
     status = models.CharField(
@@ -107,7 +108,7 @@ class Video(models.Model):
         ]
 
     def __str__(self) -> str:
-        return f"{self.title} ({self.vdocipher_id})"
+        return self.title
 
 
 class VideoProgress(models.Model):

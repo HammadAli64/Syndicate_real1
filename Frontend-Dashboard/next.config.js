@@ -39,8 +39,8 @@ const nextConfig = {
           source: "/api/track/:path*",
           destination: `${backendOrigin}/api/track/:path*`
         },
-        // VdoCipher programs API (same-origin as dashboard). Without these, fetches to
-        // `/api/courses/` hit Next and404; portal-proxy also works via resolveClientApiUrl.
+        // Programs API (same-origin as dashboard). Without these, fetches to `/api/courses/`
+        // hit Next 404; portal-proxy also works via resolveClientApiUrl.
         {
           source: "/api/courses",
           destination: `${backendOrigin}/api/courses/`

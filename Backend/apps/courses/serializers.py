@@ -47,7 +47,7 @@ class VideoSerializer(serializers.ModelSerializer):
             "title",
             "description",
             "course",
-            "vdocipher_id",
+            "video_url",
             "thumbnail_url",
             "order",
             "status",
@@ -60,21 +60,6 @@ class VideoSerializer(serializers.ModelSerializer):
         if not obj.thumbnail:
             return None
         return obj.thumbnail.url
-
-
-class VideoCreateSerializer(serializers.Serializer):
-    title = serializers.CharField(max_length=500)
-    description = serializers.CharField(required=False, allow_blank=True, default="")
-    course_id = serializers.IntegerField()
-    vdocipher_id = serializers.CharField(max_length=64)
-    order = serializers.IntegerField(min_value=0, default=0)
-    status = serializers.ChoiceField(choices=Video.Status.choices, default=Video.Status.READY)
-
-    def validate(self, attrs):
-        cid = attrs["course_id"]
-        if not Course.objects.filter(pk=cid).exists():
-            raise serializers.ValidationError({"course_id": "Invalid course."})
-        return attrs
 
 
 class VideoProgressSerializer(serializers.ModelSerializer):

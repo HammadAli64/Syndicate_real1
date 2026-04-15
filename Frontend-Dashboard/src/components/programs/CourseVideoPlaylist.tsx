@@ -3,8 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import { AlertTriangle, Play } from "lucide-react";
-import { VdoCipherPlayer } from "@/components/programs/VdoCipherPlayer";
-import { fetchCourseVideos, fetchVideoOtp, postVideoProgress, resolveDjangoMediaUrl, type VideoDto } from "@/lib/courses-api";
+import { fetchCourseVideos, postVideoProgress, resolveDjangoMediaUrl, resolveLessonVideoUrl, type VideoDto } from "@/lib/courses-api";
 import { cn } from "@/components/dashboard/dashboardPrimitives";
 
 type Props = {
@@ -19,6 +18,34 @@ function formatDurationPlaceholder(): string {
   return "—:—";
 }
 
+/** YouTube / Vimeo watch URLs → embed URL, or null if not recognized. */
+function embedUrlFromWatchUrl(url: string): string | null {
+  try {
+    const u = new URL(url.trim());
+    const h = u.hostname.replace(/^www\./, "");
+    if (h === "youtu.be") {
+      const id = u.pathname.replace(/^\//, "").split("/")[0];
+      return id ? `https://www.youtube.com/embed/${id}` : null;
+    }
+    if (h.includes("youtube.com")) {
+      const v = u.searchParams.get("v");
+      if (v) return `https://www.youtube.com/embed/${v}`;
+      const parts = u.pathname.split("/").filter(Boolean);
+      const ei = parts.indexOf("embed");
+      if (ei >= 0 && parts[ei + 1]) return `https://www.youtube.com/embed/${parts[ei + 1]}`;
+      if (parts[0] === "shorts" && parts[1]) return `https://www.youtube.com/embed/${parts[1]}`;
+    }
+    if (h.includes("vimeo.com")) {
+      const parts = u.pathname.split("/").filter(Boolean);
+      const id = parts[parts.length - 1];
+      if (id && /^\d+$/.test(id)) return `https://player.vimeo.com/video/${id}`;
+    }
+  } catch {
+    /* ignore */
+  }
+  return null;
+}
+
 export function CourseVideoPlaylist({
   courseId,
   courseTitle,
@@ -29,8 +56,6 @@ export function CourseVideoPlaylist({
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
   const [activeIdx, setActiveIdx] = useState(0);
-  const [otpPack, setOtpPack] = useState<{ otp: string; playbackInfo: string } | null>(null);
-  const [otpLoading, setOtpLoading] = useState(false);
 
   const active = videos[activeIdx] ?? null;
 
@@ -63,33 +88,6 @@ export function CourseVideoPlaylist({
     void loadList();
   }, [loadList]);
 
-  const loadOtp = useCallback(async (video: VideoDto) => {
-    setOtpLoading(true);
-    setOtpPack(null);
-    try {
-      const res = await fetchVideoOtp(video.id);
-      if (!res.ok) {
-        setErr(
-          typeof res.data === "object" && res.data && "detail" in (res.data as object)
-            ? String((res.data as { detail?: string }).detail)
-            : `OTP failed (${res.status}).`
-        );
-        return;
-      }
-      const d = res.data as { otp?: string; playbackInfo?: string };
-      if (d.otp && d.playbackInfo) setOtpPack({ otp: d.otp, playbackInfo: d.playbackInfo });
-    } catch (e) {
-      setErr(e instanceof Error ? e.message : "Failed to prepare playback.");
-    } finally {
-      setOtpLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!active) return;
-    void loadOtp(active);
-  }, [active, loadOtp]);
-
   const goNext = useCallback(() => {
     if (!active) return;
     void postVideoProgress(active.id, { position_seconds: 0, completed: true });
@@ -99,6 +97,9 @@ export function CourseVideoPlaylist({
 
   const sidebarTitle = useMemo(() => courseTitle, [courseTitle]);
   const programAbout = useMemo(() => (courseDescription || "").trim(), [courseDescription]);
+
+  const playbackSrc = active ? resolveLessonVideoUrl(active.video_url) : null;
+  const embedSrc = playbackSrc ? embedUrlFromWatchUrl(playbackSrc) : null;
 
   if (loading) {
     return (
@@ -124,18 +125,36 @@ export function CourseVideoPlaylist({
     );
   }
 
+  const playerShell =
+    "aspect-video max-h-[min(58vh,640px)] w-full overflow-hidden rounded-xl border border-white/10 bg-black/50 sm:max-h-[min(62vh,720px)]";
+
   return (
     <div className="flex flex-col gap-8 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(260px,300px)] lg:items-start lg:gap-10">
       {/* Main column: player + lesson copy */}
       <div className="min-w-0 space-y-5">
         <div className="space-y-2">
           <div>
-            {otpLoading || !otpPack ? (
-              <div className="flex aspect-video max-h-[min(58vh,640px)] w-full items-center justify-center rounded-xl border border-white/10 bg-black/50 text-sm text-white/55 sm:max-h-[min(62vh,720px)]">
-                {otpLoading ? "Preparing secure player…" : "Loading…"}
+            {!playbackSrc ? (
+              <div className={`flex ${playerShell} items-center justify-center px-4 text-center text-sm text-white/55`}>
+                No video URL for this lesson. Add a playback URL in Django admin (MP4/WebM, YouTube, or Vimeo).
               </div>
+            ) : embedSrc ? (
+              <iframe
+                title={active?.title ?? "Lesson video"}
+                src={embedSrc}
+                className={playerShell}
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                allowFullScreen
+              />
             ) : (
-              <VdoCipherPlayer otp={otpPack.otp} playbackInfo={otpPack.playbackInfo} variant="hero" />
+              <video
+                key={playbackSrc}
+                className={playerShell}
+                controls
+                playsInline
+                preload="metadata"
+                src={playbackSrc}
+              />
             )}
           </div>
           <div className="flex justify-end">
@@ -177,7 +196,7 @@ export function CourseVideoPlaylist({
                 </div>
               ) : !(active.description || "").trim() ? (
                 <p className="mt-3 max-w-3xl text-[13px] leading-[1.6] text-white/55">
-                  DRM playback via VdoCipher. Choose another lesson from the playlist anytime.
+                  Choose another lesson from the playlist anytime.
                 </p>
               ) : null}
             </div>

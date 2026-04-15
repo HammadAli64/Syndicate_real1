@@ -1,5 +1,4 @@
 import { portalFetch } from "@/lib/portal-api";
-import type { UploadCredentialsResponse } from "@/lib/vdocipher-upload";
 
 function publicApiBaseRaw(): string {
   const a = (process.env.NEXT_PUBLIC_API_BASE ?? "").trim();
@@ -29,6 +28,13 @@ export function resolveDjangoMediaUrl(mediaPath: string | null | undefined): str
   if (base.includes(":3000") || base === window.location.origin) base = "";
   if (!base) return p;
   return `${base}${p}`;
+}
+
+/**
+ * Lesson `video_url` from the API may be absolute or a site-relative path (e.g. hosted file).
+ */
+export function resolveLessonVideoUrl(videoUrl: string | null | undefined): string | null {
+  return resolveDjangoMediaUrl(videoUrl);
 }
 
 /**
@@ -65,17 +71,10 @@ export type VideoDto = {
   title: string;
   description: string;
   course: number;
-  vdocipher_id: string;
+  video_url: string;
   thumbnail_url: string | null;
   order: number;
   status: string;
-};
-
-export type OtpResponse = {
-  otp: string;
-  playbackInfo: string;
-  video_id: number;
-  vdocipher_id: string;
 };
 
 const BASE = "/api/courses";
@@ -89,34 +88,10 @@ export async function fetchCourseVideos(courseId: number) {
   return portalFetch<VideoDto[]>(`${BASE}/${courseId}/videos/`, { timeoutMs: 45_000 });
 }
 
-export async function fetchVideoOtp(videoId: number) {
-  // Backend calls VdoCipher; allow extra time.
-  return portalFetch<OtpResponse>(`${VBASE}/${videoId}/otp/`, { timeoutMs: 90_000 });
-}
-
 export async function postVideoProgress(videoId: number, body: { position_seconds: number; completed?: boolean }) {
   return portalFetch<unknown>(`${VBASE}/${videoId}/progress/`, {
     method: "POST",
     body: JSON.stringify(body),
-  });
-}
-
-export async function fetchUploadCredentials(title: string) {
-  const q = new URLSearchParams({ title });
-  return portalFetch<UploadCredentialsResponse>(`${VBASE}/upload-credentials/?${q.toString()}`);
-}
-
-export async function saveVideoMetadata(payload: {
-  title: string;
-  description?: string;
-  course_id: number;
-  vdocipher_id: string;
-  order: number;
-  status: "ready" | "pending" | "uploading" | "failed";
-}) {
-  return portalFetch<VideoDto>(`${VBASE}/`, {
-    method: "POST",
-    body: JSON.stringify(payload),
   });
 }
 

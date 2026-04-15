@@ -42,7 +42,7 @@ class VideoInline(admin.TabularInline):
 
     ordering = ("order", "id")
 
-    fields = ("order", "title", "description", "vdocipher_id", "thumbnail", "status")
+    fields = ("order", "title", "description", "video_url", "thumbnail", "status")
 
     show_change_link = True
 
@@ -94,17 +94,17 @@ class CourseEnrollmentAdmin(AllFieldsListDisplayAdmin):
 
 class VideoAdmin(admin.ModelAdmin):
 
-    list_display = ("title", "course", "order", "status", "vdocipher_id", "updated_at")
+    list_display = ("title", "course", "order", "status", "updated_at")
 
     list_filter = ("status", "course")
 
-    search_fields = ("title", "vdocipher_id", "description")
+    search_fields = ("title", "video_url", "description")
 
     ordering = ("course", "order", "id")
 
     fieldsets = (
 
-        (None, {"fields": ("course", "title", "description", "vdocipher_id", "thumbnail", "order", "status")}),
+        (None, {"fields": ("course", "title", "description", "video_url", "thumbnail", "order", "status")}),
 
         ("Timestamps", {"fields": ("created_at", "updated_at"), "classes": ("collapse",)}),
 

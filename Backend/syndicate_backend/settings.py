@@ -82,11 +82,6 @@ if _railway_host and _railway_host not in _allowed:
 # In DEBUG, accept any Host (Next proxy, LAN IP, test client "testserver", etc.)
 ALLOWED_HOSTS = ["*"] if DEBUG else _allowed
 
-# VdoCipher (secure video — uploads go direct to VdoCipher; Django stores metadata only)
-VDO_API_SECRET = _strip_optional_quotes(os.environ.get("VDO_API_SECRET") or "")
-VDO_BASE_URL = (os.environ.get("VDO_BASE_URL") or "https://dev.vdocipher.com/api").strip().rstrip("/")
-VDO_OTP_TTL = int((os.environ.get("VDO_OTP_TTL") or "300").strip() or "300")
-
 OPENAI_API_KEY = _strip_optional_quotes(os.environ.get("OPENAI_API_KEY") or "")
 OPENAI_MODEL = _strip_optional_quotes(os.environ.get("OPENAI_MODEL") or "gpt-4o-mini")
 

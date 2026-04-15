@@ -116,6 +116,6 @@ class ArticleAdmin(AllFieldsListDisplayAdmin):
 
 @admin.register(Video)
 class MembershipVideoAdmin(AllFieldsListDisplayAdmin):
-    """Membership hub videos (URL-based), not courses.Video (VdoCipher)."""
+    """Membership hub videos (URL-based), separate from courses.Video lessons."""
 
     search_fields = ("title", "description", "video_url")

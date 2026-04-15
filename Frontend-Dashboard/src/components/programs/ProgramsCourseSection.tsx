@@ -4,7 +4,6 @@ import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { ChevronLeft } from "lucide-react";
 import ChromaGrid, { type ChromaItem } from "@/components/ChromaGrid";
 import { CourseVideoPlaylist } from "@/components/programs/CourseVideoPlaylist";
-import { StaffVideoUploadPanel } from "@/components/programs/StaffVideoUploadPanel";
 import { cn } from "@/components/dashboard/dashboardPrimitives";
 import { fetchCoursesList, resolveDjangoMediaUrl, type CourseDto } from "@/lib/courses-api";
 import { fetchPortalIdentity } from "@/lib/portal-api";
@@ -118,24 +117,22 @@ export function ProgramsCourseSection({
   const activeDetailCourse = detailCourseId !== null ? apiCourses.find((c) => c.id === detailCourseId) : undefined;
   const showSecureBlock = staff || apiCourses.length > 0 || coursesError !== null;
   const useApiProgramBrowser = apiCourses.length > 0;
-  /** Focused lesson view: hide marketing hero, staff tools, and grid header. */
+  /** Focused lesson view: hide marketing hero and grid header. */
   const inProgramLessonView = useApiProgramBrowser && secureView === "detail";
 
   return (
     <>
-      {!inProgramLessonView && staff ? <StaffVideoUploadPanel isStaff={staff} onCourseCreated={reloadApiCourses} /> : null}
-
       {showSecureBlock ? (
         <div className="mb-8 space-y-5">
           {!inProgramLessonView ? (
             <div className="border-b border-[color:var(--gold-neon-border-mid)]/35 pb-3">
               <div className="text-[13px] font-black uppercase tracking-[0.2em] text-[color:var(--gold)]/90">
-                Programs · secure video
+                Programs
               </div>
               <p className="mt-2 max-w-4xl text-[14px] leading-relaxed text-white/72 sm:text-[15px]">
                 {useApiProgramBrowser
-                  ? "Choose a program to open full lessons with protected playback, follow the playlist in order, and continue your progress exactly where you left off after each session."
-                  : "Protected DRM playback is powered by VdoCipher. Once published programs are available from the API, you can open any course, watch secure lessons, and track your learning flow from one place."}
+                  ? "Choose a program to open full lessons, follow the playlist in order, and continue your progress exactly where you left off after each session."
+                  : "When published programs are available from the API, you can open any course, watch lessons, and track your learning flow from one place."}
               </p>
             </div>
           ) : null}
@@ -143,7 +140,7 @@ export function ProgramsCourseSection({
             <div className="rounded-xl border border-amber-500/30 bg-amber-950/25 px-4 py-3 text-[13px] text-amber-100/90">{coursesError}</div>
           ) : null}
           {!coursesError && staff && apiCourses.length === 0 ? (
-            <p className="text-[12px] text-white/50">No courses returned from the API yet. Create one above or publish an existing course in Django admin.</p>
+            <p className="text-[12px] text-white/50">No courses returned from the API yet. Create or publish a course in Django admin.</p>
           ) : null}
 
           {apiCourses.length > 0 && secureView === "detail" ? (
