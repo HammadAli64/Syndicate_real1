@@ -1,48 +1,65 @@
-# Secrets — never commit
+# ----- Secrets / local config -----
 .env
 .env.local
 **/.env
 !**/.env.example
-# Explicit paths (some Git versions match **/.env inconsistently on Windows)
+!.env.local.example
 Frontend-Dashboard/.env
 frontend/.env
 Backend/.env
 backend/.env
-Frontend-Dashboard/.next/
-frontend/.next/
 LOCAL_DEV_CREDENTIALS.txt
 *CREDENTIALS*.txt
 
-# Python
+# ----- Python / Django -----
 __pycache__/
 *.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# Local databases / runtime files
 *.sqlite3
-.venv/
-venv/
+*.db
+*.log
+*.pid
 
-# Node / Next.js
-node_modules/
-.next/
-out/
-*.tsbuildinfo
-
-# Large local uploads (keep folder via backend .gitignore + .gitkeep)
+# Django collected/static caches
+backend/staticfiles/
+Backend/staticfiles/
+backend/media/
+Backend/media/
 backend/data/uploads/*
 !backend/data/uploads/.gitkeep
 Backend/data/uploads/*
 !Backend/data/uploads/.gitkeep
 
-# Django user uploads (admin attachments, etc.)
-backend/media/
-Backend/media/
+# Virtual environments
+.venv/
+venv/
+env/
 
-# Collected static (build output; do not commit)
-backend/staticfiles/
-Backend/staticfiles/
+# ----- Node / Next.js -----
+node_modules/
+Frontend-Dashboard/.next/
+frontend/.next/
+frontend/out/
+out/
+frontend/.turbo/
+frontend/coverage/
+*.tsbuildinfo
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
 
-# IDE / OS
+# ----- IDE / OS -----
+.DS_Store
+Thumbs.db
+desktop.ini
 .idea/
 .vscode/
 *.swp
-.DS_Store
-Thumbs.db
