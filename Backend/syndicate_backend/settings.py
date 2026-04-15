@@ -184,6 +184,7 @@ INSTALLED_APPS.extend(
         'rest_framework',
         'rest_framework.authtoken',
         'corsheaders',
+        'accounts.apps.AccountsConfig',
         'api',
         'apps.challenges.apps.ChallengesConfig',
         'apps.portal.apps.PortalConfig',

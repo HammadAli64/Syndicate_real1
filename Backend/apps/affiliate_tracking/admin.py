@@ -3,38 +3,49 @@ from django.contrib import admin
 from .models import AffiliateProfile, ApiToken, ClickEvent, EmailOTP, LeadEvent, SaleEvent, SectionReferral
 
 
+def _all_model_field_names(model) -> tuple[str, ...]:
+    return tuple(
+        field.name
+        for field in model._meta.get_fields()
+        if ((field.concrete and not field.auto_created) or field.many_to_many)
+    )
+
+
+class AllFieldsListDisplayAdmin(admin.ModelAdmin):
+    def get_list_display(self, request):
+        return _all_model_field_names(self.model)
+
+
 @admin.register(AffiliateProfile)
-class AffiliateProfileAdmin(admin.ModelAdmin):
-    list_display = ("id", "display_name", "user", "points_total", "earnings_total", "created_at")
+class AffiliateProfileAdmin(AllFieldsListDisplayAdmin):
     search_fields = ("display_name", "user__email", "user__username")
 
 
 @admin.register(SectionReferral)
-class SectionReferralAdmin(admin.ModelAdmin):
-    list_display = ("referral_id", "section", "profile", "created_at")
+class SectionReferralAdmin(AllFieldsListDisplayAdmin):
     search_fields = ("referral_id",)
 
 
 @admin.register(ClickEvent)
-class ClickEventAdmin(admin.ModelAdmin):
-    list_display = ("id", "referral", "visitor_id", "created_at")
+class ClickEventAdmin(AllFieldsListDisplayAdmin):
+    pass
 
 
 @admin.register(LeadEvent)
-class LeadEventAdmin(admin.ModelAdmin):
-    list_display = ("id", "referral", "visitor_id", "email", "created_at")
+class LeadEventAdmin(AllFieldsListDisplayAdmin):
+    pass
 
 
 @admin.register(SaleEvent)
-class SaleEventAdmin(admin.ModelAdmin):
-    list_display = ("id", "referral", "visitor_id", "email", "amount", "created_at")
+class SaleEventAdmin(AllFieldsListDisplayAdmin):
+    pass
 
 
 @admin.register(ApiToken)
-class ApiTokenAdmin(admin.ModelAdmin):
-    list_display = ("id", "user", "token", "created_at")
+class ApiTokenAdmin(AllFieldsListDisplayAdmin):
+    pass
 
 
 @admin.register(EmailOTP)
-class EmailOTPAdmin(admin.ModelAdmin):
-    list_display = ("id", "email", "code", "expires_at", "is_used", "created_at")
+class EmailOTPAdmin(AllFieldsListDisplayAdmin):
+    pass

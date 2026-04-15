@@ -1,35 +1,124 @@
 from django.contrib import admin
 
+
+
 from apps.courses.models import Course, CourseEnrollment, Video, VideoProgress
 
 
+
+
+
+def _all_model_field_names(model) -> tuple[str, ...]:
+
+    return tuple(
+
+        field.name
+
+        for field in model._meta.get_fields()
+
+        if ((field.concrete and not field.auto_created) or field.many_to_many)
+
+    )
+
+
+
+
+
+class AllFieldsListDisplayAdmin(admin.ModelAdmin):
+
+    def get_list_display(self, request):
+
+        return _all_model_field_names(self.model)
+
+
+
+
+
 class VideoInline(admin.TabularInline):
+
     model = Video
+
     extra = 0
+
     ordering = ("order", "id")
+
+    fields = ("order", "title", "description", "vdocipher_id", "thumbnail", "status")
+
+    show_change_link = True
+
+
+
 
 
 @admin.register(Course)
+
 class CourseAdmin(admin.ModelAdmin):
-    list_display = ("title", "slug", "is_published", "allow_all_authenticated", "updated_at")
+
     prepopulated_fields = {"slug": ("title",)}
-    search_fields = ("title", "slug")
+
+    search_fields = ("title", "slug", "description")
+
+    list_display = ("title", "slug", "is_published", "allow_all_authenticated", "updated_at")
+
+    list_filter = ("is_published", "allow_all_authenticated")
+
+    readonly_fields = ("created_at", "updated_at")
+
+    fieldsets = (
+
+        (None, {"fields": ("title", "slug", "description", "cover_image")}),
+
+        ("Access", {"fields": ("is_published", "allow_all_authenticated")}),
+
+        ("Timestamps", {"fields": ("created_at", "updated_at"), "classes": ("collapse",)}),
+
+    )
+
     inlines = [VideoInline]
 
 
+
+
+
 @admin.register(CourseEnrollment)
-class CourseEnrollmentAdmin(admin.ModelAdmin):
-    list_display = ("user", "course", "enrolled_at")
+
+class CourseEnrollmentAdmin(AllFieldsListDisplayAdmin):
+
     list_filter = ("course",)
 
 
+
+
+
 @admin.register(Video)
+
 class VideoAdmin(admin.ModelAdmin):
-    list_display = ("title", "course", "vdocipher_id", "order", "status", "updated_at")
+
+    list_display = ("title", "course", "order", "status", "vdocipher_id", "updated_at")
+
     list_filter = ("status", "course")
-    search_fields = ("title", "vdocipher_id")
+
+    search_fields = ("title", "vdocipher_id", "description")
+
+    ordering = ("course", "order", "id")
+
+    fieldsets = (
+
+        (None, {"fields": ("course", "title", "description", "vdocipher_id", "thumbnail", "order", "status")}),
+
+        ("Timestamps", {"fields": ("created_at", "updated_at"), "classes": ("collapse",)}),
+
+    )
+
+    readonly_fields = ("created_at", "updated_at")
+
+
+
 
 
 @admin.register(VideoProgress)
-class VideoProgressAdmin(admin.ModelAdmin):
-    list_display = ("user", "video", "position_seconds", "completed", "updated_at")
+
+class VideoProgressAdmin(AllFieldsListDisplayAdmin):
+
+    pass
+

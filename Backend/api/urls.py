@@ -10,6 +10,8 @@ from . import views
 urlpatterns = [
     path("courses/", include("apps.courses.urls")),
     path("videos/", include("apps.courses.urls_videos")),
+    # When ROOT_URLCONF only mounts ``path("api/", include("api.urls"))`` (no separate api/challenges prefix).
+    path("challenges/", include("apps.challenges.urls")),
     # DRF Token auth for Syndicate login/signup (JWT portal routes are registered first in syndicate_backend.urls).
     path("syndicate-auth/signup/", auth_views.signup),
     path("syndicate-auth/login/", auth_views.login),

@@ -21,6 +21,7 @@ from django.http import JsonResponse
 from django.urls import include, path, re_path
 from django.views.static import serve as static_serve
 
+from accounts import views as accounts_views
 from apps.portal import views as portal_views
 
 from syndicate_backend.admin_forms import EmailAsUsernameAdminLoginForm
@@ -52,6 +53,13 @@ urlpatterns = [
     path("api/auth/login", portal_views.LoginView.as_view(), name="auth-login-noslash"),
     path("api/auth/refresh", portal_views.RefreshView.as_view(), name="auth-refresh-noslash"),
     path("api/auth/logout", portal_views.LogoutView.as_view(), name="auth-logout-noslash"),
+    # Accounts OTP auth flow (kept separate from JWT /api/auth/login/ above).
+    path("api/auth/otp-login/", accounts_views.login_view, name="auth-otp-login"),
+    path("api/auth/verify-login-otp/", accounts_views.verify_login_otp_view, name="auth-verify-login-otp"),
+    path("api/auth/signup/", accounts_views.signup_view, name="auth-signup"),
+    path("api/auth/signup/verify-otp/", accounts_views.verify_signup_otp_view, name="auth-signup-verify-otp"),
+    path("api/auth/checkout/create-session/", accounts_views.create_checkout_session_view, name="auth-checkout-create"),
+    path("api/auth/checkout/success/", accounts_views.checkout_success_view, name="auth-checkout-success"),
     path("api/portal/", include("apps.portal.urls")),
     path("api/challenges/", include("apps.challenges.urls")),
     path("api/track/", include("apps.affiliate_tracking.urls_track")),

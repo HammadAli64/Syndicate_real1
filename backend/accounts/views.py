@@ -5,6 +5,7 @@ from datetime import timedelta
 
 import stripe
 from django.conf import settings
+from django.contrib.auth import authenticate
 from django.contrib.auth.hashers import make_password
 from django.contrib.auth.models import User
 from django.core.mail import send_mail
@@ -108,67 +109,27 @@ def signup_view(request):
     return _json_error("Invalid JSON payload.")
 
   email = str(payload.get("email", "")).strip().lower()
+  password = str(payload.get("password", ""))
   if not email:
     return _json_error("Email is required.")
+  if len(password) < 6:
+    return _json_error("Password must be at least 6 characters.")
   try:
     validate_email(email)
   except ValidationError:
     return _json_error("Enter a valid email address.")
 
   if User.objects.filter(email=email).exists():
-    SignupOTP.objects.filter(email=email).delete()
-    LoginOTP.objects.filter(email=email).delete()
-    returning = ReturningCheckout.objects.create(email=email)
-    return JsonResponse(
-      {
-        "message": "Welcome back. Continue to checkout for your purchase.",
-        "email": email,
-        "signup_token": str(returning.token),
-        "verify_flow": "checkout",
-      },
-      status=200,
-    )
+    return _json_error("Email already registered.", status=400)
 
-  pending, _created = PendingSignup.objects.get_or_create(
-    email=email,
-    defaults={
-      "username": _unique_pending_username(),
-      "password_hash": make_password(secrets.token_urlsafe(48)),
-      "is_paid": False,
-      "stripe_checkout_session_id": "",
-    },
-  )
-  if not _created and pending.is_paid:
-    return _json_error("This email is already registered. Please log in instead.")
-
-  if not _created and not pending.is_paid:
-    pending.stripe_checkout_session_id = ""
-    pending.save(update_fields=["stripe_checkout_session_id", "updated_at"])
-
-  SignupOTP.objects.filter(email=email).delete()
-  LoginOTP.objects.filter(email=email).delete()
-
-  otp_code = _generate_otp()
-  expires_at = timezone.now() + timedelta(
-    minutes=getattr(settings, "OTP_EXPIRES_MINUTES", 10)
-  )
-  SignupOTP.objects.create(
-    email=email,
-    otp_code=otp_code,
-    otp_expires_at=expires_at,
-  )
-
-  try:
-    _send_signup_otp_email(email=email, otp_code=otp_code)
-  except Exception:
-    return _json_error("Failed to send signup verification email.", status=500)
-
+  user = User.objects.create_user(username=email, email=email, password=password)
+  token = secrets.token_urlsafe(32)
   return JsonResponse(
     {
-      "message": "Verification code sent to your email.",
-      "email": email,
+      "token": token,
+      "user": {"id": user.id, "email": user.email},
     },
-    status=200,
+    status=201,
   )
 
 
@@ -392,34 +353,25 @@ def login_view(request):
     return _json_error("Invalid JSON payload.")
 
   email = str(payload.get("email", "")).strip().lower()
-  if not email:
-    return _json_error("Email is required.")
+  password = str(payload.get("password", ""))
+  if not email or not password:
+    return _json_error("Email and password are required.")
   try:
     validate_email(email)
   except ValidationError:
     return _json_error("Enter a valid email address.")
 
-  try:
-    User.objects.get(email=email)
-  except User.DoesNotExist:
-    return JsonResponse(
-      {
-        "error": "No account found for this email. Please sign up first.",
-        "code": "SIGNUP_REQUIRED",
-      },
-      status=404,
-    )
+  user = authenticate(username=email, password=password)
+  if not user:
+    return _json_error("Invalid credentials.", status=401)
 
-  login_err = _create_and_email_login_otp(email)
-  if login_err is not None:
-    return login_err
-
+  token = secrets.token_urlsafe(32)
   return JsonResponse(
     {
-      "message": "Login OTP sent to your email.",
-      "email": email,
-      "otp_required": True,
-    }
+      "token": token,
+      "user": {"id": user.id, "email": user.email},
+    },
+    status=200,
   )
 
 

@@ -1,17 +1,30 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import toast from "react-hot-toast";
+import { AlertTriangle, Play } from "lucide-react";
 import { VdoCipherPlayer } from "@/components/programs/VdoCipherPlayer";
-import { fetchCourseVideos, fetchVideoOtp, postVideoProgress, type VideoDto } from "@/lib/courses-api";
+import { fetchCourseVideos, fetchVideoOtp, postVideoProgress, resolveDjangoMediaUrl, type VideoDto } from "@/lib/courses-api";
 import { cn } from "@/components/dashboard/dashboardPrimitives";
 
 type Props = {
   courseId: number;
   courseTitle: string;
+  /** Course-level description from API (shown under the active lesson title). */
+  courseDescription?: string;
   autoAdvance?: boolean;
 };
 
-export function CourseVideoPlaylist({ courseId, courseTitle, autoAdvance = true }: Props) {
+function formatDurationPlaceholder(): string {
+  return "—:—";
+}
+
+export function CourseVideoPlaylist({
+  courseId,
+  courseTitle,
+  courseDescription = "",
+  autoAdvance = true,
+}: Props) {
   const [videos, setVideos] = useState<VideoDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
@@ -24,17 +37,26 @@ export function CourseVideoPlaylist({ courseId, courseTitle, autoAdvance = true 
   const loadList = useCallback(async () => {
     setLoading(true);
     setErr(null);
-    const res = await fetchCourseVideos(courseId);
-    if (!res.ok) {
-      setErr(typeof res.data === "object" && res.data && "detail" in (res.data as object) ? String((res.data as { detail?: string }).detail) : `Failed (${res.status})`);
+    try {
+      const res = await fetchCourseVideos(courseId);
+      if (!res.ok) {
+        setErr(
+          typeof res.data === "object" && res.data && "detail" in (res.data as object)
+            ? String((res.data as { detail?: string }).detail)
+            : `Failed (${res.status}).`
+        );
+        setVideos([]);
+        return;
+      }
+      const list = (Array.isArray(res.data) ? res.data : []) as VideoDto[];
+      setVideos(list);
+      setActiveIdx(0);
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Failed to load course videos.");
       setVideos([]);
+    } finally {
       setLoading(false);
-      return;
     }
-    const list = (Array.isArray(res.data) ? res.data : []) as VideoDto[];
-    setVideos(list);
-    setActiveIdx(0);
-    setLoading(false);
   }, [courseId]);
 
   useEffect(() => {
@@ -44,15 +66,23 @@ export function CourseVideoPlaylist({ courseId, courseTitle, autoAdvance = true 
   const loadOtp = useCallback(async (video: VideoDto) => {
     setOtpLoading(true);
     setOtpPack(null);
-    const res = await fetchVideoOtp(video.id);
-    if (!res.ok) {
-      setErr(typeof res.data === "object" && res.data && "detail" in (res.data as object) ? String((res.data as { detail?: string }).detail) : `OTP failed (${res.status})`);
+    try {
+      const res = await fetchVideoOtp(video.id);
+      if (!res.ok) {
+        setErr(
+          typeof res.data === "object" && res.data && "detail" in (res.data as object)
+            ? String((res.data as { detail?: string }).detail)
+            : `OTP failed (${res.status}).`
+        );
+        return;
+      }
+      const d = res.data as { otp?: string; playbackInfo?: string };
+      if (d.otp && d.playbackInfo) setOtpPack({ otp: d.otp, playbackInfo: d.playbackInfo });
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Failed to prepare playback.");
+    } finally {
       setOtpLoading(false);
-      return;
     }
-    const d = res.data as { otp?: string; playbackInfo?: string };
-    if (d.otp && d.playbackInfo) setOtpPack({ otp: d.otp, playbackInfo: d.playbackInfo });
-    setOtpLoading(false);
   }, []);
 
   useEffect(() => {
@@ -67,7 +97,8 @@ export function CourseVideoPlaylist({ courseId, courseTitle, autoAdvance = true 
     setActiveIdx((i) => i + 1);
   }, [active, activeIdx, autoAdvance, videos.length]);
 
-  const title = useMemo(() => courseTitle, [courseTitle]);
+  const sidebarTitle = useMemo(() => courseTitle, [courseTitle]);
+  const programAbout = useMemo(() => (courseDescription || "").trim(), [courseDescription]);
 
   if (loading) {
     return (
@@ -94,56 +125,119 @@ export function CourseVideoPlaylist({ courseId, courseTitle, autoAdvance = true 
   }
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[minmax(0,280px)_1fr] lg:items-start">
-      <nav aria-label="Course playlist" className="flex flex-col gap-1 rounded-xl border border-[color:var(--gold-neon-border-mid)]/35 bg-black/45 p-2">
-        <div className="border-b border-white/10 px-2 py-2 text-[11px] font-black uppercase tracking-[0.14em] text-[color:var(--gold)]/85">{title}</div>
-        <ul className="max-h-[min(60vh,520px)] space-y-1 overflow-y-auto pr-1">
-          {videos.map((v, i) => (
-            <li key={v.id}>
-              <button
-                type="button"
-                onClick={() => setActiveIdx(i)}
-                className={cn(
-                  "w-full rounded-lg border px-3 py-2.5 text-left text-[13px] font-semibold transition",
-                  i === activeIdx
-                    ? "border-[color:var(--gold-neon-border)] bg-[rgba(250,204,21,0.12)] text-[color:var(--gold)]"
-                    : "border-transparent text-white/75 hover:border-white/15 hover:bg-white/5"
-                )}
-              >
-                <span className="mr-2 font-mono text-[11px] text-white/40">{i + 1}.</span>
-                {v.title}
-              </button>
-            </li>
-          ))}
-        </ul>
-      </nav>
-
-      <div className="min-w-0 space-y-3">
-        {active ? (
+    <div className="flex flex-col gap-8 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(260px,300px)] lg:items-start lg:gap-10">
+      {/* Main column: player + lesson copy */}
+      <div className="min-w-0 space-y-5">
+        <div className="space-y-2">
           <div>
-            <h3 className="mb-2 text-[clamp(1rem,2vw+0.5rem,1.25rem)] font-black text-white/95">{active.title}</h3>
             {otpLoading || !otpPack ? (
-              <div className="flex aspect-video w-full items-center justify-center rounded-lg border border-white/10 bg-black/50 text-sm text-white/55">
+              <div className="flex aspect-video max-h-[min(58vh,640px)] w-full items-center justify-center rounded-xl border border-white/10 bg-black/50 text-sm text-white/55 sm:max-h-[min(62vh,720px)]">
                 {otpLoading ? "Preparing secure player…" : "Loading…"}
               </div>
             ) : (
-              <VdoCipherPlayer otp={otpPack.otp} playbackInfo={otpPack.playbackInfo} />
+              <VdoCipherPlayer otp={otpPack.otp} playbackInfo={otpPack.playbackInfo} variant="hero" />
             )}
-            <p className="mt-2 text-[11px] text-white/45">
-              Playback is DRM-protected. Token refreshes when you switch lessons.
-            </p>
+          </div>
+          <div className="flex justify-end">
+            <button
+              type="button"
+              className="inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-black/50 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.12em] text-white/90 transition hover:border-amber-400/45 hover:bg-black/60 hover:text-white"
+              onClick={() =>
+                toast("Refresh or switch lesson. If it keeps failing, check your connection.", {
+                  duration: 3200,
+                  className: "text-sm"
+                })
+              }
+            >
+              <AlertTriangle className="h-3.5 w-3.5 text-amber-300/90" aria-hidden />
+              Video issues?
+            </button>
+          </div>
+        </div>
+
+        {active ? (
+          <>
+            <div>
+              <h2 className="text-[clamp(1.15rem,2.2vw+0.5rem,1.65rem)] font-black leading-tight tracking-tight text-white">
+                {active.title}
+              </h2>
+              {(active.description || "").trim() ? (
+                <p className="mt-3 max-w-3xl text-[14px] font-medium leading-[1.65] tracking-[0.01em] text-white/[0.88] antialiased">
+                  {(active.description || "").trim()}
+                </p>
+              ) : null}
+              {programAbout ? (
+                <div className="mt-4 max-w-3xl rounded-xl border border-white/15 bg-black/40 px-4 py-3.5">
+                  <div className="text-[10px] font-black uppercase tracking-[0.18em] text-[color:var(--gold)]/85">
+                    About this program
+                  </div>
+                  <p className="mt-2.5 text-[14px] font-normal leading-[1.65] tracking-[0.01em] text-white/[0.82] antialiased">
+                    {programAbout}
+                  </p>
+                </div>
+              ) : !(active.description || "").trim() ? (
+                <p className="mt-3 max-w-3xl text-[13px] leading-[1.6] text-white/55">
+                  DRM playback via VdoCipher. Choose another lesson from the playlist anytime.
+                </p>
+              ) : null}
+            </div>
+
             {autoAdvance && activeIdx < videos.length - 1 ? (
               <button
                 type="button"
                 onClick={goNext}
-                className="mt-3 text-[12px] font-semibold text-cyan-200/85 underline-offset-4 hover:underline"
+                className="text-[13px] font-semibold text-cyan-200/90 underline-offset-4 hover:underline"
               >
                 Mark complete &amp; play next
               </button>
             ) : null}
-          </div>
+          </>
         ) : null}
       </div>
+
+      {/* Playlist sidebar */}
+      <aside
+        aria-label="Lesson playlist"
+        className="flex min-h-0 flex-col rounded-xl border border-white/12 bg-black/40 p-3 lg:sticky lg:top-24 lg:max-h-[calc(100vh-8rem)]"
+      >
+        <div className="border-b border-white/10 px-1 pb-3 text-[13px] font-bold text-white/95">{sidebarTitle}</div>
+        <ul className="mt-3 flex max-h-[min(52vh,560px)] flex-col gap-2 overflow-y-auto pr-1 lg:max-h-none lg:flex-1">
+          {videos.map((v, i) => {
+            const on = i === activeIdx;
+            const thumbSrc = resolveDjangoMediaUrl(v.thumbnail_url);
+            return (
+              <li key={v.id}>
+                <button
+                  type="button"
+                  onClick={() => setActiveIdx(i)}
+                  className={cn(
+                    "flex w-full gap-3 rounded-xl border p-2.5 text-left transition",
+                    on ? "border-white/80 bg-white/[0.07] shadow-[0_0_0_1px_rgba(255,255,255,0.12)]" : "border-transparent bg-white/[0.02] hover:border-white/15 hover:bg-white/[0.05]"
+                  )}
+                >
+                  <div className="relative h-14 w-[4.5rem] shrink-0 overflow-hidden rounded-lg bg-gradient-to-br from-red-700/90 via-neutral-900 to-black">
+                    {thumbSrc ? (
+                      <img src={thumbSrc} alt="" className="absolute inset-0 h-full w-full object-cover opacity-90" />
+                    ) : null}
+                    <span className="absolute right-1 top-1 z-[1] text-lg font-black leading-none text-white/25">{i + 1}</span>
+                    <span className="absolute inset-0 z-[1] flex items-center justify-center">
+                      <Play className={cn("h-6 w-6 stroke-[1.75]", on ? "text-white" : "text-white/55")} />
+                    </span>
+                  </div>
+                  <div className="min-w-0 flex-1 py-0.5">
+                    <div className={cn("text-[13px] font-semibold leading-snug", on ? "text-white" : "text-white/80")}>
+                      {v.title}
+                    </div>
+                    <span className="mt-1.5 inline-flex rounded-full bg-white px-2 py-0.5 text-[10px] font-bold tabular-nums text-neutral-900">
+                      {formatDurationPlaceholder()}
+                    </span>
+                  </div>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      </aside>
     </div>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { createPortal } from "react-dom";
+import { useRouter, usePathname } from "next/navigation";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import type { CSSProperties } from "react";
 import gsap from "gsap";
@@ -17,6 +18,8 @@ import { SyndicateAiChallengePanel } from "../components/SyndicateAiChallengePan
 import { MembershipContentHub } from "../components/membership/MembershipContentHub";
 import { AffiliatePortalSection } from "@/components/affiliate/AffiliatePortalSection";
 import { ProgramsCourseSection } from "@/components/programs/ProgramsCourseSection";
+import { STORAGE_SIMPLE_AUTH } from "@/lib/portal-api";
+import { logoutSyndicateSession } from "@/lib/syndicateAuth";
 import { Toaster } from "react-hot-toast";
 
 type NavItem = { label: string; key: string; active?: boolean };
@@ -1427,6 +1430,8 @@ function InstructorSlideshow() {
 }
 
 export default function Page() {
+  const router = useRouter();
+  const pathname = usePathname();
   const { recordVisit, recordEvent } = useActivityTimeline();
   const { setShellSectionKey, setPanelThemeMode, closeGoalsPanel, isGoalsPanelOpen } = useGoalsPanel();
 
@@ -1462,7 +1467,20 @@ export default function Page() {
     []
   );
 
-  const [selectedNavKey, setSelectedNavKey] = useState<string>("dashboard");
+  const [selectedNavKey, setNavKeyState] = useState<string>("dashboard");
+
+  const applyNavKey = useCallback(
+    (key: string) => {
+      const valid = new Set(nav.map((n) => n.key));
+      if (!valid.has(key)) return;
+      setNavKeyState(key);
+      const params = new URLSearchParams(typeof window !== "undefined" ? window.location.search : "");
+      params.set("section", key);
+      const qs = params.toString();
+      router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+    },
+    [nav, pathname, router]
+  );
   const [themeMode, setThemeMode] = useState<ThemeMode>("default");
   const [profileOpen, setProfileOpen] = useState(false);
   const [profileAvatar, setProfileAvatar] = useState<string>("/assets/a.webp");
@@ -1509,6 +1527,17 @@ export default function Page() {
     },
     [persistProfileAvatar]
   );
+
+  const handleLogout = useCallback(() => {
+    try {
+      window.localStorage.removeItem(STORAGE_SIMPLE_AUTH);
+      logoutSyndicateSession();
+    } catch {
+      /* ignore */
+    }
+    document.cookie = "simple_auth_session=; path=/; max-age=0; samesite=lax";
+    window.location.replace("/login");
+  }, []);
 
   useEffect(() => {
     try {
@@ -1591,15 +1620,27 @@ export default function Page() {
     setPanelThemeMode(themeMode);
   }, [themeMode, setPanelThemeMode]);
 
-  /** Allow deep links like /?section=resources to open the correct module. */
-  useEffect(() => {
+  /** Restore section from URL on load / refresh (e.g. /?section=programs). */
+  useLayoutEffect(() => {
     if (typeof window === "undefined") return;
     const section = new URLSearchParams(window.location.search).get("section");
-    if (!section) return;
     const valid = new Set(nav.map((n) => n.key));
-    if (valid.has(section)) {
-      setSelectedNavKey(section);
+    if (section && valid.has(section)) {
+      setNavKeyState(section);
     }
+  }, [nav]);
+
+  /** Browser back/forward: keep shell in sync with ?section=. */
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const syncFromUrl = () => {
+      const section = new URLSearchParams(window.location.search).get("section");
+      const valid = new Set(nav.map((n) => n.key));
+      if (section && valid.has(section)) setNavKeyState(section);
+      else if (!section) setNavKeyState("dashboard");
+    };
+    window.addEventListener("popstate", syncFromUrl);
+    return () => window.removeEventListener("popstate", syncFromUrl);
   }, [nav]);
 
   useEffect(() => {
@@ -2271,7 +2312,7 @@ export default function Page() {
                         ent.navKey.toLowerCase().includes(q)
                     );
                     if (hit) {
-                      setSelectedNavKey(hit.navKey);
+                      applyNavKey(hit.navKey);
                       setNavQuickSearch("");
                       recordEvent({
                         category: "system",
@@ -2295,13 +2336,13 @@ export default function Page() {
                 userName={profileName}
                 courses={dashboardCoursesForSnapshots}
                 onNavigate={(nav: DashboardNavKey) => {
-                  if (nav === "programs") setSelectedNavKey("programs");
-                  else if (nav === "monk") setSelectedNavKey("monk");
-                  else if (nav === "affiliate") setSelectedNavKey("affiliate");
-                  else if (nav === "resources") setSelectedNavKey("resources");
-                  else if (nav === "support") setSelectedNavKey("support");
-                  else if (nav === "settings") setSelectedNavKey("settings");
-                  else setSelectedNavKey("dashboard");
+                  if (nav === "programs") applyNavKey("programs");
+                  else if (nav === "monk") applyNavKey("monk");
+                  else if (nav === "affiliate") applyNavKey("affiliate");
+                  else if (nav === "resources") applyNavKey("resources");
+                  else if (nav === "support") applyNavKey("support");
+                  else if (nav === "settings") applyNavKey("settings");
+                  else applyNavKey("dashboard");
                 }}
                 onOpenChange={(open) => {
                   if (open) setProfileOpen(false);
@@ -2377,7 +2418,7 @@ export default function Page() {
                             <SidebarNavRailList
                               nav={nav}
                               selectedNavKey={selectedNavKey}
-                              setSelectedNavKey={setSelectedNavKey}
+                              setSelectedNavKey={applyNavKey}
                               onItemActivate={() => setSidebarOpen(false)}
                             />
                           </div>
@@ -2493,6 +2534,7 @@ export default function Page() {
                     </button>
                     <button
                       type="button"
+                      onClick={handleLogout}
                       className="cut-frame-sm cyber-frame gold-stroke hud-hover-glow inline-flex items-center justify-center border border-[rgba(255,255,255,0.14)] bg-black/35 px-4 py-3 text-[11px] font-black uppercase tracking-[0.22em] text-white/70 transition hover:border-[rgba(255,0,0,0.34)] hover:text-[rgba(255,0,0,0.88)] hover:[box-shadow:0_0_0_1px_rgba(255,0,0,0.20),0_0_44px_rgba(255,0,0,0.12)]"
                     >
                       Logout
@@ -2584,7 +2626,7 @@ export default function Page() {
                   <SidebarNavRailList
                     nav={nav}
                     selectedNavKey={selectedNavKey}
-                    setSelectedNavKey={setSelectedNavKey}
+                    setSelectedNavKey={applyNavKey}
                     onItemActivate={() => setSidebarOpen(false)}
                   />
                 </div>
@@ -2698,13 +2740,13 @@ export default function Page() {
                       profileAvatar={profileAvatar}
                       courses={dashboardCoursesForSnapshots}
                       onNavigate={(nav) => {
-                        if (nav === "programs") setSelectedNavKey("programs");
-                        else if (nav === "monk") setSelectedNavKey("monk");
-                        else if (nav === "affiliate") setSelectedNavKey("affiliate");
-                        else if (nav === "resources") setSelectedNavKey("resources");
-                        else if (nav === "support") setSelectedNavKey("support");
-                        else if (nav === "settings") setSelectedNavKey("settings");
-                        else setSelectedNavKey("dashboard");
+                        if (nav === "programs") applyNavKey("programs");
+                        else if (nav === "monk") applyNavKey("monk");
+                        else if (nav === "affiliate") applyNavKey("affiliate");
+                        else if (nav === "resources") applyNavKey("resources");
+                        else if (nav === "support") applyNavKey("support");
+                        else if (nav === "settings") applyNavKey("settings");
+                        else applyNavKey("dashboard");
                       }}
                     />
                   </div>

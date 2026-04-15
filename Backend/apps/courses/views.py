@@ -97,6 +97,7 @@ class VideoMetadataCreateView(APIView):
         v = ser.validated_data
         video = Video.objects.create(
             title=v["title"],
+            description=(v.get("description") or "").strip(),
             course_id=v["course_id"],
             vdocipher_id=v["vdocipher_id"].strip(),
             order=v["order"],

@@ -2,6 +2,8 @@
 
 export const STORAGE_ACCESS = "syndicate_access";
 export const STORAGE_REFRESH = "syndicate_refresh";
+/** DRF Token from simple email/password login (`/api/syndicate-auth/login/`). */
+export const STORAGE_SIMPLE_AUTH = "simple_auth_token";
 
 export type PortalUser = {
   id: number;
@@ -15,12 +17,23 @@ export type PortalUser = {
 };
 
 /**
+ * Browser-visible Django origin. Login/signup use `NEXT_PUBLIC_API_BASE_URL`; older code used
+ * `NEXT_PUBLIC_API_BASE`. If only one is set, use it for all API calls so you do not mix
+ * direct login (→ :8000) with portal-proxy (→ Next → :8000), which breaks when the proxy cannot reach Django.
+ */
+function publicApiBaseRaw(): string {
+  const a = (process.env.NEXT_PUBLIC_API_BASE ?? "").trim();
+  if (a) return a;
+  return (process.env.NEXT_PUBLIC_API_BASE_URL ?? "").trim();
+}
+
+/**
  * When unset, empty, or "proxy", the browser calls same-origin `/api/portal-proxy/...`
- * and Next.js forwards to Django (avoids 404/CORS/mobile quirks hitting :8000 directly).
- * Set to a full URL (e.g. http://127.0.0.1:8000) only if you need direct browser → Django.
+ * and Next.js forwards to Django. Set `NEXT_PUBLIC_API_BASE` or `NEXT_PUBLIC_API_BASE_URL`
+ * to `http://127.0.0.1:8000` for direct browser → Django (matches login pages; needs CORS on Django).
  */
 function useNextProxy(): boolean {
-  const v = (process.env.NEXT_PUBLIC_API_BASE ?? "").trim().toLowerCase();
+  const v = publicApiBaseRaw().toLowerCase();
   return v === "" || v === "proxy";
 }
 
@@ -42,11 +55,11 @@ export function resolveClientApiUrl(apiPath: string): string {
   if (apiPath.startsWith("http://") || apiPath.startsWith("https://")) return apiPath;
   const normalized = normalizeDjangoApiPath(apiPath);
   if (typeof window === "undefined") {
-    const base = (process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:8000").replace(/\/$/, "");
+    const base = (publicApiBaseRaw() || "http://127.0.0.1:8000").replace(/\/$/, "");
     return `${base}${normalized}`;
   }
   if (!useNextProxy()) {
-    let base = (process.env.NEXT_PUBLIC_API_BASE || "").replace(/\/$/, "");
+    let base = publicApiBaseRaw().replace(/\/$/, "");
     // Misconfiguration: pointing at the Next dev server causes /api/portal/... 404s (no Django there).
     if (
       base &&
@@ -68,18 +81,22 @@ export function resolveClientApiUrl(apiPath: string): string {
 /** Hint text for login / errors (human-readable). */
 export function getApiDisplayHint(): string {
   if (!useNextProxy()) {
-    return (process.env.NEXT_PUBLIC_API_BASE || "").replace(/\/$/, "") || "not configured";
+    return publicApiBaseRaw().replace(/\/$/, "") || "not configured";
   }
-  return "Next.js proxy → Django (BACKEND_INTERNAL_URL or http://127.0.0.1:8000)";
+  return (
+    "Next.js proxy → Django (BACKEND_INTERNAL_URL or http://127.0.0.1:8000). " +
+    'If login works but Programs shows "Failed to fetch", set NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8000 ' +
+    "(or NEXT_PUBLIC_API_BASE) so the dashboard calls Django directly, or fix BACKEND_INTERNAL_URL for Docker (e.g. host.docker.internal)."
+  );
 }
 
 /** @deprecated Use getApiDisplayHint(); kept for older imports. */
 export function getApiBase(): string {
   if (typeof window === "undefined") {
-    return (process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:8000").replace(/\/$/, "");
+    return (publicApiBaseRaw() || "http://127.0.0.1:8000").replace(/\/$/, "");
   }
   if (!useNextProxy()) {
-    return (process.env.NEXT_PUBLIC_API_BASE || "").replace(/\/$/, "");
+    return publicApiBaseRaw().replace(/\/$/, "");
   }
   return typeof window !== "undefined" ? window.location.origin : "";
 }
@@ -98,6 +115,21 @@ export function readStoredAccess(): string | null {
 export function readStoredRefresh(): string | null {
   if (typeof window === "undefined") return null;
   return window.localStorage.getItem(STORAGE_REFRESH);
+}
+
+export function readStoredDrfToken(): string | null {
+  if (typeof window === "undefined") return null;
+  const t = (window.localStorage.getItem(STORAGE_SIMPLE_AUTH) || "").trim();
+  return t || null;
+}
+
+/** JWT uses Bearer; DRF authtoken uses Token (see syndicate_backend REST_FRAMEWORK). */
+export function getAuthorizationHeader(): string | null {
+  const jwt = readStoredAccess();
+  if (jwt) return `Bearer ${jwt}`;
+  const drf = readStoredDrfToken();
+  if (drf) return `Token ${drf}`;
+  return null;
 }
 
 export function persistTokens(access: string, refresh: string) {
@@ -213,6 +245,42 @@ export async function meRequest(accessToken: string): Promise<PortalUser> {
   return data as PortalUser;
 }
 
+/** Resolve current user for UI (JWT portal or simple DRF token login). */
+export async function fetchPortalIdentity(): Promise<PortalUser | null> {
+  const jwt = readStoredAccess();
+  if (jwt) {
+    try {
+      return await meRequest(jwt);
+    } catch {
+      return null;
+    }
+  }
+  const drf = readStoredDrfToken();
+  if (!drf) return null;
+  const res = await fetch(resolveClientApiUrl("/api/syndicate-auth/me/"), {
+    headers: { Authorization: `Token ${drf}`, Accept: "application/json" }
+  });
+  const data = (await res.json().catch(() => ({}))) as {
+    id?: number;
+    email?: string;
+    username?: string;
+    is_staff?: boolean;
+    detail?: string;
+  };
+  if (!res.ok || data.id == null) return null;
+  const email = String(data.email ?? "").trim();
+  return {
+    id: data.id,
+    username: String(data.username ?? email).trim() || email,
+    email,
+    first_name: "",
+    last_name: "",
+    is_staff: !!data.is_staff,
+    roles: [],
+    permissions: []
+  };
+}
+
 export async function logoutRequest(accessToken: string): Promise<void> {
   await fetch(resolveClientApiUrl("/api/auth/logout/"), {
     method: "POST",
@@ -226,8 +294,8 @@ export async function logoutRequest(accessToken: string): Promise<void> {
 export async function fetchAuthenticatedPdfBlob(apiPath: string): Promise<Blob> {
   const url = resolveClientApiUrl(apiPath.startsWith("/") ? apiPath : `/${apiPath}`);
   const headers = new Headers();
-  const at = readStoredAccess();
-  if (at) headers.set("Authorization", `Bearer ${at}`);
+  const auth = getAuthorizationHeader();
+  if (auth) headers.set("Authorization", auth);
   const res = await fetch(url, { headers, credentials: "omit" });
   if (!res.ok) {
     const text = await res.text().catch(() => "");
@@ -238,14 +306,18 @@ export async function fetchAuthenticatedPdfBlob(apiPath: string): Promise<Blob> 
 
 export async function portalFetch<T>(
   path: string,
-  init?: RequestInit & { skipAuth?: boolean }
+  init?: RequestInit & { skipAuth?: boolean; timeoutMs?: number }
 ): Promise<{ ok: boolean; status: number; data: T }> {
+  const skipAuth = init?.skipAuth;
+  const timeoutMs = init?.timeoutMs ?? 60_000;
+  const { skipAuth: _sa, timeoutMs: _tm, ...restInit } = init ?? {};
+
   const url = path.startsWith("http") ? path : resolveClientApiUrl(path.startsWith("/") ? path : `/${path}`);
 
-  const buildHeaders = (bearer: string | null): Headers => {
-    const headers = new Headers(init?.headers);
-    if (!init?.skipAuth && bearer) headers.set("Authorization", `Bearer ${bearer}`);
-    if (init?.body && !headers.has("Content-Type")) headers.set("Content-Type", "application/json");
+  const buildHeaders = (authorization: string | null): Headers => {
+    const headers = new Headers(restInit.headers);
+    if (!skipAuth && authorization) headers.set("Authorization", authorization);
+    if (restInit.body && !headers.has("Content-Type")) headers.set("Content-Type", "application/json");
     return headers;
   };
 
@@ -259,23 +331,48 @@ export async function portalFetch<T>(
     }
   };
 
-  let bearer: string | null = init?.skipAuth ? null : readStoredAccess();
-  let res = await fetch(url, { ...init, headers: buildHeaders(bearer) });
+  const userSignal = restInit.signal;
+  const ctrl = new AbortController();
+  let tid: ReturnType<typeof setTimeout> | undefined;
+  if (!userSignal && timeoutMs > 0) {
+    tid = setTimeout(() => ctrl.abort(), timeoutMs);
+  }
+  const signal = userSignal ?? ctrl.signal;
 
-  if (res.status === 401 && !init?.skipAuth) {
-    const rt = readStoredRefresh();
-    if (rt) {
-      try {
-        const { access } = await refreshRequest(rt);
-        persistTokens(access, rt);
-        bearer = access;
-        res = await fetch(url, { ...init, headers: buildHeaders(bearer) });
-      } catch {
-        /* return the original 401 below */
+  const cleanup = () => {
+    if (tid !== undefined) clearTimeout(tid);
+  };
+
+  let authorization: string | null = skipAuth ? null : getAuthorizationHeader();
+
+  try {
+    let res = await fetch(url, { ...restInit, signal, headers: buildHeaders(authorization) });
+
+    if (res.status === 401 && !skipAuth && readStoredAccess() && readStoredRefresh()) {
+      const rt = readStoredRefresh();
+      if (rt) {
+        try {
+          const { access } = await refreshRequest(rt);
+          persistTokens(access, rt);
+          authorization = getAuthorizationHeader();
+          res = await fetch(url, { ...restInit, signal, headers: buildHeaders(authorization) });
+        } catch {
+          /* return the original 401 below */
+        }
       }
     }
-  }
 
-  const data = await parseBody(res);
-  return { ok: res.ok, status: res.status, data };
+    const data = await parseBody(res);
+    return { ok: res.ok, status: res.status, data };
+  } catch (e) {
+    const name = e instanceof Error ? e.name : "";
+    const hint = getApiDisplayHint();
+    const detail =
+      name === "AbortError"
+        ? `Request timed out after ${Math.round(timeoutMs / 1000)}s. Start Django on port 8000 or set BACKEND_INTERNAL_URL / NEXT_PUBLIC_API_BASE (${hint}).`
+        : `Cannot reach API (${hint}).${e instanceof Error && e.message ? ` ${e.message}` : ""}`;
+    return { ok: false, status: 0, data: { detail } as unknown as T };
+  } finally {
+    cleanup();
+  }
 }

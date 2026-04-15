@@ -19,6 +19,19 @@ from .views import run_ingest
 logger = logging.getLogger(__name__)
 
 
+def _all_model_field_names(model) -> tuple[str, ...]:
+    return tuple(
+        field.name
+        for field in model._meta.get_fields()
+        if ((field.concrete and not field.auto_created) or field.many_to_many)
+    )
+
+
+class AllFieldsListDisplayAdmin(admin.ModelAdmin):
+    def get_list_display(self, request):
+        return _all_model_field_names(self.model)
+
+
 class UploadedDocumentAddForm(forms.ModelForm):
     """Must not use Meta.fields = [] — Django drops non-model fields, so <input type=file> never binds."""
 
@@ -91,16 +104,7 @@ class UploadedDocumentAddForm(forms.ModelForm):
 
 
 @admin.register(UploadedDocument)
-class UploadedDocumentAdmin(admin.ModelAdmin):
-    list_display = [
-        "id",
-        "original_name",
-        "content_hash",
-        "created_at",
-        "ingested",
-        "ingest_last_at",
-        "ingest_error_short",
-    ]
+class UploadedDocumentAdmin(AllFieldsListDisplayAdmin):
     list_filter = ["created_at"]
     actions = ["ingest_mindsets_action"]
 
@@ -199,6 +203,18 @@ class UploadedDocumentAdmin(admin.ModelAdmin):
 
 
 @admin.register(MindsetKnowledge)
-class MindsetKnowledgeAdmin(admin.ModelAdmin):
-    list_display = ["id", "source", "updated_at", "model_used"]
+class MindsetKnowledgeAdmin(AllFieldsListDisplayAdmin):
     readonly_fields = ["source", "payload", "updated_at", "model_used"]
+
+
+try:
+    from rest_framework.authtoken.models import Token
+except ImportError:  # pragma: no cover
+    Token = None
+
+if Token is not None:
+
+    @admin.register(Token)
+    class AuthtokenAdmin(AllFieldsListDisplayAdmin):
+        autocomplete_fields = ("user",)
+        search_fields = ("user__username", "user__email", "key")

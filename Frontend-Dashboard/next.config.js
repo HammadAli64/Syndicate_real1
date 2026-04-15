@@ -11,6 +11,15 @@ const nextConfig = {
   devIndicators: {
     buildActivity: false
   },
+  images: {
+    formats: ["image/avif", "image/webp"],
+    deviceSizes: [640, 750, 828, 1080, 1200, 1920],
+    imageSizes: [256, 384, 480, 640, 768],
+    remotePatterns: [
+      { protocol: "http", hostname: "127.0.0.1", port: "8000", pathname: "/media/**" },
+      { protocol: "http", hostname: "localhost", port: "8000", pathname: "/media/**" }
+    ]
+  },
   async rewrites() {
     return {
       beforeFiles: [
@@ -47,6 +56,11 @@ const nextConfig = {
         {
           source: "/api/videos/:path*",
           destination: `${backendOrigin}/api/videos/:path*`
+        },
+        // Uploaded course covers & video thumbnails (Django MEDIA_URL)
+        {
+          source: "/media/:path*",
+          destination: `${backendOrigin}/media/:path*`
         }
       ]
     };

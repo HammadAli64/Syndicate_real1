@@ -1,11 +1,61 @@
 import { portalFetch } from "@/lib/portal-api";
 import type { UploadCredentialsResponse } from "@/lib/vdocipher-upload";
 
+function publicApiBaseRaw(): string {
+  const a = (process.env.NEXT_PUBLIC_API_BASE ?? "").trim();
+  if (a) return a;
+  return (process.env.NEXT_PUBLIC_API_BASE_URL ?? "").trim();
+}
+
+/**
+ * Turn a Django `ImageField` URL (`/media/...` or absolute) into a browser-loadable URL.
+ * When using the Next.js dev proxy (no public API base), `/media/...` stays same-origin and is rewritten.
+ */
+export function resolveDjangoMediaUrl(mediaPath: string | null | undefined): string | null {
+  if (!mediaPath) return null;
+  if (/^https?:\/\//i.test(mediaPath)) return mediaPath;
+  const p = mediaPath.startsWith("/") ? mediaPath : `/${mediaPath}`;
+  if (typeof window === "undefined") {
+    const b = (process.env.NEXT_PUBLIC_API_BASE || process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:8000").replace(
+      /\/$/,
+      ""
+    );
+    return `${b}${p}`;
+  }
+  const raw = publicApiBaseRaw();
+  const useProxy = !raw || raw.toLowerCase() === "proxy";
+  if (useProxy) return p;
+  let base = raw.replace(/\/$/, "");
+  if (base.includes(":3000") || base === window.location.origin) base = "";
+  if (!base) return p;
+  return `${base}${p}`;
+}
+
+/**
+ * Use with `next/image`: the default optimizer refuses to fetch `http://127.0.0.1:8000/media/...`
+ * (private IP / SSRF protection). Same-origin `/media/...` is proxied by Next to Django instead.
+ */
+export function djangoMediaSrcForNextImage(mediaPath: string | null | undefined): string | null {
+  const resolved = resolveDjangoMediaUrl(mediaPath);
+  if (!resolved) return null;
+  if (resolved.startsWith("/")) return resolved;
+  try {
+    const u = new URL(resolved);
+    if ((u.hostname === "127.0.0.1" || u.hostname === "localhost") && u.pathname.startsWith("/media/")) {
+      return u.pathname + u.search;
+    }
+  } catch {
+    /* ignore */
+  }
+  return resolved;
+}
+
 export type CourseDto = {
   id: number;
   title: string;
   slug: string;
   description: string;
+  cover_image_url: string | null;
   is_published: boolean;
   allow_all_authenticated: boolean;
 };
@@ -13,8 +63,10 @@ export type CourseDto = {
 export type VideoDto = {
   id: number;
   title: string;
+  description: string;
   course: number;
   vdocipher_id: string;
+  thumbnail_url: string | null;
   order: number;
   status: string;
 };
@@ -30,15 +82,16 @@ const BASE = "/api/courses";
 const VBASE = "/api/videos";
 
 export async function fetchCoursesList() {
-  return portalFetch<CourseDto[]>(`${BASE}/`);
+  return portalFetch<CourseDto[]>(`${BASE}/`, { timeoutMs: 45_000 });
 }
 
 export async function fetchCourseVideos(courseId: number) {
-  return portalFetch<VideoDto[]>(`${BASE}/${courseId}/videos/`);
+  return portalFetch<VideoDto[]>(`${BASE}/${courseId}/videos/`, { timeoutMs: 45_000 });
 }
 
 export async function fetchVideoOtp(videoId: number) {
-  return portalFetch<OtpResponse>(`${VBASE}/${videoId}/otp/`);
+  // Backend calls VdoCipher; allow extra time.
+  return portalFetch<OtpResponse>(`${VBASE}/${videoId}/otp/`, { timeoutMs: 90_000 });
 }
 
 export async function postVideoProgress(videoId: number, body: { position_seconds: number; completed?: boolean }) {
@@ -55,6 +108,7 @@ export async function fetchUploadCredentials(title: string) {
 
 export async function saveVideoMetadata(payload: {
   title: string;
+  description?: string;
   course_id: number;
   vdocipher_id: string;
   order: number;

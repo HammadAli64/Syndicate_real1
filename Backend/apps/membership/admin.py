@@ -6,6 +6,19 @@ from apps.membership.keyword_dataset import KeywordDatasetParseError, parse_keyw
 from apps.membership.models import Article, ArticleKeywordDataset, KeywordUsageStat, MembershipGenerationState, Video
 
 
+def _all_model_field_names(model) -> tuple[str, ...]:
+    return tuple(
+        field.name
+        for field in model._meta.get_fields()
+        if ((field.concrete and not field.auto_created) or field.many_to_many)
+    )
+
+
+class AllFieldsListDisplayAdmin(admin.ModelAdmin):
+    def get_list_display(self, request):
+        return _all_model_field_names(self.model)
+
+
 class ArticleKeywordDatasetForm(forms.ModelForm):
     class Meta:
         model = ArticleKeywordDataset
@@ -33,12 +46,10 @@ class ArticleKeywordDatasetForm(forms.ModelForm):
 
 
 @admin.register(ArticleKeywordDataset)
-class ArticleKeywordDatasetAdmin(admin.ModelAdmin):
+class ArticleKeywordDatasetAdmin(AllFieldsListDisplayAdmin):
     form = ArticleKeywordDatasetForm
-    list_display = ("name", "is_active", "row_count", "created_at")
     list_filter = ("is_active",)
     search_fields = ("name",)
-    exclude = ("rows",)
     readonly_fields = ("created_at", "rows_preview")
 
     @admin.display(description="Rows")
@@ -80,22 +91,19 @@ class ArticleKeywordDatasetAdmin(admin.ModelAdmin):
 
 
 @admin.register(KeywordUsageStat)
-class KeywordUsageStatAdmin(admin.ModelAdmin):
-    list_display = ("keyword", "category", "usage_count", "last_used_at", "dataset")
+class KeywordUsageStatAdmin(AllFieldsListDisplayAdmin):
     list_filter = ("category",)
     search_fields = ("keyword", "fingerprint")
     readonly_fields = ("fingerprint",)
 
 
 @admin.register(MembershipGenerationState)
-class MembershipGenerationStateAdmin(admin.ModelAdmin):
-    list_display = ("id", "updated_at")
+class MembershipGenerationStateAdmin(AllFieldsListDisplayAdmin):
     readonly_fields = ("id", "updated_at")
 
 
 @admin.register(Article)
-class ArticleAdmin(admin.ModelAdmin):
-    list_display = ("title", "slug", "is_featured", "has_pdf", "published_at", "created_at")
+class ArticleAdmin(AllFieldsListDisplayAdmin):
     list_filter = ("is_featured",)
     search_fields = ("title", "slug", "description")
     prepopulated_fields = {"slug": ("title",)}
@@ -107,6 +115,7 @@ class ArticleAdmin(admin.ModelAdmin):
 
 
 @admin.register(Video)
-class VideoAdmin(admin.ModelAdmin):
-    list_display = ("title", "duration", "created_at")
-    search_fields = ("title", "description")
+class MembershipVideoAdmin(AllFieldsListDisplayAdmin):
+    """Membership hub videos (URL-based), not courses.Video (VdoCipher)."""
+
+    search_fields = ("title", "description", "video_url")

@@ -3,12 +3,27 @@ from django.db import models
 from django.utils.text import slugify
 
 
+def course_cover_upload_to(instance: "Course", filename: str) -> str:
+    return f"courses/covers/{instance.slug or 'draft'}/{filename}"
+
+
+def video_thumbnail_upload_to(instance: "Video", filename: str) -> str:
+    cid = instance.course_id or "draft"
+    return f"courses/{cid}/video_thumbs/{filename}"
+
+
 class Course(models.Model):
     """Course container for ordered VdoCipher-backed videos."""
 
     title = models.CharField(max_length=255)
     slug = models.SlugField(max_length=280, unique=True, db_index=True)
     description = models.TextField(blank=True)
+    cover_image = models.ImageField(
+        upload_to=course_cover_upload_to,
+        blank=True,
+        null=True,
+        help_text="Programs grid cover. Use a high-resolution file (e.g. JPEG/PNG at least ~1200px on the short edge, or 1600px+ wide) so it stays sharp on retina screens; small images are stretched and look soft.",
+    )
     is_published = models.BooleanField(default=True, db_index=True)
     allow_all_authenticated = models.BooleanField(
         default=True,
@@ -62,7 +77,14 @@ class Video(models.Model):
         FAILED = "failed", "Failed"
 
     title = models.CharField(max_length=500)
+    description = models.TextField(blank=True, help_text="Optional. Shown under the lesson title in the player.")
     course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name="videos")
+    thumbnail = models.ImageField(
+        upload_to=video_thumbnail_upload_to,
+        blank=True,
+        null=True,
+        help_text="Optional. Shown in the lesson list; VdoCipher poster is separate.",
+    )
     vdocipher_id = models.CharField(
         max_length=64,
         db_index=True,

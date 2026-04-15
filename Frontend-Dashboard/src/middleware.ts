@@ -34,6 +34,23 @@ const sameHostHint =
 
 export function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
+  const authCookie = request.cookies.get("simple_auth_session")?.value;
+  const authFreePath =
+    pathname === "/login" ||
+    pathname.startsWith("/login/") ||
+    pathname === "/signup" ||
+    pathname.startsWith("/signup/") ||
+    pathname.startsWith("/api/") ||
+    pathname.startsWith("/_next/") ||
+    pathname === "/favicon.ico";
+
+  if (!authCookie && !authFreePath && !pathname.startsWith("/static/")) {
+    const loginUrl = request.nextUrl.clone();
+    loginUrl.pathname = "/login";
+    loginUrl.search = "";
+    return NextResponse.redirect(loginUrl);
+  }
+
   if (!pathname.startsWith("/static/")) {
     return NextResponse.next();
   }
@@ -70,5 +87,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/static/:path*"]
+  matcher: ["/", "/((?!_next/static|_next/image|favicon.ico).*)"]
 };

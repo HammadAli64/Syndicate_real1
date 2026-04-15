@@ -61,4 +61,12 @@ def logout(request):
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def me(request):
-    return Response({"id": request.user.id, "email": request.user.email})
+    u = request.user
+    return Response(
+        {
+            "id": u.id,
+            "email": u.email,
+            "username": getattr(u, "username", "") or "",
+            "is_staff": bool(getattr(u, "is_staff", False)),
+        }
+    )

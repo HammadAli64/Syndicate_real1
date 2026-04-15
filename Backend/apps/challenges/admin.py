@@ -13,12 +13,29 @@ from django.utils.text import Truncator
 from .models import (
     AdminAssignedTask,
     AdminTaskSubmission,
+    AgentDailyQuote,
     GeneratedChallenge,
+    LeaderboardEntry,
     ReferralRestore,
     SyndicateUserProgress,
+    UserAgentDailyQuote,
+    UserDeviceMindsetContext,
 )
 
 User = get_user_model()
+
+
+def _all_model_field_names(model) -> tuple[str, ...]:
+    return tuple(
+        field.name
+        for field in model._meta.get_fields()
+        if ((field.concrete and not field.auto_created) or field.many_to_many)
+    )
+
+
+class AllFieldsListDisplayAdmin(admin.ModelAdmin):
+    def get_list_display(self, request):
+        return _all_model_field_names(self.model)
 
 
 def _format_elapsed(seconds: int) -> str:
@@ -63,38 +80,45 @@ def _pounds_from_state(state: Optional[dict]) -> str:
 
 
 @admin.register(GeneratedChallenge)
-class GeneratedChallengeAdmin(admin.ModelAdmin):
-    list_display = ["id", "mood", "category", "challenge_date", "created_at"]
+class GeneratedChallengeAdmin(AllFieldsListDisplayAdmin):
+    pass
 
 
 @admin.register(ReferralRestore)
-class ReferralRestoreAdmin(admin.ModelAdmin):
-    list_display = ["code", "creator_device", "redeemed", "restore_claimed", "expires_at"]
+class ReferralRestoreAdmin(AllFieldsListDisplayAdmin):
+    pass
+
+
+@admin.register(UserAgentDailyQuote)
+class UserAgentDailyQuoteAdmin(AllFieldsListDisplayAdmin):
+    list_select_related = ("user",)
+    search_fields = ["user__username", "user__email"]
+    ordering = ["-quote_date"]
+
+
+@admin.register(LeaderboardEntry)
+class LeaderboardEntryAdmin(AllFieldsListDisplayAdmin):
+    search_fields = ["device_id", "display_name"]
+
+
+@admin.register(UserDeviceMindsetContext)
+class UserDeviceMindsetContextAdmin(AllFieldsListDisplayAdmin):
+    search_fields = ["device_id"]
+
+
+@admin.register(AgentDailyQuote)
+class AgentDailyQuoteAdmin(AllFieldsListDisplayAdmin):
+    ordering = ["-quote_date"]
 
 
 @admin.register(AdminAssignedTask)
-class AdminAssignedTaskAdmin(admin.ModelAdmin):
-    list_display = ["id", "title", "points_target", "visibility_hours", "active", "created_at"]
+class AdminAssignedTaskAdmin(AllFieldsListDisplayAdmin):
     list_filter = ["active", "created_at"]
     search_fields = ["title", "description"]
-    fields = ["title", "description", "admin_note", "points_target", "visibility_hours", "active"]
 
 
 @admin.register(AdminTaskSubmission)
-class AdminTaskSubmissionAdmin(admin.ModelAdmin):
-    list_display = [
-        "id",
-        "task",
-        "device_id",
-        "status",
-        "result_summary",
-        "awarded_points",
-        "reviewed_at",
-        "time_after_bonus_display",
-        "points_claimed",
-        "submitted_at",
-        "attachment",
-    ]
+class AdminTaskSubmissionAdmin(AllFieldsListDisplayAdmin):
     list_select_related = ("task",)
     list_filter = ["status", "points_claimed", "submitted_at"]
     search_fields = ["device_id", "task__title", "response_text"]
@@ -287,16 +311,7 @@ class UserAdmin(BaseUserAdmin):
 
 
 @admin.register(SyndicateUserProgress)
-class SyndicateUserProgressAdmin(admin.ModelAdmin):
-    list_display = [
-        "user",
-        "points_total",
-        "level",
-        "streak_count",
-        "last_activity_date",
-        "pounds_list_display",
-        "updated_at",
-    ]
+class SyndicateUserProgressAdmin(AllFieldsListDisplayAdmin):
     list_select_related = ("user",)
     search_fields = ["user__username", "user__email"]
     ordering = ["-updated_at"]

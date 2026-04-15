@@ -14,6 +14,7 @@ import {
   hasPermission,
   logoutRequest,
   meRequest,
+  persistTokens,
   readStoredAccess,
   readStoredRefresh,
   refreshRequest,

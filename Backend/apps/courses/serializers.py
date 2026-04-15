@@ -1,9 +1,13 @@
+from typing import Optional
+
 from rest_framework import serializers
 
 from apps.courses.models import Course, Video, VideoProgress
 
 
 class CourseSerializer(serializers.ModelSerializer):
+    cover_image_url = serializers.SerializerMethodField()
+
     class Meta:
         model = Course
         fields = (
@@ -11,12 +15,18 @@ class CourseSerializer(serializers.ModelSerializer):
             "title",
             "slug",
             "description",
+            "cover_image_url",
             "is_published",
             "allow_all_authenticated",
             "created_at",
             "updated_at",
         )
-        read_only_fields = ("id", "slug", "created_at", "updated_at")
+        read_only_fields = ("id", "slug", "cover_image_url", "created_at", "updated_at")
+
+    def get_cover_image_url(self, obj: Course) -> Optional[str]:
+        if not obj.cover_image:
+            return None
+        return obj.cover_image.url
 
 
 class CourseWriteSerializer(serializers.ModelSerializer):
@@ -28,23 +38,33 @@ class CourseWriteSerializer(serializers.ModelSerializer):
 
 
 class VideoSerializer(serializers.ModelSerializer):
+    thumbnail_url = serializers.SerializerMethodField()
+
     class Meta:
         model = Video
         fields = (
             "id",
             "title",
+            "description",
             "course",
             "vdocipher_id",
+            "thumbnail_url",
             "order",
             "status",
             "created_at",
             "updated_at",
         )
-        read_only_fields = ("id", "created_at", "updated_at")
+        read_only_fields = ("id", "thumbnail_url", "created_at", "updated_at")
+
+    def get_thumbnail_url(self, obj: Video) -> Optional[str]:
+        if not obj.thumbnail:
+            return None
+        return obj.thumbnail.url
 
 
 class VideoCreateSerializer(serializers.Serializer):
     title = serializers.CharField(max_length=500)
+    description = serializers.CharField(required=False, allow_blank=True, default="")
     course_id = serializers.IntegerField()
     vdocipher_id = serializers.CharField(max_length=64)
     order = serializers.IntegerField(min_value=0, default=0)
