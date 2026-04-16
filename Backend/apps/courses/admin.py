@@ -50,75 +50,44 @@ class VideoInline(admin.TabularInline):
 
 
 
-@admin.register(Course)
+# @admin.register(Course)
 
-class CourseAdmin(admin.ModelAdmin):
+# class CourseAdmin(admin.ModelAdmin):
 
-    prepopulated_fields = {"slug": ("title",)}
+#     prepopulated_fields = {"slug": ("title",)}
 
-    search_fields = ("title", "slug", "description")
+#     search_fields = ("title", "slug", "description")
 
-    list_display = ("title", "slug", "is_published", "allow_all_authenticated", "updated_at")
+#     list_display = ("title", "slug", "is_published", "show_in_programs", "allow_all_authenticated", "updated_at")
 
-    list_filter = ("is_published", "allow_all_authenticated")
+#     list_filter = ("is_published", "show_in_programs", "allow_all_authenticated")
 
-    readonly_fields = ("created_at", "updated_at")
+#     readonly_fields = ("created_at", "updated_at")
 
-    fieldsets = (
+#     fieldsets = (
 
-        (None, {"fields": ("title", "slug", "description", "cover_image")}),
+#         (None, {"fields": ("title", "slug", "description", "cover_image")}),
 
-        ("Access", {"fields": ("is_published", "allow_all_authenticated")}),
+#         ("Access", {"fields": ("is_published", "show_in_programs", "allow_all_authenticated")}),
 
-        ("Timestamps", {"fields": ("created_at", "updated_at"), "classes": ("collapse",)}),
+#         ("Timestamps", {"fields": ("created_at", "updated_at"), "classes": ("collapse",)}),
 
-    )
+#     )
 
-    inlines = [VideoInline]
-
-
-
-
-
-@admin.register(CourseEnrollment)
-
-class CourseEnrollmentAdmin(AllFieldsListDisplayAdmin):
-
-    list_filter = ("course",)
+#     inlines = [VideoInline]
 
 
 
 
 
-@admin.register(Video)
+# @admin.register(CourseEnrollment)
 
-class VideoAdmin(admin.ModelAdmin):
+# class CourseEnrollmentAdmin(AllFieldsListDisplayAdmin):
 
-    list_display = ("title", "course", "order", "status", "updated_at")
-
-    list_filter = ("status", "course")
-
-    search_fields = ("title", "video_url", "description")
-
-    ordering = ("course", "order", "id")
-
-    fieldsets = (
-
-        (None, {"fields": ("course", "title", "description", "video_url", "thumbnail", "order", "status")}),
-
-        ("Timestamps", {"fields": ("created_at", "updated_at"), "classes": ("collapse",)}),
-
-    )
-
-    readonly_fields = ("created_at", "updated_at")
+#     list_filter = ("course",)
 
 
 
 
 
-@admin.register(VideoProgress)
-
-class VideoProgressAdmin(AllFieldsListDisplayAdmin):
-
-    pass
 

@@ -3,7 +3,7 @@ from django.contrib import admin, messages
 from django.core.files.uploadedfile import UploadedFile
 
 from apps.membership.keyword_dataset import KeywordDatasetParseError, parse_keyword_dataset_bytes
-from apps.membership.models import Article, ArticleKeywordDataset, KeywordUsageStat, MembershipGenerationState, Video
+from apps.membership.models import Article, ArticleKeywordDataset, KeywordUsageStat, MembershipGenerationState, MembershipStreamVideo, Video
 
 
 def _all_model_field_names(model) -> tuple[str, ...]:
@@ -119,3 +119,31 @@ class MembershipVideoAdmin(AllFieldsListDisplayAdmin):
     """Membership hub videos (URL-based), separate from courses.Video lessons."""
 
     search_fields = ("title", "description", "video_url")
+
+
+@admin.register(MembershipStreamVideo)
+class MembershipStreamVideoAdmin(admin.ModelAdmin):
+    """
+    Secure upload section for Membership videos.
+    Uses the same HLS transcode pipeline as Programs, but separated by visibility flags.
+    """
+
+    list_display = ("title", "status", "price", "show_in_membership", "show_in_programs", "created_at")
+    list_filter = ("status", "show_in_membership", "show_in_programs")
+    search_fields = ("title", "description")
+    readonly_fields = ("hls_path", "status", "last_error", "created_at")
+    fieldsets = (
+        (None, {"fields": ("title", "description", "price", "show_in_membership", "show_in_programs")}),
+        ("Media", {"fields": ("thumbnail", "original_video")}),
+        ("Pipeline", {"fields": ("status", "hls_path", "last_error", "created_at")}),
+    )
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).filter(show_in_membership=True).order_by("-created_at")
+
+    def save_model(self, request, obj, form, change):
+        # Default behavior for this section: membership-only.
+        if not change:
+            obj.show_in_membership = True
+            obj.show_in_programs = False
+        super().save_model(request, obj, form, change)

@@ -6,9 +6,8 @@ export type VideoDto = {
   id: number;
   title: string;
   description: string;
-  video_url: string;
-  thumbnail: string;
-  duration: string;
+  thumbnail_url: string | null;
+  status: string;
   created_at: string;
 };
 
@@ -32,7 +31,7 @@ type VideoCardProps = {
 
 export function VideoCard({ video, onPlay, index = 0 }: VideoCardProps) {
   const fallback = FALLBACK_THUMBS[Math.abs(Number(video.id || 0)) % FALLBACK_THUMBS.length];
-  const thumb = video.thumbnail?.trim() || fallback;
+  const thumb = video.thumbnail_url?.trim() || fallback;
 
   return (
     <motion.article
@@ -60,11 +59,16 @@ export function VideoCard({ video, onPlay, index = 0 }: VideoCardProps) {
             <path d="M8 5v14l11-7L8 5Z" />
           </svg>
         </span>
-        {video.duration ? (
-          <span className="absolute bottom-2 right-2 rounded border border-cyan-300/35 bg-black/75 px-2 py-0.5 text-[10px] font-bold tabular-nums text-cyan-100">
-            {video.duration}
-          </span>
-        ) : null}
+        <span
+          className={cx(
+            "absolute bottom-2 right-2 rounded border px-2 py-0.5 text-[10px] font-bold uppercase",
+            video.status === "ready"
+              ? "border-emerald-300/40 bg-emerald-500/20 text-emerald-100"
+              : "border-amber-300/40 bg-amber-500/20 text-amber-100"
+          )}
+        >
+          {video.status}
+        </span>
       </button>
 
       <h3 className="relative z-[1] mt-4 line-clamp-2 text-[15px] font-bold leading-snug text-neutral-50">{video.title}</h3>

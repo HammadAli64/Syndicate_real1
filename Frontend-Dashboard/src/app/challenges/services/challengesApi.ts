@@ -79,6 +79,7 @@ export async function fetchSyndicateProgress(): Promise<SyndicateProgressPayload
   return parseProgressJson(j);
 }
 
+
 export async function patchSyndicateProgress(state: Record<string, string>): Promise<SyndicateProgressPayload> {
   if (!getSyndicateAuthToken()) {
     return parseProgressJson({
@@ -96,6 +97,8 @@ export async function patchSyndicateProgress(state: Record<string, string>): Pro
   if (!r.ok) throw new Error(typeof j.detail === "string" ? j.detail : "Failed to save progress");
   return parseProgressJson(j);
 }
+
+
 
 export async function postSyndicateStreakRecord(activityDate?: string): Promise<{ ok: boolean; streak_count: number; last_activity_date: string }> {
   if (!getSyndicateAuthToken()) {

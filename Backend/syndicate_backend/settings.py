@@ -186,11 +186,28 @@ INSTALLED_APPS.extend(
         'apps.membership.apps.MembershipConfig',
         'apps.affiliate_tracking.apps.AffiliateTrackingConfig',
         'apps.courses.apps.CoursesConfig',
+        'apps.video_streaming.apps.VideoStreamingConfig',
     ]
 )
 
 # Optional: Redis for membership article search index (inverted index + short-lived result cache).
 REDIS_URL = (os.environ.get("REDIS_URL") or "").strip()
+# Celery (HLS transcoding worker). Broker defaults to REDIS_URL when CELERY_BROKER_URL is unset.
+CELERY_BROKER_URL = (os.environ.get("CELERY_BROKER_URL") or "").strip() or (REDIS_URL or "redis://127.0.0.1:6379/0")
+CELERY_RESULT_BACKEND = (os.environ.get("CELERY_RESULT_BACKEND") or "").strip() or CELERY_BROKER_URL
+CELERY_TASK_ALWAYS_EAGER = (os.environ.get("CELERY_TASK_ALWAYS_EAGER") or "").strip().lower() in (
+    "1",
+    "true",
+    "yes",
+)
+CELERY_TASK_EAGER_PROPAGATES = True
+CELERY_TASK_TIME_LIMIT = int((os.environ.get("CELERY_TASK_TIME_LIMIT") or "7200").strip() or "7200")
+CELERY_TASK_SOFT_TIME_LIMIT = int((os.environ.get("CELERY_TASK_SOFT_TIME_LIMIT") or "7000").strip() or "7000")
+CELERY_WORKER_PREFETCH_MULTIPLIER = int((os.environ.get("CELERY_WORKER_PREFETCH_MULTIPLIER") or "1").strip() or "1")
+CELERY_ACCEPT_CONTENT = ["json"]
+CELERY_TASK_SERIALIZER = "json"
+CELERY_RESULT_SERIALIZER = "json"
+
 
 _mpr = (os.environ.get("MEMBERSHIP_ALLOW_ANONYMOUS_READ") or "").strip().lower()
 if _mpr in ("0", "false", "no"):

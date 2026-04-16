@@ -154,6 +154,8 @@ export function CourseVideoPlaylist({
                 playsInline
                 preload="metadata"
                 src={playbackSrc}
+                controlsList="nodownload"
+                onContextMenu={(e) => e.preventDefault()}
               />
             )}
           </div>

@@ -1,6 +1,7 @@
 from django.db import models
 from django.utils import timezone
 from django.utils.text import slugify
+from apps.video_streaming.models import StreamVideo
 
 
 class ArticleKeywordDataset(models.Model):
@@ -130,3 +131,16 @@ class Video(models.Model):
 
     def __str__(self) -> str:
         return self.title
+
+
+class MembershipStreamVideo(StreamVideo):
+    """
+    Proxy model to provide a dedicated Membership admin upload section
+    backed by the secure StreamVideo pipeline.
+    """
+
+    class Meta:
+        proxy = True
+        app_label = "membership"
+        verbose_name = "Membership stream video"
+        verbose_name_plural = "Membership stream videos"

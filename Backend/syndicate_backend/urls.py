@@ -38,6 +38,7 @@ def api_root(_request):
             "admin": "/admin/",
             "affiliate_track": "/api/track/health",
             "affiliate_auth": "/api/affiliate/auth/request-otp",
+            "streaming_videos": "/api/streaming/videos/",
         }
     )
 

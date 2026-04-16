@@ -25,6 +25,16 @@ class Course(models.Model):
         help_text="Programs grid cover. Use a high-resolution file (e.g. JPEG/PNG at least ~1200px on the short edge, or 1600px+ wide) so it stays sharp on retina screens; small images are stretched and look soft.",
     )
     is_published = models.BooleanField(default=True, db_index=True)
+    show_in_programs = models.BooleanField(
+        default=True,
+        db_index=True,
+        help_text="If False, this course is hidden from the dashboard Programs grid (lessons API unchanged).",
+    )
+    show_in_programs = models.BooleanField(
+        default=True,
+        db_index=True,
+        help_text="If False, this course is hidden from the dashboard Programs grid (lessons API unchanged).",
+    )
     allow_all_authenticated = models.BooleanField(
         default=True,
         help_text="If True, any authenticated user may view videos. If False, only enrolled users (or staff).",
@@ -123,6 +133,11 @@ class VideoProgress(models.Model):
     position_seconds = models.FloatField(default=0)
     completed = models.BooleanField(default=False)
     updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["user", "video"], name="courses_videoprogress_user_video"),
+        ]
 
     class Meta:
         constraints = [

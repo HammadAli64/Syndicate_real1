@@ -9,6 +9,7 @@ from . import views
 # Names omitted to avoid clashing with syndicate_backend.urls (same paths, first match wins).
 urlpatterns = [
     path("courses/", include("apps.courses.urls")),
+    path("streaming/", include("apps.video_streaming.urls")),
     path("videos/", include("apps.courses.urls_videos")),
     # When ROOT_URLCONF only mounts ``path("api/", include("api.urls"))`` (no separate api/challenges prefix).
     path("challenges/", include("apps.challenges.urls")),

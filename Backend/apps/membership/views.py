@@ -26,6 +26,13 @@ from apps.membership.permissions import MembershipPublicReadOrAuthenticated
 from apps.membership.redis_index import cache_get_merged_ids, cache_set_merged_ids, search_article_ids, tokenize
 from apps.membership.serializers import ArticleSerializer, VideoSerializer
 from apps.portal.permissions import IsAuthenticatedStrict
+from apps.video_streaming.models import StreamVideo
+from apps.video_streaming.serializers import StreamVideoListSerializer, StreamVideoStreamSerializer
+from apps.video_streaming.views import (
+    _build_stream_token,
+    _token_ttl_seconds,
+    playback_playlist_path,
+)
 
 
 class MembershipPagination(PageNumberPagination):
@@ -138,6 +145,31 @@ class VideoListView(generics.ListAPIView):
 
     def get_queryset(self):
         return Video.objects.all().order_by("-created_at", "-id")
+
+
+class MembershipSecureVideoListView(generics.ListAPIView):
+    serializer_class = StreamVideoListSerializer
+    permission_classes = [IsAuthenticatedStrict]
+    pagination_class = MembershipPagination
+
+    def get_queryset(self):
+        return StreamVideo.objects.filter(show_in_membership=True).order_by("-created_at", "-id")
+
+
+class MembershipSecureVideoStreamView(APIView):
+    permission_classes = [IsAuthenticatedStrict]
+
+    def get(self, request, pk: int, *args, **kwargs):
+        video = get_object_or_404(StreamVideo, pk=pk, show_in_membership=True)
+        if video.status != StreamVideo.Status.READY or not (video.hls_path or "").strip():
+            payload = {"id": video.id, "status": video.status, "hls_url": None}
+            return Response(StreamVideoStreamSerializer(payload).data, status=status.HTTP_200_OK)
+
+        exp = int(timezone.now().timestamp()) + _token_ttl_seconds()
+        token = _build_stream_token(user_id=request.user.id, video_id=video.pk, exp=exp)
+        hls_url = f"{playback_playlist_path(video.pk)}?token={token}&expires={exp}"
+        payload = {"id": video.id, "status": video.status, "hls_url": hls_url}
+        return Response(StreamVideoStreamSerializer(payload).data, status=status.HTTP_200_OK)
 
 
 class MembershipSearchView(generics.ListAPIView):

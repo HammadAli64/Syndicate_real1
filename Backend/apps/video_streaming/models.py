@@ -1,0 +1,129 @@
+import uuid
+
+from django.core.validators import MinValueValidator
+from django.db import models
+from django.utils.text import slugify
+
+
+def stream_video_original_upload_to(instance: "StreamVideo", filename: str) -> str:
+    sid = str(instance.pk) if instance.pk else uuid.uuid4().hex[:16]
+    base = slugify(instance.title)[:80] or "video"
+    return f"stream_videos/originals/{sid}/{base}_{filename}"
+
+
+def stream_video_thumbnail_upload_to(instance: "StreamVideo", filename: str) -> str:
+    sid = str(instance.pk) if instance.pk else uuid.uuid4().hex[:16]
+    return f"stream_videos/thumbnails/{sid}/{filename}"
+
+
+def stream_playlist_cover_upload_to(instance: "StreamPlaylist", filename: str) -> str:
+    sid = str(instance.pk) if instance.pk else uuid.uuid4().hex[:16]
+    return f"stream_playlists/covers/{sid}/{filename}"
+
+
+class StreamVideo(models.Model):
+    """
+    Admin-uploaded asset transcoded to HLS by Celery + FFmpeg, packaged to R2 (or local media in dev).
+    """
+
+    class Status(models.TextChoices):
+        PROCESSING = "processing", "Processing"
+        READY = "ready", "Ready"
+        FAILED = "failed", "Failed"
+
+    title = models.CharField(max_length=255)
+    description = models.TextField(blank=True)
+    price = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0,
+        validators=[MinValueValidator(0)],
+    )
+    thumbnail = models.ImageField(upload_to=stream_video_thumbnail_upload_to, blank=True, null=True)
+    original_video = models.FileField(
+        upload_to=stream_video_original_upload_to,
+        blank=True,
+        help_text="Source file (e.g. MP4). Not exposed via public API; transcoded to HLS only.",
+    )
+    hls_path = models.URLField(
+        max_length=2048,
+        blank=True,
+        default="",
+        help_text="Public playlist URL (index.m3u8) after processing.",
+    )
+    status = models.CharField(
+        max_length=16,
+        choices=Status.choices,
+        default=Status.PROCESSING,
+        db_index=True,
+    )
+    last_error = models.TextField(blank=True, default="")
+    show_in_programs = models.BooleanField(
+        default=True,
+        db_index=True,
+        help_text="Visible in Programs section secure video lists/playlists.",
+    )
+    show_in_membership = models.BooleanField(
+        default=False,
+        db_index=True,
+        help_text="Visible in Membership section secure videos.",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self) -> str:
+        return self.title
+
+
+class StreamPlaylist(models.Model):
+    """Ordered collection of StreamVideo entries for the Programs dashboard."""
+
+    title = models.CharField(max_length=255)
+    slug = models.SlugField(max_length=280, unique=True, db_index=True)
+    description = models.TextField(blank=True)
+    cover_image = models.ImageField(
+        upload_to=stream_playlist_cover_upload_to,
+        blank=True,
+        null=True,
+        help_text="Optional. Shown on the Programs grid; falls back to the first video thumbnail.",
+    )
+    is_published = models.BooleanField(default=True, db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["title"]
+
+    def __str__(self) -> str:
+        return self.title
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            base = slugify(self.title) or "playlist"
+            slug = base
+            n = 2
+            while StreamPlaylist.objects.filter(slug=slug).exclude(pk=self.pk).exists():
+                slug = f"{base}-{n}"
+                n += 1
+            self.slug = slug
+        super().save(*args, **kwargs)
+
+
+class StreamPlaylistItem(models.Model):
+    playlist = models.ForeignKey(StreamPlaylist, on_delete=models.CASCADE, related_name="items")
+    stream_video = models.ForeignKey(StreamVideo, on_delete=models.CASCADE, related_name="playlist_items")
+    order = models.PositiveIntegerField(default=0, db_index=True)
+
+    class Meta:
+        ordering = ["playlist", "order", "id"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["playlist", "stream_video"],
+                name="video_streaming_playlist_unique_video",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.playlist_id}:{self.stream_video_id}"

@@ -25,7 +25,7 @@ class CourseListCreateView(APIView):
         return [IsAuthenticatedStrict()]
 
     def get(self, request):
-        qs = Course.objects.all()
+        qs = Course.objects.filter(show_in_programs=True)
         if not getattr(request.user, "is_staff", False):
             qs = qs.filter(is_published=True)
         return Response(CourseSerializer(qs.order_by("title"), many=True).data)
