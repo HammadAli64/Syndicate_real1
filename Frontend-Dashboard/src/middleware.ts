@@ -40,6 +40,12 @@ export function middleware(request: NextRequest) {
     pathname.startsWith("/login/") ||
     pathname === "/signup" ||
     pathname.startsWith("/signup/") ||
+    pathname === "/verify-otp" ||
+    pathname.startsWith("/verify-otp/") ||
+    pathname === "/checkout" ||
+    pathname.startsWith("/checkout/") ||
+    pathname === "/syndicate-otp" ||
+    pathname.startsWith("/syndicate-otp/") ||
     pathname.startsWith("/api/") ||
     pathname.startsWith("/_next/") ||
     pathname === "/favicon.ico";

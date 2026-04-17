@@ -18,6 +18,8 @@ import { SyndicateAiChallengePanel } from "../components/SyndicateAiChallengePan
 import { MembershipContentHub } from "../components/membership/MembershipContentHub";
 import { AffiliatePortalSection } from "@/components/affiliate/AffiliatePortalSection";
 import { ProgramsCourseSection } from "@/components/programs/ProgramsCourseSection";
+import { AFFILIATE_REFERRAL_IDS_STORAGE_KEY } from "@/lib/affiliateReferralIds";
+import { PROFILE_AVATAR_STORAGE_KEY, PROFILE_DISPLAY_NAME_KEY } from "@/lib/dashboardProfileStorage";
 import { STORAGE_SIMPLE_AUTH } from "@/lib/portal-api";
 import { logoutSyndicateSession } from "@/lib/syndicateAuth";
 import { Toaster } from "react-hot-toast";
@@ -57,8 +59,6 @@ const FEATURE_MENU_ENTRIES: FeatureMenuEntry[] = [
   { section: "More options", label: "Settings", navKey: "settings" }
 ];
 
-const PROFILE_AVATAR_STORAGE_KEY = "dashboarded:profileAvatar";
-const PROFILE_NAME_STORAGE_KEY = "dashboarded:profileDisplayName";
 const PROFILE_AVATAR_MAX_BYTES = Math.floor(1.5 * 1024 * 1024);
 
 const menuMotion = {
@@ -1484,13 +1484,20 @@ export default function Page() {
   const [themeMode, setThemeMode] = useState<ThemeMode>("default");
   const [profileOpen, setProfileOpen] = useState(false);
   const [profileAvatar, setProfileAvatar] = useState<string>("/assets/a.webp");
-  const [profileName, setProfileName] = useState("Subhan");
+  const [profileName, setProfileName] = useState(() => {
+    if (typeof window === "undefined") return "Member";
+    try {
+      return window.localStorage.getItem(PROFILE_DISPLAY_NAME_KEY)?.trim() || "Member";
+    } catch {
+      return "Member";
+    }
+  });
 
   const persistProfileName = useCallback((name: string) => {
     const trimmed = name.trim() || "Member";
     setProfileName(trimmed);
     try {
-      window.localStorage.setItem(PROFILE_NAME_STORAGE_KEY, trimmed);
+      window.localStorage.setItem(PROFILE_DISPLAY_NAME_KEY, trimmed);
     } catch {
       /* ignore */
     }
@@ -1531,6 +1538,9 @@ export default function Page() {
   const handleLogout = useCallback(() => {
     try {
       window.localStorage.removeItem(STORAGE_SIMPLE_AUTH);
+      window.localStorage.removeItem(PROFILE_DISPLAY_NAME_KEY);
+      window.localStorage.removeItem(PROFILE_AVATAR_STORAGE_KEY);
+      window.localStorage.removeItem(AFFILIATE_REFERRAL_IDS_STORAGE_KEY);
       logoutSyndicateSession();
     } catch {
       /* ignore */
@@ -1543,7 +1553,7 @@ export default function Page() {
     try {
       const saved = window.localStorage.getItem(PROFILE_AVATAR_STORAGE_KEY);
       if (saved) setProfileAvatar(saved);
-      const savedName = window.localStorage.getItem(PROFILE_NAME_STORAGE_KEY);
+      const savedName = window.localStorage.getItem(PROFILE_DISPLAY_NAME_KEY);
       if (savedName) setProfileName(savedName);
     } catch {
       /* ignore */
@@ -2687,7 +2697,7 @@ export default function Page() {
               {selectedNavKey === "monk" ? (
                 <SyndicateModeSection />
               ) : selectedNavKey === "affiliate" ? (
-                <AffiliatePortalSection />
+                <AffiliatePortalSection shellProfileName={profileName} />
               ) : selectedNavKey === "programs" ? (
                 <ProgramsCourseSection
                   instructorHero={<InstructorSlideshow />}

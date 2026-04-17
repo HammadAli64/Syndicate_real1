@@ -49,6 +49,7 @@ import {
 } from "@/lib/syndicateAuth";
 import { applySyncedStateFromServer, collectSyncedState, onSyndicatePersist } from "@/lib/syndicateProgressSync";
 import { getSyndicateApiBase } from "@/lib/syndicateApiBase";
+import { displayNameFromEmail } from "@/lib/dashboardProfileStorage";
 import { syndicateUserStorageKey as ls } from "@/lib/syndicateStorageKeys";
 
 const API_BASE = getSyndicateApiBase();
@@ -300,6 +301,16 @@ const CUSTOM_MISSION_DEFAULT_DIFFICULTY = "medium" as const;
 const POINTS_PER_10_POUNDS = 100;
 const POUNDS_PER_100_POINTS = 10;
 const DEFAULT_PROFILE_NAME = "Operator";
+
+function syndicateShellDisplayName(profileName: string): string {
+  const p = profileName.trim();
+  if (p) return p;
+  const u = getSyndicateUser();
+  const e = u?.email?.trim();
+  if (e) return displayNameFromEmail(e) || u?.name?.trim() || DEFAULT_PROFILE_NAME;
+  return u?.name?.trim() || DEFAULT_PROFILE_NAME;
+}
+
 const MAX_PROFILE_IMAGE_DATA_URL_CHARS = 350_000;
 const MAX_PROFILE_IMAGE_URL_LEN = 2048;
 const MAX_PROFILE_IMAGE_FILE_BYTES = 280 * 1024;
@@ -2277,9 +2288,13 @@ export function SyndicateAiChallengePanel() {
         const savedName = window.localStorage.getItem(ls("display_name"));
         const sessionUser = getSyndicateUser();
         const accountEmail = (sessionUser?.email || "").trim();
-        const nextName = (savedName || accountEmail || DEFAULT_PROFILE_NAME).trim() || DEFAULT_PROFILE_NAME;
+        const sessionName = (sessionUser?.name || "").trim();
+        const fromEmail = accountEmail ? displayNameFromEmail(accountEmail) : "";
+        const nextName =
+          (savedName?.trim() || sessionName || fromEmail || DEFAULT_PROFILE_NAME).trim() ||
+          DEFAULT_PROFILE_NAME;
         setProfileName(nextName);
-        if (!savedName && accountEmail) {
+        if (!savedName?.trim() && (sessionName || fromEmail)) {
           window.localStorage.setItem(ls("display_name"), nextName);
           onSyndicatePersist();
         }
@@ -4590,7 +4605,7 @@ export function SyndicateAiChallengePanel() {
                   <div className="min-w-0">
                     <div className="text-[11px] font-black uppercase tracking-[0.14em] text-[color:var(--gold)]/70">Your profile</div>
                     <div className="mt-1 break-words text-[24px] font-black leading-none text-white sm:text-[28px]">
-                      {profileName.trim() || getSyndicateUser()?.email || DEFAULT_PROFILE_NAME}
+                      {syndicateShellDisplayName(profileName)}
                     </div>
                     <button
                       type="button"

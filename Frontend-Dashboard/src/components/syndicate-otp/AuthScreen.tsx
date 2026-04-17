@@ -11,10 +11,11 @@ import {
   useRef,
   useState,
 } from "react";
-import { loadStripe } from "@stripe/stripe-js";
 import { gsap } from "gsap";
 import LuxuryRedirectOverlay from "@/components/syndicate-otp/LuxuryRedirectOverlay";
+import { persistSimpleAuthSession } from "@/lib/portal-api";
 import {
+  resolvePostOtpAppRedirect,
   syndicateOtpLoginHref,
   syndicateOtpSignupHref,
   syndicateOtpVerifyHref
@@ -32,15 +33,16 @@ type AuthScreenProps = {
 type ApiPayload = {
   message?: string;
   error?: string;
-  pending_email?: string;
-  signup_token?: string;
-  checkout_url?: string;
-  session_id?: string;
   redirect_url?: string;
+  token?: string;
   otp_required?: boolean;
-  verify_flow?: string;
   email?: string;
   code?: string;
+  referral_ids?: {
+    complete?: string;
+    single?: string;
+    exclusive?: string;
+  };
   user?: {
     id: number;
     username: string;
@@ -48,11 +50,9 @@ type ApiPayload = {
   };
 };
 
-const API_BASE_URL = (process.env.NEXT_PUBLIC_API_BASE_URL ?? "").replace(/\/$/, "");
-const SYNDICATE_URL =
-  process.env.NEXT_PUBLIC_POST_LOGIN_REDIRECT_URL ?? "https://the-syndicate.com/";
-const STRIPE_PUBLISHABLE_KEY =
-  process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? "";
+const API_BASE_URL = (process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:8000").replace(/\/$/, "");
+const DASHBOARD_FALLBACK =
+  process.env.NEXT_PUBLIC_POST_LOGIN_REDIRECT_URL ?? "http://localhost:3000/";
 
 export default function AuthScreen({
   mode,
@@ -67,9 +67,8 @@ export default function AuthScreen({
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
-  const [checkoutBridge, setCheckoutBridge] = useState(false);
   const [luxuryOpen, setLuxuryOpen] = useState(false);
-  const [luxuryHref, setLuxuryHref] = useState(SYNDICATE_URL);
+  const [luxuryHref, setLuxuryHref] = useState(DASHBOARD_FALLBACK);
   const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   const isSignup = mode === "signup";
@@ -342,40 +341,6 @@ export default function AuthScreen({
     }
   }
 
-  async function beginHostedStripeCheckout(signupToken: string) {
-    const response = await fetch(`${API_BASE_URL || ""}/api/auth/checkout/create-session/`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ signup_token: signupToken }),
-    });
-    const text = await response.text();
-    let data: { checkout_url?: string; session_id?: string; error?: string } = {};
-    try {
-      data = text ? (JSON.parse(text) as typeof data) : {};
-    } catch {
-      throw new Error("Checkout API returned non-JSON response.");
-    }
-    if (!response.ok) {
-      throw new Error(data.error || "Could not start checkout.");
-    }
-    if (STRIPE_PUBLISHABLE_KEY && data.session_id) {
-      const stripe = await loadStripe(STRIPE_PUBLISHABLE_KEY);
-      if (!stripe) {
-        throw new Error("Stripe failed to load.");
-      }
-      const result = await stripe.redirectToCheckout({ sessionId: data.session_id });
-      if (result.error) {
-        throw new Error(result.error.message);
-      }
-      return;
-    }
-    if (data.checkout_url) {
-      window.location.href = data.checkout_url;
-      return;
-    }
-    throw new Error("Checkout session missing from server.");
-  }
-
   async function postJson(path: string, body: Record<string, string | undefined>) {
     let response: Response;
     const url = `${API_BASE_URL || ""}${path}`;
@@ -456,17 +421,6 @@ export default function AuthScreen({
           throw new Error(data.error || "Request failed");
         }
         setMessage(data.message || "Check your inbox for the code.");
-        if (data.verify_flow === "checkout" && data.signup_token) {
-          setCheckoutBridge(true);
-          try {
-            await new Promise((r) => window.setTimeout(r, 380));
-            await beginHostedStripeCheckout(data.signup_token);
-          } catch (checkoutErr) {
-            setCheckoutBridge(false);
-            throw checkoutErr;
-          }
-          return;
-        }
         router.push(syndicateOtpVerifyHref(data.email || email.trim(), "signup"));
         return;
       }
@@ -479,31 +433,37 @@ export default function AuthScreen({
         if (!response.ok) {
           throw new Error(data.error || "Request failed");
         }
-
-        if (isSignupOtp) {
-          if (!data.signup_token) {
-            throw new Error("Verification incomplete. Please try again.");
-          }
-          setMessage(data.message || "Opening checkout.");
-          setCheckoutBridge(true);
-          try {
-            await new Promise((r) => window.setTimeout(r, 420));
-            await beginHostedStripeCheckout(data.signup_token);
-          } catch (checkoutErr) {
-            setCheckoutBridge(false);
-            throw checkoutErr;
-          }
-          return;
-        }
-
         setMessage(data.message || "Welcome back.");
         setOtpDigits(Array.from({ length: 6 }, () => ""));
-        setLuxuryHref(data.redirect_url || SYNDICATE_URL);
+        const t = typeof data.token === "string" ? data.token.trim() : "";
+        if (t) {
+          const loginEmail = (data.user?.email || email.trim()).trim();
+          const rid = data.referral_ids;
+          const referralIds =
+            rid && typeof rid.complete === "string" && rid.complete.trim()
+              ? {
+                  complete: rid.complete.trim(),
+                  single: rid.single?.trim() || rid.complete.trim(),
+                  exclusive: rid.exclusive?.trim() || rid.complete.trim(),
+                }
+              : undefined;
+          persistSimpleAuthSession(
+            t,
+            loginEmail
+              ? { email: loginEmail, userId: data.user?.id, referralIds }
+              : undefined,
+          );
+        }
+        const nextUrl =
+          typeof window !== "undefined"
+            ? resolvePostOtpAppRedirect(data.redirect_url)
+            : DASHBOARD_FALLBACK;
+        setLuxuryHref(nextUrl);
         setLuxuryOpen(true);
         return;
       }
 
-      const { response, data } = await postJson("/api/auth/login/", requestBody);
+      const { response, data } = await postJson("/api/auth/otp-login/", requestBody);
 
       if (!response.ok) {
         if (response.status === 404 && data.code === "SIGNUP_REQUIRED") {
@@ -534,14 +494,6 @@ export default function AuthScreen({
   return (
     <>
       <LuxuryRedirectOverlay active={luxuryOpen} href={luxuryHref} />
-
-      {checkoutBridge ? (
-        <div className="checkout-bridge-overlay" aria-hidden>
-          <div className="checkout-bridge-overlay__aurora" />
-          <div className="checkout-bridge-overlay__frame" />
-          <p className="checkout-bridge-overlay__label">Preparing secure checkout</p>
-        </div>
-      ) : null}
 
       <div className="scanline" />
       <div className="noise" />
@@ -674,8 +626,7 @@ export default function AuthScreen({
             ) : null}
             {isSignup && !isOtp ? (
               <p className="form-hint">
-                New email: we send a code, then Stripe checkout. Returning members go straight to
-                Stripe checkout.
+                Enter your email. We will send a one-time verification code.
               </p>
             ) : null}
 

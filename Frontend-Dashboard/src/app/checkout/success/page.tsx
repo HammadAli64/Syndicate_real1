@@ -7,5 +7,9 @@ type PageProps = {
 export default async function CheckoutSuccessPage({ searchParams }: PageProps) {
   const params = await searchParams;
   const sessionId = typeof params.session_id === "string" ? params.session_id : "";
-  return <CheckoutSuccessScreen sessionId={sessionId} />;
+  return (
+    <div id="syndicate-otp-mount" className="min-h-dvh">
+      <CheckoutSuccessScreen sessionId={sessionId} />
+    </div>
+  );
 }

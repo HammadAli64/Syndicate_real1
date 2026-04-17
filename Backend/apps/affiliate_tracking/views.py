@@ -112,6 +112,43 @@ def _get_referral_or_400(affiliate_id: str):
         return None
 
 
+def ensure_affiliate_profile_for_existing_user(user: User) -> AffiliateProfile:
+    """
+    Link AffiliateProfile + SectionReferral rows to a Django user (e.g. OTP signup/login).
+    Referral IDs are derived from display name + user id (see _referral_code); they are not
+    the legacy hard-coded demo id.
+    """
+    email = (user.email or "").strip().lower()
+    display_name = (
+        _display_name_from_email(email)
+        if email
+        else (user.get_full_name() or user.username or "Affiliate")
+    )[:120]
+    profile, _ = AffiliateProfile.objects.get_or_create(
+        user=user,
+        defaults={"display_name": display_name},
+    )
+    if not profile.display_name:
+        profile.display_name = display_name
+        profile.save(update_fields=["display_name"])
+    for section in ("complete", "single", "exclusive"):
+        SectionReferral.objects.get_or_create(
+            profile=profile,
+            section=section,
+            defaults={"referral_id": _referral_code(profile.display_name, section, user.id)},
+        )
+    return profile
+
+
+def referral_ids_payload(profile: AffiliateProfile) -> dict[str, str]:
+    refs = {r.section: r.referral_id for r in profile.section_referrals.all()}
+    return {
+        "complete": refs.get("complete", ""),
+        "single": refs.get("single", ""),
+        "exclusive": refs.get("exclusive", ""),
+    }
+
+
 def _iso_or_none(value):
     return value.isoformat() if value else None
 

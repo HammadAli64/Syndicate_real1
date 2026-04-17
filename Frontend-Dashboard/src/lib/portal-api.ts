@@ -1,5 +1,12 @@
 /** Django portal + auth API client (JWT). */
 
+import {
+  AFFILIATE_REFERRAL_IDS_STORAGE_KEY,
+  type StoredAffiliateReferralIds,
+} from "@/lib/affiliateReferralIds";
+import { PROFILE_DISPLAY_NAME_KEY, displayNameFromEmail } from "@/lib/dashboardProfileStorage";
+import { createSyndicateSession } from "@/lib/syndicateAuth";
+
 export const STORAGE_ACCESS = "syndicate_access";
 export const STORAGE_REFRESH = "syndicate_refresh";
 /** DRF Token from simple email/password login (`/api/syndicate-auth/login/`). */
@@ -140,6 +147,39 @@ export function persistTokens(access: string, refresh: string) {
 export function clearTokens() {
   window.localStorage.removeItem(STORAGE_ACCESS);
   window.localStorage.removeItem(STORAGE_REFRESH);
+}
+
+const SIMPLE_AUTH_SESSION_COOKIE = "simple_auth_session";
+const SIMPLE_AUTH_SESSION_MAX_AGE_SEC = 60 * 60 * 24 * 30;
+
+export type PersistSimpleAuthIdentity = {
+  email: string;
+  userId?: number;
+  referralIds?: StoredAffiliateReferralIds | null;
+};
+
+/** DRF token + cookie so Next middleware allows `/` and API calls use `Token …`. */
+export function persistSimpleAuthSession(token: string, identity?: PersistSimpleAuthIdentity) {
+  if (typeof window === "undefined") return;
+  const trimmed = token.trim();
+  if (!trimmed) return;
+  window.localStorage.setItem(STORAGE_SIMPLE_AUTH, trimmed);
+  document.cookie = `${SIMPLE_AUTH_SESSION_COOKIE}=1; path=/; max-age=${SIMPLE_AUTH_SESSION_MAX_AGE_SEC}; samesite=lax`;
+
+  const email = identity?.email?.trim();
+  if (!email) return;
+  const label = displayNameFromEmail(email);
+  if (label) window.localStorage.setItem(PROFILE_DISPLAY_NAME_KEY, label);
+  const refs = identity?.referralIds;
+  if (refs?.complete?.trim()) {
+    window.localStorage.setItem(AFFILIATE_REFERRAL_IDS_STORAGE_KEY, JSON.stringify(refs));
+  }
+  const uid = identity?.userId;
+  createSyndicateSession(
+    { name: label || email, email },
+    trimmed,
+    typeof uid === "number" && Number.isFinite(uid) && uid > 0 ? uid : 0,
+  );
 }
 
 export function hasPermission(permissions: string[] | undefined, codename: string): boolean {

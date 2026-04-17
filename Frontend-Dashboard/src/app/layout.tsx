@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { JetBrains_Mono } from "next/font/google";
 import { Providers } from "./providers";
 import "./globals.css";
+import "./syndicate-otp/syndicate-otp.css";
 
 const jetbrainsMono = JetBrains_Mono({
   subsets: ["latin"],

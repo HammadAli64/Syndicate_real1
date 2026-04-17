@@ -50,7 +50,7 @@ type AffiliatePortalProps = {
 
 export default function AffiliatePortal({ displayName, referralIds, onLogout, embedded = false }: AffiliatePortalProps) {
   const toastTimerRef = useRef<number | null>(null);
-  const [affiliateId, setAffiliateId] = useState(referralIds?.complete ?? "subhan-x91");
+  const [affiliateId, setAffiliateId] = useState(() => referralIds?.complete?.trim() || "subhan-x91");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [stats, setStats] = useState<AffiliateStats | null>(null);
@@ -114,6 +114,11 @@ export default function AffiliatePortal({ displayName, referralIds, onLogout, em
         : "border-[rgba(0,255,122,0.72)] shadow-[0_0_26px_rgba(0,255,122,0.4)]";
 
   const [conversionRing, setConversionRing] = useState(0);
+  useEffect(() => {
+    const c = referralIds?.complete?.trim();
+    if (c) setAffiliateId(c);
+  }, [referralIds?.complete, referralIds?.single, referralIds?.exclusive]);
+
   useEffect(() => {
     // Smoothly animate ring to new value.
     setConversionRing(0);

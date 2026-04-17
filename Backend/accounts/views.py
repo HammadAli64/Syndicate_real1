@@ -5,7 +5,7 @@ from datetime import timedelta
 
 import stripe
 from django.conf import settings
-from django.contrib.auth import authenticate
+from rest_framework.authtoken.models import Token
 from django.contrib.auth.hashers import make_password
 from django.contrib.auth.models import User
 from django.core.mail import send_mail
@@ -15,6 +15,8 @@ from django.http import JsonResponse
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
+
+from apps.affiliate_tracking.views import ensure_affiliate_profile_for_existing_user, referral_ids_payload
 
 from .models import LoginOTP, PendingSignup, ReturningCheckout, SignupOTP
 
@@ -96,6 +98,9 @@ def _create_and_email_login_otp(email: str):
   try:
     _send_login_otp_email(email=email, otp_code=otp_code, username=user_by_email.username)
   except Exception:
+    if settings.DEBUG:
+      print(f"[DEV OTP FALLBACK] login {email}: {otp_code}")
+      return None
     return _json_error("Failed to send login OTP email.", status=500)
 
   return None
@@ -109,27 +114,66 @@ def signup_view(request):
     return _json_error("Invalid JSON payload.")
 
   email = str(payload.get("email", "")).strip().lower()
-  password = str(payload.get("password", ""))
   if not email:
     return _json_error("Email is required.")
-  if len(password) < 6:
-    return _json_error("Password must be at least 6 characters.")
   try:
     validate_email(email)
   except ValidationError:
     return _json_error("Enter a valid email address.")
 
   if User.objects.filter(email=email).exists():
-    return _json_error("Email already registered.", status=400)
+    return _json_error("Email already registered. Please log in.", status=400)
 
-  user = User.objects.create_user(username=email, email=email, password=password)
-  token = secrets.token_urlsafe(32)
+  pending, created = PendingSignup.objects.get_or_create(
+    email=email,
+    defaults={
+      "username": _unique_pending_username(),
+      "password_hash": make_password(secrets.token_urlsafe(48)),
+      "is_paid": False,
+      "stripe_checkout_session_id": "",
+    },
+  )
+  if not created and pending.is_paid:
+    return _json_error("This email is already registered. Please log in instead.")
+
+  if not created and not pending.is_paid:
+    pending.stripe_checkout_session_id = ""
+    pending.save(update_fields=["stripe_checkout_session_id", "updated_at"])
+
+  SignupOTP.objects.filter(email=email).delete()
+  LoginOTP.objects.filter(email=email).delete()
+
+  otp_code = _generate_otp()
+  expires_at = timezone.now() + timedelta(
+    minutes=getattr(settings, "OTP_EXPIRES_MINUTES", 10)
+  )
+  SignupOTP.objects.create(
+    email=email,
+    otp_code=otp_code,
+    otp_expires_at=expires_at,
+  )
+
+  try:
+    _send_signup_otp_email(email=email, otp_code=otp_code)
+  except Exception:
+    if settings.DEBUG:
+      print(f"[DEV OTP FALLBACK] signup {email}: {otp_code}")
+      return JsonResponse(
+        {
+          "message": "Verification code generated (email temporarily unavailable in dev).",
+          "email": email,
+          "debug_otp": otp_code,
+        },
+        status=200,
+      )
+    return _json_error("Failed to send signup verification email.", status=500)
+
   return JsonResponse(
     {
-      "token": token,
-      "user": {"id": user.id, "email": user.email},
+      "message": "Verification code sent to your email.",
+      "email": email,
     },
-    status=201,
+    status=200,
   )
 
 
@@ -170,11 +214,33 @@ def verify_signup_otp_view(request):
 
   signup_otp.delete()
 
+  if User.objects.filter(username=pending_signup.username).exists():
+    pending_signup.username = _unique_pending_username()
+    pending_signup.save(update_fields=["username", "updated_at"])
+  if User.objects.filter(email=pending_signup.email).exists():
+    pending_signup.delete()
+    return _json_error("Email already registered. Please log in.", status=400)
+
+  user = User(
+    username=pending_signup.username,
+    email=pending_signup.email,
+    password=pending_signup.password_hash,
+  )
+  user.save()
+  pending_signup.is_paid = True
+  pending_signup.save(update_fields=["is_paid", "updated_at"])
+
+  auth_token, _ = Token.objects.get_or_create(user=user)
+  af_profile = ensure_affiliate_profile_for_existing_user(user)
+
   return JsonResponse(
     {
-      "message": "Email verified. Continue to checkout.",
-      "signup_token": str(pending_signup.token),
+      "message": "Signup verified successfully.",
       "email": email,
+      "token": auth_token.key,
+      "redirect_url": getattr(settings, "POST_LOGIN_REDIRECT_URL", "http://localhost:3000/"),
+      "user": {"id": user.id, "username": user.username, "email": user.email},
+      "referral_ids": referral_ids_payload(af_profile),
     },
     status=200,
   )
@@ -353,25 +419,34 @@ def login_view(request):
     return _json_error("Invalid JSON payload.")
 
   email = str(payload.get("email", "")).strip().lower()
-  password = str(payload.get("password", ""))
-  if not email or not password:
-    return _json_error("Email and password are required.")
+  if not email:
+    return _json_error("Email is required.")
   try:
     validate_email(email)
   except ValidationError:
     return _json_error("Enter a valid email address.")
 
-  user = authenticate(username=email, password=password)
-  if not user:
-    return _json_error("Invalid credentials.", status=401)
+  try:
+    User.objects.get(email=email)
+  except User.DoesNotExist:
+    return JsonResponse(
+      {
+        "error": "No account found for this email. Please sign up first.",
+        "code": "SIGNUP_REQUIRED",
+      },
+      status=404,
+    )
 
-  token = secrets.token_urlsafe(32)
+  login_err = _create_and_email_login_otp(email)
+  if login_err is not None:
+    return login_err
+
   return JsonResponse(
     {
-      "token": token,
-      "user": {"id": user.id, "email": user.email},
+      "message": "Login OTP sent to your email.",
+      "email": email,
+      "otp_required": True,
     },
-    status=200,
   )
 
 
@@ -408,11 +483,15 @@ def verify_login_otp_view(request):
     return _json_error("Invalid OTP code.", status=400)
 
   login_otp.delete()
+  auth_token, _ = Token.objects.get_or_create(user=user)
+  af_profile = ensure_affiliate_profile_for_existing_user(user)
   return JsonResponse(
     {
       "message": "Login verified successfully.",
-      "redirect_url": settings.POST_LOGIN_REDIRECT_URL,
+      "token": auth_token.key,
+      "redirect_url": getattr(settings, "POST_LOGIN_REDIRECT_URL", "http://localhost:3000/"),
       "user": {"id": user.id, "username": user.username, "email": user.email},
+      "referral_ids": referral_ids_payload(af_profile),
     },
     status=200,
   )

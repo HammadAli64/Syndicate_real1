@@ -7,7 +7,8 @@ import { fetchAuthenticatedPdfBlob, portalFetch } from "@/lib/portal-api";
 import { StreamVideoProgramPanel } from "@/components/programs/StreamVideoProgramPanel";
 import { ArticleCard, type ArticleDto } from "./ArticleCard";
 import { MembershipArticleReader, type ArticleReaderState } from "./MembershipArticleReader";
-import { VideoCard, type VideoDto } from "./VideoCard";
+import { type VideoDto } from "./VideoCard";
+import { MembershipVideoGallery } from "./MembershipVideoGallery";
 
 type Tab = "articles" | "videos";
 
@@ -401,41 +402,13 @@ export function MembershipContentHub() {
             <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(transparent_92%,rgba(34,211,238,0.15)_100%)] bg-[length:100%_7px] opacity-35" />
             <p className="relative text-[12px] font-black uppercase tracking-[0.18em] text-cyan-200">Video arcade // hazard feed</p>
             <p className="relative mt-2 text-[15px] leading-relaxed text-neutral-300 sm:text-[16px]">
-              Full-screen playback. Neural thumbnails. When the grid runs dry, demo signals keep the sector online.
+              Full-screen playback. Neural thumbnails. Mixed portrait and landscape grid — filter by date on the archive panel below.
             </p>
           </div>
 
-          {error ? (
-            <div className="rounded-xl border border-red-500/35 bg-red-950/25 p-5 text-[15px] leading-relaxed text-red-100 sm:text-[16px]">
-              <p>{error}</p>
-            </div>
-          ) : null}
-
-          {loading && !videos.length ? (
-            <div className="relative overflow-hidden rounded-xl border border-cyan-500/20 py-[clamp(3rem,10vh,4.5rem)] text-center">
-              <div className="pointer-events-none absolute inset-0 bg-[repeating-linear-gradient(90deg,transparent,transparent_4px,rgba(220,38,38,0.04)_4px,rgba(220,38,38,0.04)_5px)]" />
-              <p className="relative font-mono text-[13px] uppercase tracking-[0.2em] text-cyan-200/75">Buffering visual feed…</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 gap-[clamp(1rem,2.5vw+0.35rem,1.5rem)] md:grid-cols-2 xl:grid-cols-3">
-              {videosToRender.map((v, i) => (
-                <VideoCard key={v.id} video={v} onPlay={setActiveVideo} index={i} />
-              ))}
-            </div>
-          )}
-          {!loading && !videos.length && !error ? (
-            <div className="rounded-xl border border-cyan-300/25 bg-black/40 px-6 py-14 text-center">
-              <p className="text-[18px] font-semibold text-cyan-100 sm:text-[19px]">No secure videos yet</p>
-              <p className="mx-auto mt-4 max-w-md text-[15px] leading-[1.65] text-neutral-300 sm:text-[16px]">
-                Add videos in <span className="text-cyan-200/85">Django admin</span> under{" "}
-                <span className="text-neutral-100">Video streaming - Stream videos</span>. Membership now uses the same secure
-                playback pipeline as Programs.
-              </p>
-            </div>
-          ) : null}
+          <MembershipVideoGallery videos={videosToRender} loading={loading} error={error} onPlay={setActiveVideo} />
         </div>
-        )}
-      </div>
+      )}
 
       <MembershipArticleReader state={articleReader} onClose={closeArticleReader} />
 
@@ -476,6 +449,7 @@ export function MembershipContentHub() {
           </motion.div>
         ) : null}
       </AnimatePresence>
-    </div> 
+      </div>
+    </div>
   );
 }
