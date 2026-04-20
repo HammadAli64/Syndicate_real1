@@ -1,0 +1,50 @@
+.eb-root {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+}
+
+.eb-canvas-container {
+  pointer-events: none;
+  position: absolute;
+  inset: -60px;
+  z-index: 1;
+}
+
+.eb-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.eb-layers {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+.eb-glow-1,
+.eb-glow-2,
+.eb-background-glow {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+}
+
+.eb-glow-1 {
+  background: radial-gradient(circle at 25% 20%, color-mix(in srgb, var(--electric-border-color) 25%, transparent), transparent 55%);
+}
+
+.eb-glow-2 {
+  background: radial-gradient(circle at 75% 80%, color-mix(in srgb, var(--electric-border-color) 28%, transparent), transparent 60%);
+}
+
+.eb-background-glow {
+  background: linear-gradient(145deg, rgba(12, 12, 28, 0.2), rgba(4, 4, 14, 0.5));
+}
+
+.eb-content {
+  position: relative;
+  z-index: 2;
+}
