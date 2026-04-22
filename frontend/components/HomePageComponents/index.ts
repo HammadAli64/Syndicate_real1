@@ -1,1 +1,0 @@
-export { SyndicateWordmark } from './effects'

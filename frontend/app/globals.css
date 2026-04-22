@@ -266,6 +266,68 @@ body {
   animation: marquee-reverse var(--duration) linear infinite;
 }
 
+/* Amber / gold — matches hamburger (border-amber-300/70, rgba(251,191,36) glow) */
+@keyframes neon-border-pulse {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 1px rgba(252, 211, 77, 0.55),
+      0 0 10px rgba(251, 191, 36, 0.28),
+      0 0 22px rgba(251, 191, 36, 0.16),
+      inset 0 0 24px rgba(15, 23, 42, 0.32);
+  }
+  50% {
+    box-shadow:
+      0 0 0 1px rgba(253, 230, 138, 0.78),
+      0 0 16px rgba(251, 191, 36, 0.42),
+      0 0 34px rgba(251, 191, 36, 0.26),
+      inset 0 0 28px rgba(15, 23, 42, 0.38);
+  }
+}
+
+@keyframes neon-caret-blink {
+  0%,
+  48% {
+    opacity: 1;
+  }
+  52%,
+  100% {
+    opacity: 0;
+  }
+}
+
+.neon-badge {
+  background: linear-gradient(180deg, rgba(2, 6, 23, 0.66), rgba(2, 6, 23, 0.5));
+  border: 1px solid rgba(252, 211, 77, 0.7);
+  backdrop-filter: blur(8px);
+  animation: neon-border-pulse 2.8s ease-in-out infinite;
+}
+
+.neon-badge-text {
+  color: #fde68a;
+  font-family: "Inter", "Segoe UI", "Roboto", "Helvetica Neue", Arial, sans-serif;
+  font-size: clamp(0.64rem, 1.8vw, 0.95rem);
+  font-weight: 500;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  text-shadow:
+    0 0 8px rgba(251, 191, 36, 0.35),
+    0 0 20px rgba(251, 191, 36, 0.18);
+  white-space: nowrap;
+}
+
+.neon-caret {
+  display: inline-block;
+  margin-left: 0.2em;
+  color: #fcd34d;
+  text-shadow:
+    0 0 6px rgba(251, 191, 36, 0.55),
+    0 0 14px rgba(251, 191, 36, 0.4),
+    0 0 24px rgba(251, 191, 36, 0.2);
+  filter: drop-shadow(0 0 4px rgba(251, 191, 36, 0.45));
+  animation: neon-caret-blink 1s step-end infinite;
+}
+
 /* Testimonials — cyber section shell */
 .testimonials-cyber-section {
   background: linear-gradient(180deg, #030508 0%, #050a0f 30%, #04080c 70%, #030508 100%);
@@ -318,5 +380,10 @@ body {
     transition: none !important;
     opacity: 1;
     transform: none;
+  }
+
+  .neon-badge,
+  .neon-caret {
+    animation: none !important;
   }
 }

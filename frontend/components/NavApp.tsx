@@ -1,15 +1,12 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { usePathname, useRouter } from 'next/navigation'
 import { type NavSectionId, RadialNav } from '@/components/RadialNav'
+import LetterGlitch from '@/components/LetterGlitch'
 import NavLogo from '@/components/NavLogo'
 
 export function NavApp() {
-  const router = useRouter()
-  const pathname = usePathname()
   const [menuOpen, setMenuOpen] = useState(false)
-  const [closing, setClosing] = useState(false)
   const [scrollActiveId, setScrollActiveId] = useState<NavSectionId>('home')
 
   const handleToggleMenu = () => {
@@ -18,12 +15,10 @@ export function NavApp() {
       return
     }
     setMenuOpen(true)
-    setClosing(false)
   }
 
   const handleClose = () => {
     setMenuOpen(false)
-    setClosing(false)
   }
 
   const scrollToId = (id: string) => {
@@ -37,10 +32,6 @@ export function NavApp() {
   }
 
   useEffect(() => {
-    if (pathname !== '/') {
-      return
-    }
-
     const onScroll = () => {
       const heroTop = document.getElementById('heroSection')?.getBoundingClientRect().top ?? Number.POSITIVE_INFINITY
       const homeTop = document.getElementById('homeSection')?.getBoundingClientRect().top ?? Number.POSITIVE_INFINITY
@@ -60,46 +51,23 @@ export function NavApp() {
     onScroll()
     window.addEventListener('scroll', onScroll, { passive: true })
     return () => window.removeEventListener('scroll', onScroll)
-  }, [pathname])
+  }, [])
 
-  const activeId: NavSectionId = pathname === '/what-you-get' ? 'whatYouGet' : pathname === '/login' ? 'login' : scrollActiveId
+  const activeId: NavSectionId = scrollActiveId
 
   const handleSelect = (id: NavSectionId) => {
-    if (id === 'whatYouGet') {
-      if (pathname !== '/what-you-get') {
-        window.location.assign('/what-you-get')
-      }
-      handleClose()
-      return
-    }
-
-    if (id === 'login') {
-      router.push('/login')
-      handleClose()
-      return
-    }
-
-    if (pathname !== '/') {
-      router.push('/')
-      setTimeout(() => {
-        if (id === 'home') scrollToId('heroSection')
-        if (id === 'ourMethods') scrollToId('ourMethodsSection')
-        if (id === 'joinNow') scrollToId('homeSection')
-      }, 120)
-      handleClose()
-      return
-    }
-
     if (id === 'home') scrollToId('heroSection')
+    if (id === 'whatYouGet') scrollToId('heroSection')
     if (id === 'ourMethods') scrollToId('ourMethodsSection')
     if (id === 'joinNow') scrollToId('homeSection')
+    if (id === 'login') scrollToId('heroSection')
     setScrollActiveId(id)
     handleClose()
   }
 
   return (
     <div
-      className="fixed left-0 right-0 top-0 z-50 flex flex-col rounded-b-2xl bg-gradient-to-b from-black/85 via-black/65 to-transparent backdrop-blur-[2px] transition-[height] duration-500 ease-in-out pt-2"
+      className="fixed left-0 right-0 top-0 z-50 flex flex-col bg-gradient-to-b from-black/45 via-black/20 to-transparent backdrop-blur-[2px] transition-[height] duration-500 ease-in-out pt-2"
       style={{
         height: menuOpen ? '100dvh' : '69px',
         minHeight: menuOpen ? '100dvh' : undefined,
@@ -108,6 +76,17 @@ export function NavApp() {
       }}
       role="banner"
     >
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        <LetterGlitch
+          glitchSpeed={130}
+          centerVignette={false}
+          outerVignette={false}
+          smooth
+          glitchColors={['#2b4539', '#7f5af0', '#61b3dc']}
+          layerOpacity={0.1}
+          className="bg-transparent"
+        />
+      </div>
       <div className="relative z-10 flex flex-1 flex-col min-h-0">
         <div
           className={`flex h-14 min-h-14 w-full shrink-0 items-center px-4 transition-[justify-content] duration-500 ease-in-out sm:h-16 sm:min-h-16 sm:px-5 ${
@@ -134,7 +113,6 @@ export function NavApp() {
           <div className="relative min-h-0 flex-1 overflow-visible p-2 sm:p-[10px]">
             <RadialNav
               open={menuOpen}
-              closing={closing}
               activeId={activeId}
               onClose={handleClose}
               onSelect={handleSelect}

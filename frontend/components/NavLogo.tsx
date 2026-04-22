@@ -2,14 +2,14 @@ import Image from 'next/image'
 
 export default function NavLogo() {
   return (
-    <div className="flex items-center gap-2" data-logo="gun">
+    <div className="flex items-center" data-logo="gun" aria-label="Logo">
       <Image
-        src="/logo.png"
-        alt="Nav Logo"
-        width={120}
-        height={48}
+        src="/Assets/logo.png"
+        alt="ONEM Logo"
+        width={119}
+        height={40}
         priority
-        className="hamburger-attract h-8 w-auto max-w-[80px] sm:h-10 sm:max-w-[100px] md:h-12 md:max-w-[120px]"
+        className="hamburger-attract h-8 w-auto sm:h-10 md:h-12"
         style={{ filter: 'drop-shadow(0 0 14px rgba(251,191,36,0.35))' }}
       />
     </div>

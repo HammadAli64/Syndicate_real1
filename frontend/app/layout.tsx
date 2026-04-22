@@ -1,6 +1,5 @@
 import type { Metadata } from 'next'
 import './globals.css'
-import { GlobalEyeBackdrop } from '@/components/GlobalEyeBackdrop'
 import { NavApp } from '@/components/NavApp'
 
 export const metadata: Metadata = {
@@ -24,9 +23,8 @@ export default function RootLayout({
         <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
       </head>
       <body suppressHydrationWarning>
-        <GlobalEyeBackdrop />
         <NavApp />
-        <main className="relative z-10 pt-24 sm:pt-28">{children}</main>
+        <main className="relative z-10">{children}</main>
       </body>
     </html>
   )

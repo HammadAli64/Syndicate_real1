@@ -57,18 +57,6 @@ function getSlots(radius: number) {
   })
 }
 
-const SHUFFLE_INTERVAL_MS = 2600
-const SHUFFLE_DURATION = 0.85
-
-function shuffleArray<T>(arr: T[]): T[] {
-  const out = [...arr]
-  for (let i = out.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1))
-    ;[out[i], out[j]] = [out[j], out[i]]
-  }
-  return out
-}
-
 export function RadialNav({
   open,
   closing = false,
@@ -81,8 +69,6 @@ export function RadialNav({
   const rootRef = useRef<HTMLDivElement | null>(null)
   const tlRef = useRef<gsap.core.Timeline | null>(null)
   const glowRef = useRef<gsap.core.Tween | null>(null)
-  const shuffleIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
-  const itemToSlotRef = useRef<number[]>([0, 1, 2, 3, 4])
 
   const placed = useMemo(() => {
     const count = items.length
@@ -124,10 +110,6 @@ export function RadialNav({
     if (!open) {
       tlRef.current?.kill()
       glowRef.current?.kill()
-      if (shuffleIntervalRef.current) {
-        clearInterval(shuffleIntervalRef.current)
-        shuffleIntervalRef.current = null
-      }
       tlRef.current = gsap.timeline().to('[data-rnav="backdrop"]', {
         autoAlpha: 0,
         duration: 0.25,
@@ -157,10 +139,6 @@ export function RadialNav({
 
     tlRef.current?.kill()
     glowRef.current?.kill()
-    if (shuffleIntervalRef.current) {
-      clearInterval(shuffleIntervalRef.current)
-      shuffleIntervalRef.current = null
-    }
 
     const nodes = rootRef.current.querySelectorAll<HTMLElement>('[data-rnav="item"]')
     const logoEl = document.querySelector<HTMLElement>('[data-logo="gun"]')
@@ -180,8 +158,6 @@ export function RadialNav({
       startX = logoCx - centerCx
       startY = logoCy - centerCy
     }
-
-    itemToSlotRef.current = [0, 1, 2, 3, 4]
 
     const slots = getSlots(getSlotRadius())
 
@@ -239,35 +215,7 @@ export function RadialNav({
       ease: 'sine.inOut',
     })
 
-    const runShuffle = () => {
-      if (!rootRef.current) return
-      const slots = getSlots(getSlotRadius())
-      const items = rootRef.current.querySelectorAll<HTMLElement>('[data-rnav="item"]')
-      itemToSlotRef.current = shuffleArray([0, 1, 2, 3, 4])
-      items.forEach((el, i) => {
-        const slotIdx = itemToSlotRef.current[i] ?? i
-        const slot = slots[slotIdx]
-        if (!slot) return
-        gsap.to(el, {
-          x: slot.x,
-          y: slot.y,
-          duration: SHUFFLE_DURATION + 0.2,
-          ease: 'power2.inOut',
-          overwrite: true,
-        })
-      })
-    }
-
-    const firstShuffleDelay = setTimeout(runShuffle, 1400)
-    shuffleIntervalRef.current = setInterval(runShuffle, SHUFFLE_INTERVAL_MS)
-
-    return () => {
-      clearTimeout(firstShuffleDelay)
-      if (shuffleIntervalRef.current) {
-        clearInterval(shuffleIntervalRef.current)
-        shuffleIntervalRef.current = null
-      }
-    }
+    return
   }, [open, prefersReducedMotion, placed])
 
   // When cursor leaves section: cards assemble to center, then close
@@ -279,10 +227,6 @@ export function RadialNav({
     }
 
     glowRef.current?.kill()
-    if (shuffleIntervalRef.current) {
-      clearInterval(shuffleIntervalRef.current)
-      shuffleIntervalRef.current = null
-    }
 
     const logoEl = document.querySelector<HTMLElement>('[data-logo="gun"]')
     const centerEl = rootRef.current.querySelector<HTMLElement>('[data-rnav="center"]')
