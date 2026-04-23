@@ -382,7 +382,7 @@ export function ProgramsCourseSection({
             ) : null}
             <div
               className={cn(
-                "flex flex-col overflow-hidden rounded-2xl border-2 px-2.5 py-2 sm:px-3.5 sm:py-3",
+                "flex flex-col overflow-hidden rounded-2xl border-2 px-2.5 py-2.5 sm:px-3.5 sm:py-3.5",
                 theme.infoPanel,
                 "bg-black/60 shadow-[0_10px_30px_rgba(0,0,0,0.62),inset_0_1px_0_rgba(255,255,255,0.12)]",
                 "backdrop-blur-md transition duration-300 group-hover/card:brightness-125 group-hover/card:saturate-125"
@@ -398,22 +398,22 @@ export function ProgramsCourseSection({
                   {pl.title}
                 </div>
               </div>
-              <div className="mt-1.5 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-1.5">
-                <span className="inline-flex min-w-0 items-center gap-0.5 overflow-hidden rounded-full border border-white/25 bg-black/45 px-1.5 py-0.5 font-sans text-[9px] font-semibold tracking-[0.01em] text-white/95 [text-shadow:none] sm:px-2 sm:py-1 sm:text-[11px]">
+              <div className="mt-2 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2.5">
+                <span className="inline-flex min-w-0 items-center gap-0.5 overflow-hidden rounded-full border border-amber-300/45 bg-[#130d03]/92 px-2 py-0.5 font-sans text-[11px] font-bold tracking-[0.01em] text-amber-50 shadow-[0_0_14px_rgba(245,158,11,0.28)] [text-shadow:none] sm:px-3 sm:py-1 sm:text-[13px]">
                   {Array.from({ length: 5 }).map((_, idx) => (
                     <Star
                       key={`${pl.id}-star-${idx}`}
                       className={cn(
                         "h-2.5 w-2.5 sm:h-3 sm:w-3",
-                        idx < roundedStarCount(rating) ? "fill-amber-300 text-amber-300" : "fill-transparent text-white/35"
+                        idx < roundedStarCount(rating) ? "fill-amber-300 text-amber-300" : "fill-transparent text-amber-100/35"
                       )}
                     />
                   ))}
-                  <span className="ml-1 hidden tabular-nums sm:inline">{rating.toFixed(1)}</span>
+                  <span className="ml-1 tabular-nums text-amber-50/95">{rating.toFixed(1)}</span>
                 </span>
                 <span
                   className={cn(
-                    "inline-flex shrink-0 items-center rounded-full border border-white/20 bg-black/40 px-1.5 py-0.5 font-sans text-[10px] font-black tracking-tight sm:px-2.5 sm:text-[20px]",
+                    "inline-flex shrink-0 items-center whitespace-nowrap rounded-full border border-emerald-300/50 bg-[#03140d]/95 px-2.5 py-0.5 font-sans text-[13px] font-black tracking-tight text-emerald-100 shadow-[0_0_16px_rgba(52,211,153,0.28)] sm:px-3.5 sm:py-1 sm:text-[17px]",
                     theme.priceColor,
                     theme.priceGlow
                   )}

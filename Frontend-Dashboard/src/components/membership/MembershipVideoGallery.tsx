@@ -1,19 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { VideoCard, type VideoDto } from "./VideoCard";
 import { getVideoGridSlot } from "./videoGridSlots";
 
 function cx(...parts: Array<string | false | null | undefined>) {
   return parts.filter(Boolean).join(" ");
-}
-
-function toYyyyMmDd(d: Date): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
 }
 
 function startOfDayMs(ymd: string): number {
@@ -36,6 +29,8 @@ type MembershipVideoGalleryProps = {
   videoNext?: string | null;
   onLoadMore?: () => void;
   onPlay: (video: VideoDto) => void;
+  activeTab?: "articles" | "videos";
+  onSwitchTab?: (tab: "articles" | "videos") => void;
 };
 
 export function MembershipVideoGallery({
@@ -44,15 +39,12 @@ export function MembershipVideoGallery({
   error,
   videoNext = null,
   onLoadMore,
-  onPlay
+  onPlay,
+  activeTab = "videos",
+  onSwitchTab
 }: MembershipVideoGalleryProps) {
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
-  const [rangeMode, setRangeMode] = useState<"all" | "7d" | "30d" | "custom">("all");
-
-  useEffect(() => {
-    if (!dateFrom && !dateTo) setRangeMode("all");
-  }, [dateFrom, dateTo]);
 
   const filteredVideos = useMemo(() => {
     if (!dateFrom && !dateTo) return videos;
@@ -64,21 +56,6 @@ export function MembershipVideoGallery({
       return true;
     });
   }, [videos, dateFrom, dateTo]);
-
-  const setPreset = (mode: "all" | "7d" | "30d") => {
-    setRangeMode(mode);
-    if (mode === "all") {
-      setDateFrom("");
-      setDateTo("");
-      return;
-    }
-    const days = mode === "7d" ? 7 : 30;
-    const end = new Date();
-    const start = new Date();
-    start.setDate(start.getDate() - days);
-    setDateFrom(toYyyyMmDd(start));
-    setDateTo(toYyyyMmDd(end));
-  };
 
   const filterActive = Boolean(dateFrom || dateTo);
   const showFilteredEmpty = !loading && videos.length > 0 && filteredVideos.length === 0;
@@ -116,105 +93,60 @@ export function MembershipVideoGallery({
         />
 
         <div className="relative border-b border-white/[0.08] bg-black/35 px-4 py-4 md:px-6 md:py-5">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-[0.28em] text-[color:var(--gold-neon)]/90">
-                Video archive
-              </p>
-              <h3 className="mt-1 text-[clamp(1rem,2vw,1.2rem)] font-black italic tracking-tight text-white/95">
-                Briefings & field drops
-              </h3>
-              <p className="mt-1 max-w-xl text-[11px] leading-relaxed text-white/45">
-                Mixed landscape reels and portrait verticals. Narrow by publish date (filters the videos already loaded below).
-              </p>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-3 lg:justify-end">
-              <span className="text-[9px] font-black uppercase tracking-[0.2em] text-white/35">Quick</span>
-              <div className="flex flex-wrap gap-2">
-                {(
-                  [
-                    { id: "all" as const, label: "All time" },
-                    { id: "7d" as const, label: "7d" },
-                    { id: "30d" as const, label: "30d" }
-                  ] as const
-                ).map((p) => (
-                  <button
-                    key={p.id}
-                    type="button"
-                    onClick={() => setPreset(p.id)}
-                    className={cx(
-                      "rounded-lg border px-3 py-2 text-[10px] font-black uppercase tracking-[0.18em] transition",
-                      rangeMode === p.id
-                        ? "border-[rgba(250,204,21,0.45)] bg-[rgba(250,204,21,0.1)] text-[color:var(--gold-neon)]"
-                        : "border-white/12 bg-black/40 text-white/55 hover:border-white/22 hover:text-white/75"
-                    )}
-                  >
-                    {p.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_auto] lg:items-end">
-            <label className="block min-w-0">
-              <span className="mb-1.5 block text-[9px] font-black uppercase tracking-[0.2em] text-white/40">
-                From
-              </span>
+          <div className="flex flex-wrap items-end gap-3 xl:flex-nowrap">
+            <label className="block min-w-[170px] flex-1 xl:max-w-[240px]">
+              <span className="mb-1.5 block text-[9px] font-black uppercase tracking-[0.2em] text-white/40">From</span>
               <input
                 type="date"
                 value={dateFrom}
                 onChange={(e) => {
-                  setRangeMode("custom");
                   setDateFrom(e.target.value);
                 }}
                 className={inputClass}
               />
             </label>
-            <label className="block min-w-0">
+            <label className="block min-w-[170px] flex-1 xl:max-w-[240px]">
               <span className="mb-1.5 block text-[9px] font-black uppercase tracking-[0.2em] text-white/40">To</span>
               <input
                 type="date"
                 value={dateTo}
                 onChange={(e) => {
-                  setRangeMode("custom");
                   setDateTo(e.target.value);
                 }}
                 className={inputClass}
               />
             </label>
-            <div className="flex flex-wrap gap-2 sm:col-span-2 lg:col-span-1 lg:justify-end">
-              <button
-                type="button"
-                onClick={() => {
-                  setRangeMode("all");
-                  setDateFrom("");
-                  setDateTo("");
-                }}
-                className="rounded-lg border border-white/14 bg-black/45 px-4 py-2.5 text-[10px] font-black uppercase tracking-[0.16em] text-white/60 transition hover:border-white/25 hover:text-white/85"
-              >
-                Clear range
-              </button>
+            <div className="flex flex-wrap items-center gap-2 xl:ml-auto">
+              {onSwitchTab
+                ? ([
+                    { id: "articles" as const, label: "Articles", sub: "Text archive" },
+                    { id: "videos" as const, label: "Videos", sub: "Visual feed" },
+                  ] as const).map((t) => (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => onSwitchTab(t.id)}
+                  className={cx(
+                    "group relative overflow-hidden rounded-lg border px-6 py-3 text-left transition",
+                    activeTab === t.id
+                      ? "cut-frame-sm cyber-frame gold-stroke border-[color:var(--gold-neon-border)] bg-[rgba(250,204,21,0.14)] text-[color:var(--gold-neon)] shadow-[0_0_24px_rgba(250,204,21,0.18)]"
+                      : "cut-frame-sm cyber-frame border-white/15 bg-black/55 text-neutral-400 hover:border-[color:var(--gold-neon-border-mid)] hover:text-[color:var(--gold-neon)]/90"
+                  )}
+                >
+                  <span className="block text-[13px] font-black uppercase tracking-[0.16em]">{t.label}</span>
+                  <span className="mt-0.5 block text-[10px] font-mono uppercase tracking-wider text-neutral-500 group-hover:text-neutral-400">
+                    {t.sub}
+                  </span>
+                </button>
+              ))
+                : null}
             </div>
           </div>
-
-          <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-white/[0.06] pt-4">
-            <span className="text-[9px] font-black uppercase tracking-[0.2em] text-white/35">Layout key</span>
-            <span className="inline-flex items-center gap-2 rounded-full border border-[rgba(250,204,21,0.35)] bg-[rgba(250,204,21,0.08)] px-3 py-1 text-[9px] font-bold uppercase tracking-wider text-[color:var(--gold-neon)]">
-              <span className="h-2 w-3 rounded-sm bg-[rgba(250,204,21,0.5)]" aria-hidden />
-              Landscape / wide
-            </span>
-            <span className="inline-flex items-center gap-2 rounded-full border border-[rgba(248,113,113,0.4)] bg-[rgba(127,29,29,0.2)] px-3 py-1 text-[9px] font-bold uppercase tracking-wider text-red-200/90">
-              <span className="h-3 w-2 rounded-sm bg-[rgba(248,113,113,0.45)]" aria-hidden />
-              Portrait 9:16
-            </span>
-            {filterActive ? (
-              <span className="text-[10px] text-white/45">
-                Showing <span className="font-bold text-white/75">{filteredVideos.length}</span> of {videos.length}
-              </span>
-            ) : null}
-          </div>
+          {filterActive ? (
+            <div className="mt-3 text-right text-[10px] text-white/45">
+              Showing <span className="font-bold text-white/75">{filteredVideos.length}</span> of {videos.length}
+            </div>
+          ) : null}
         </div>
 
         <div className="relative p-4 md:p-6">
