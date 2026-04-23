@@ -306,7 +306,7 @@ body {
 .neon-badge-text {
   color: #fde68a;
   font-family: "Inter", "Segoe UI", "Roboto", "Helvetica Neue", Arial, sans-serif;
-  font-size: clamp(0.64rem, 1.8vw, 0.95rem);
+  font-size: clamp(0.82rem, 2.3vw, 1.3rem);
   font-weight: 500;
   letter-spacing: 0.26em;
   text-transform: uppercase;

@@ -81,7 +81,7 @@ export default function CoursesGrid({ courses = DEFAULT_COURSES }: CoursesGridPr
       <div className="relative z-10 mx-auto max-w-6xl">
         <h2 className="mb-10 text-center text-2xl font-black uppercase sm:mb-12 sm:text-3xl md:text-4xl lg:text-5xl">
           <span className="bg-gradient-to-r from-[#ff006e] via-[#00d9ff] via-[#39ff14] to-[#a855f7] bg-clip-text text-transparent drop-shadow-[0_0_20px_rgba(255,0,110,0.4)]">
-            Featured Courses
+            Featured PROGRAMS
           </span>
         </h2>
 

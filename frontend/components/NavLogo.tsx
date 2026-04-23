@@ -5,7 +5,7 @@ export default function NavLogo() {
     <div className="flex items-center" data-logo="gun" aria-label="Logo">
       <Image
         src="/Assets/logo.png"
-        alt="ONEM Logo"
+        alt="syndicate Logo"
         width={119}
         height={40}
         priority

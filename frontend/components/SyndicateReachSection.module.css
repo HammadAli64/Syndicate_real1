@@ -39,25 +39,26 @@
   border-radius:16px;
   overflow:hidden;
   background:
-    radial-gradient(1000px 300px at 50% -10%, rgba(0,217,255,.10), transparent 60%),
-    linear-gradient(180deg, #090e16 0%, #05080d 65%, #04060a 100%);
-  border:1px solid rgba(255,255,255,.08);
+    radial-gradient(820px 240px at 50% -8%, rgba(0,217,255,.14), transparent 62%),
+    linear-gradient(180deg, #061019 0%, #040a11 35%, #03070d 100%);
+  border:1px solid rgba(0,217,255,.16);
   box-shadow:
-    inset 0 0 0 1px rgba(255,255,255,.03),
-    0 16px 50px rgba(0,0,0,.55);
+    inset 0 0 0 1px rgba(0,217,255,.06),
+    0 14px 44px rgba(0,0,0,.58);
 }
 
 .reachMapWrap::before{
   content:"";
   position:absolute; inset:0;
   background:
-    radial-gradient(circle at 20% 33%, rgba(255,255,255,.14) 0 1px, transparent 1.7px) 0 0/8px 8px,
-    radial-gradient(ellipse at 26% 42%, rgba(90,110,130,.22) 0 20%, transparent 21%),
-    radial-gradient(ellipse at 50% 41%, rgba(90,110,130,.20) 0 23%, transparent 24%),
-    radial-gradient(ellipse at 74% 43%, rgba(90,110,130,.20) 0 16%, transparent 17%),
-    radial-gradient(ellipse at 93% 44%, rgba(90,110,130,.16) 0 10%, transparent 11%);
-  opacity:.44;
-  filter:contrast(120%);
+    radial-gradient(circle at 12% 41%, rgba(0,235,255,.50) 0 .9px, transparent 1.8px) 0 0/8px 8px,
+    radial-gradient(ellipse at 24% 56%, rgba(0,225,255,.21) 0 24%, transparent 25%),
+    radial-gradient(ellipse at 49% 52%, rgba(0,225,255,.2) 0 22%, transparent 23%),
+    radial-gradient(ellipse at 72% 51%, rgba(0,225,255,.18) 0 18%, transparent 19%),
+    radial-gradient(ellipse at 84% 66%, rgba(0,225,255,.17) 0 13%, transparent 14%),
+    radial-gradient(ellipse at 92% 54%, rgba(0,225,255,.16) 0 10%, transparent 11%);
+  opacity:.34;
+  filter:contrast(124%) saturate(108%);
   pointer-events:none;
 }
 
@@ -66,21 +67,21 @@
   position:absolute; inset:0;
   pointer-events:none;
   background:
-    radial-gradient(ellipse at 73% 37%, rgba(83,106,130,.26) 0 18%, transparent 19%),
-    radial-gradient(ellipse at 79% 42%, rgba(83,106,130,.22) 0 16%, transparent 17%),
-    radial-gradient(ellipse at 88% 50%, rgba(83,106,130,.2) 0 14%, transparent 15%),
-    radial-gradient(ellipse at 92% 34%, rgba(83,106,130,.18) 0 10%, transparent 11%);
+    radial-gradient(ellipse at 26% 58%, rgba(1,9,14,.92) 0 18%, transparent 19%),
+    radial-gradient(ellipse at 52% 54%, rgba(1,9,14,.9) 0 23%, transparent 24%),
+    radial-gradient(ellipse at 76% 56%, rgba(1,9,14,.9) 0 16%, transparent 17%),
+    radial-gradient(ellipse at 93% 60%, rgba(1,9,14,.9) 0 12%, transparent 13%);
   mix-blend-mode:screen;
-  opacity:.42;
+  opacity:.54;
 }
 
 .reachGrid{
   position:absolute; inset:0;
   background:
-    linear-gradient(to right, rgba(255,255,255,.03) 1px, transparent 1px) 0 0/44px 44px,
-    linear-gradient(to bottom, rgba(255,255,255,.03) 1px, transparent 1px) 0 0/44px 44px;
-  mix-blend-mode:screen;
-  opacity:.12;
+    linear-gradient(to right, rgba(0,225,255,.045) 1px, transparent 1px) 0 0/44px 44px,
+    linear-gradient(to bottom, rgba(0,225,255,.045) 1px, transparent 1px) 0 0/44px 44px;
+  mix-blend-mode:plus-lighter;
+  opacity:.15;
 }
 
 .reachVignette{
@@ -98,14 +99,12 @@
 
 .line{
   fill:none;
-  stroke:#00d9ff;
-  stroke-width:2;
+  stroke:#05e7ff;
+  stroke-width:1.8;
   stroke-linecap:round;
-  opacity:.9;
-  filter:drop-shadow(0 0 6px rgba(0,217,255,.55));
-  stroke-dasharray:420;
-  stroke-dashoffset:420;
-  animation:drawLoop 3.1s linear infinite, linePulse 3.8s ease-in-out infinite;
+  opacity:.92;
+  filter:drop-shadow(0 0 5px rgba(5,231,255,.6));
+  animation:linePulse 3.8s ease-in-out infinite;
 }
 
 .delay1{animation-delay:.0s,.0s}
@@ -129,17 +128,17 @@
   bottom:14px;
   transform:translateX(-50%);
   font-family:"Orbitron",sans-serif;
-  font-size:clamp(.7rem, 1vw + .42rem, 1.35rem);
+  font-size:clamp(.7rem, 1vw + .42rem, 1.25rem);
   letter-spacing:.02em;
-  color:#8eefff;
-  background:rgba(2,12,18,.82);
-  border:1px solid rgba(0,217,255,.32);
-  border-radius:12px;
-  padding:.38em .78em;
-  text-shadow:0 0 8px rgba(0,220,255,.35);
+  color:#2ce7ff;
+  background:rgba(2,10,16,.88);
+  border:1px solid rgba(3,225,255,.35);
+  border-radius:10px;
+  padding:.34em .74em;
+  text-shadow:0 0 8px rgba(0,220,255,.28);
   box-shadow:
-    inset 0 0 0 1px rgba(255,255,255,.04),
-    0 0 14px rgba(0,217,255,.14);
+    inset 0 0 0 1px rgba(255,255,255,.03),
+    0 0 12px rgba(0,217,255,.12);
   backdrop-filter:blur(2px);
 }
 
@@ -148,12 +147,12 @@
   left:50%;
   top:50%;
   transform:translate(-50%,-50%);
-  width:clamp(7px, 0.8vw, 10px); height:clamp(7px, 0.8vw, 10px); border-radius:999px;
-  background:#00d9ff;
+  width:clamp(7px, 0.85vw, 11px); height:clamp(7px, 0.85vw, 11px); border-radius:999px;
+  background:#00e7ff;
   box-shadow:
-    0 0 0 6px rgba(0,217,255,.16),
-    0 0 0 12px rgba(0,217,255,.08),
-    0 0 18px rgba(0,217,255,.95);
+    0 0 0 5px rgba(0,231,255,.16),
+    0 0 0 10px rgba(0,231,255,.07),
+    0 0 16px rgba(0,231,255,.85);
   animation:dotPulse 2.2s ease-in-out infinite;
 }
 
@@ -161,14 +160,8 @@
 .city:nth-child(5n+2) .tag{animation:float 5.0s ease-in-out infinite .3s}
 .city:nth-child(5n+3) .tag{animation:float 4.4s ease-in-out infinite .6s}
 
-@keyframes drawLoop{
-  0%{ stroke-dashoffset:420; }
-  70%{ stroke-dashoffset:0; }
-  100%{ stroke-dashoffset:-40; }
-}
-
 @keyframes linePulse{
-  0%,100%{opacity:.55}
+  0%,100%{opacity:.62}
   50%{opacity:1}
 }
 

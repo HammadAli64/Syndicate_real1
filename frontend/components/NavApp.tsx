@@ -1,13 +1,30 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { usePathname, useRouter } from 'next/navigation'
 import { type NavSectionId, RadialNav } from '@/components/RadialNav'
 import LetterGlitch from '@/components/LetterGlitch'
-import NavLogo from '@/components/NavLogo'
+
+const SECTION_ROUTES: Record<Exclude<NavSectionId, 'joinNow'>, string> = {
+  home: '/',
+  whatYouGet: '/what-you-get',
+  ourMethods: '/our-methods',
+  programs: '/programs',
+}
+
+function getActiveNavId(pathname: string, hash: string): NavSectionId {
+  if (hash === '#joinNowSection') return 'joinNow'
+  if (pathname === '/what-you-get') return 'whatYouGet'
+  if (pathname === '/our-methods') return 'ourMethods'
+  if (pathname === '/programs') return 'programs'
+  return 'home'
+}
 
 export function NavApp() {
+  const pathname = usePathname()
+  const router = useRouter()
   const [menuOpen, setMenuOpen] = useState(false)
-  const [scrollActiveId, setScrollActiveId] = useState<NavSectionId>('home')
+  const [activeId, setActiveId] = useState<NavSectionId>('home')
 
   const handleToggleMenu = () => {
     if (menuOpen) {
@@ -21,47 +38,24 @@ export function NavApp() {
     setMenuOpen(false)
   }
 
-  const scrollToId = (id: string) => {
-    const section = document.getElementById(id)
-    if (section) {
-      section.scrollIntoView({
-        behavior: 'smooth',
-        block: 'start',
-      })
-    }
-  }
-
   useEffect(() => {
-    const onScroll = () => {
-      const heroTop = document.getElementById('heroSection')?.getBoundingClientRect().top ?? Number.POSITIVE_INFINITY
-      const homeTop = document.getElementById('homeSection')?.getBoundingClientRect().top ?? Number.POSITIVE_INFINITY
-      const methodsTop = document.getElementById('ourMethodsSection')?.getBoundingClientRect().top ?? Number.POSITIVE_INFINITY
-
-      if (methodsTop <= 220) {
-        setScrollActiveId('ourMethods')
-      } else if (homeTop <= 220) {
-        setScrollActiveId('joinNow')
-      } else if (heroTop <= 220) {
-        setScrollActiveId('home')
-      } else {
-        setScrollActiveId('home')
-      }
+    const syncActive = () => {
+      const hash = typeof window !== 'undefined' ? window.location.hash : ''
+      setActiveId(getActiveNavId(pathname, hash))
     }
 
-    onScroll()
-    window.addEventListener('scroll', onScroll, { passive: true })
-    return () => window.removeEventListener('scroll', onScroll)
-  }, [])
-
-  const activeId: NavSectionId = scrollActiveId
+    syncActive()
+    window.addEventListener('hashchange', syncActive)
+    return () => window.removeEventListener('hashchange', syncActive)
+  }, [pathname])
 
   const handleSelect = (id: NavSectionId) => {
-    if (id === 'home') scrollToId('heroSection')
-    if (id === 'whatYouGet') scrollToId('heroSection')
-    if (id === 'ourMethods') scrollToId('ourMethodsSection')
-    if (id === 'joinNow') scrollToId('homeSection')
-    if (id === 'login') scrollToId('heroSection')
-    setScrollActiveId(id)
+    if (id === 'joinNow') {
+      router.push('/#joinNowSection')
+    } else {
+      router.push(SECTION_ROUTES[id])
+    }
+    setActiveId(id)
     handleClose()
   }
 
@@ -93,9 +87,6 @@ export function NavApp() {
             menuOpen ? 'justify-start' : 'justify-center'
           }`}
         >
-          <button type="button" onClick={handleToggleMenu} className="inline-flex items-center" aria-label={menuOpen ? 'Close menu' : 'Open menu'}>
-            <NavLogo />
-          </button>
           {!menuOpen && (
             <button
               type="button"

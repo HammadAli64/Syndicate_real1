@@ -4,11 +4,13 @@
   "version": "0.0.0",
   "scripts": {
     "dev": "next dev",
+    "dev:clean": "node -e \"require('fs').rmSync('.next', { recursive: true, force: true })\" && next dev",
     "build": "next build",
     "start": "next start",
     "lint": "eslint ."
   },
   "dependencies": {
+    "@use-gesture/react": "^10.3.1",
     "framer-motion": "^12.38.0",
     "gsap": "^3.14.2",
     "lucide-react": "^1.8.0",

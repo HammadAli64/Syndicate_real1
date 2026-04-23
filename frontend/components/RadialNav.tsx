@@ -6,7 +6,7 @@ import { usePrefersReducedMotion } from '@/hooks/usePrefersReducedMotion'
 import { ScrambleText } from './ScrambleText'
 import NavLogo from './NavLogo'
 
-export type NavSectionId = 'home' | 'whatYouGet' | 'ourMethods' | 'joinNow' | 'login'
+export type NavSectionId = 'home' | 'whatYouGet' | 'ourMethods' | 'joinNow' | 'programs'
 
 export type RadialNavItem = {
   id: NavSectionId
@@ -28,7 +28,7 @@ const defaultItems: RadialNavItem[] = [
   { id: 'whatYouGet', label: 'What You Get' },
   { id: 'ourMethods', label: 'Our Methods' },
   { id: 'joinNow', label: 'Join Now' },
-  { id: 'login', label: 'Courses' },
+  { id: 'programs', label: 'Programs' },
 ]
 
 const THEMES: Record<NavSectionId, { color: string; bg: string; border: string; glow: string }> = {
@@ -36,7 +36,7 @@ const THEMES: Record<NavSectionId, { color: string; bg: string; border: string; 
   whatYouGet: { color: '#22d3ee', bg: 'rgba(34,211,238,0.12)', border: 'rgba(34,211,238,0.5)', glow: 'rgba(52, 210, 235, 0.4)' },
   ourMethods: { color: '#d946ef', bg: 'rgba(217,70,239,0.14)', border: 'rgba(217,70,239,0.5)', glow: 'rgba(217,70,239,0.4)' },
   joinNow: { color: '#fbbf24', bg: 'rgba(251,191,36,0.12)', border: 'rgba(251,191,36,0.5)', glow: 'rgba(248, 191, 47, 0.4)' },
-  login: { color: '#f472b6', bg: 'rgba(244,114,182,0.12)', border: 'rgba(208, 70, 243, 0.5)', glow: 'rgba(218, 114, 244, 0.4)' },
+  programs: { color: '#f472b6', bg: 'rgba(244,114,182,0.12)', border: 'rgba(208, 70, 243, 0.5)', glow: 'rgba(218, 114, 244, 0.4)' },
 }
 
 /** Slot radius by viewport: smaller on mobile so buttons stay on screen */

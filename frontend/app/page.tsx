@@ -1,10 +1,64 @@
 import Image from 'next/image'
+import Link from 'next/link'
+import { PricingPage } from '@/components/AnimatedPricingPage'
+import CertificatesSection from '@/components/CertificatesSection'
+import DomeGallery from '@/components/DomeGallery'
+import FAQSection from '@/components/FAQSection'
+import FeaturedLogosStrip from '@/components/FeaturedLogosStrip'
 import LetterGlitch from '@/components/LetterGlitch'
 import NeonTypingBadge from '@/components/NeonTypingBadge'
-import FeaturedLogosStrip from '@/components/FeaturedLogosStrip'
+import SiteFooter from '@/components/SiteFooter'
 import SyndicateReachSection from '@/components/SyndicateReachSection'
-import CertificatesSection from '@/components/CertificatesSection'
-import CoursesGrid from '@/components/CoursesGrid'
+
+const FEATURED_LOGOS = [
+  {
+    src: '/Assets/press-forbes.png',
+    alt: 'Forbes logo',
+    href: 'https://forbes.ge/en/how-the-syndicate-uses-mastery-and-empowerment-to-redefine-business/',
+  },
+  {
+    src: '/Assets/press-luxury.png',
+    alt: 'LLM logo',
+    href: 'https://www.luxurylifestylemag.co.uk/money/how-the-syndicate-empowers-individuals-to-master-power-money-and-influence-in-the-money-mastery-course/',
+  },
+  {
+    src: '/Assets/press-gq.png',
+    alt: 'GQ logo',
+    href: 'https://gq.co.za/wealth/2025-02-10-how-the-syndicate-can-disrupt-the-traditional-model-of-influence-and-education-in-the-digital-age/',
+  },
+]
+
+const METHODS = [
+  {
+    title: 'Signal-Based Training',
+    description:
+      'Learn from real operating principles: weekly execution loops, operator scorecards, and decisions that compound over time.',
+  },
+  {
+    title: 'Systems Over Motivation',
+    description:
+      'Replace random effort with repeatable systems for outreach, delivery, and cash flow so momentum does not rely on mood.',
+  },
+  {
+    title: 'Network Accountability',
+    description:
+      'Use cohort pressure and peer review to maintain standards, cut procrastination, and keep your actions aligned with outcomes.',
+  },
+]
+
+const PROGRAM_IMAGE_BASE = '/Assets/programs/cources%20imnages'
+const courseImage = (fileName: string) => `${PROGRAM_IMAGE_BASE}/${encodeURIComponent(fileName)}`
+
+const FEATURED_PROGRAM_IMAGES = [
+  { src: courseImage('make_best_thumbnails_or_cover_image_of_program_wordpress_blog_dystopian_futuristc_cyber_vibes__56y25d9msuef6h5mvdp7_0.png'), alt: 'WordPress Blog' },
+  { src: courseImage('make_best_thumbnails_or_cover_image_of_program_framer_crash_course__dystopian_futuristic_cyber__sv3m15ue62yv42axqzjz_3.png'), alt: 'Framer Crash Course' },
+  { src: courseImage('make_best_thumbnails_or_cover_image_of_program_faceless_youtube_ai_content_creator_course_dystopian_6ilaa9szo8ti113v76xv_0.png'), alt: 'Faceless YouTube AI Creator' },
+  { src: courseImage('make_best_thumbnails_or_cover_image_of_program_ai_automations_dystopian_futuristic_cyber__jo1dnkoktqk1eiv9foxm_2.png'), alt: 'AI Automations' },
+  { src: courseImage('make_best_thumbnails_or_cover_image_of_program_crypto_trading_with_technical_analysis_course__dysto_jne4vbob12582s4qybop_2.png'), alt: 'Crypto Trading TA' },
+  { src: courseImage('make_best_thumbnails_or_cover_image_of_program_print_on_demand_clothing___zxxqlpgl77cee8pe59ru_2.png'), alt: 'Print on Demand Clothing' },
+  { src: courseImage('make_best_thumbnails_or_cover_image_of_program_python_programming__dystopian_cyber__pds64wpqtzleuu2ucwkp_0.png'), alt: 'Python Programming' },
+  { src: courseImage('new-project (12).png'), alt: 'Building Apps using React JS' },
+]
 
 export default function Home() {
   return (
@@ -51,104 +105,114 @@ export default function Home() {
             }}
           />
         </div>
+        <div className="absolute bottom-4 left-1/2 z-20 w-[min(94vw,1180px)] -translate-x-1/2 sm:bottom-6">
+          <FeaturedLogosStrip logos={FEATURED_LOGOS} speedSeconds={16} compact />
+        </div>
         <div className="relative z-10 h-screen w-screen" />
       </section>
-      <section className="relative m-0 h-screen w-screen overflow-hidden p-0">
-        <Image
-          src="/Assets/cb.gif"
-          alt="Cyber neon animated visual"
-          fill
-          unoptimized
-          className="object-cover"
-        />
-        <div className="pointer-events-none absolute inset-0 bg-black/20" />
-      </section>
-      <CoursesGrid />
-      <CertificatesSection />
-      <SyndicateReachSection />
-      <FeaturedLogosStrip
-        logos={[
-          {
-            src: '/Assets/press-forbes.png',
-            alt: 'Forbes logo',
-            href: 'https://forbes.ge/en/how-the-syndicate-uses-mastery-and-empowerment-to-redefine-business/',
-          },
-          {
-            src: '/Assets/press-luxury.png',
-            alt: 'LLM logo',
-            href: 'https://www.luxurylifestylemag.co.uk/money/how-the-syndicate-empowers-individuals-to-master-power-money-and-influence-in-the-money-mastery-course/',
-          },
-          {
-            src: '/Assets/press-gq.png',
-            alt: 'GQ logo',
-            href: 'https://gq.co.za/wealth/2025-02-10-how-the-syndicate-can-disrupt-the-traditional-model-of-influence-and-education-in-the-digital-age/',
-          },
-        ]}
-        speedSeconds={20}
-      />
+      <section className="relative flex h-screen min-h-screen w-screen items-center overflow-hidden bg-[#050508] px-0 py-0">
+        <div className="pointer-events-none absolute inset-0 overflow-hidden">
+          <iframe
+            src="https://player.vimeo.com/video/988922121?autoplay=1&muted=1&loop=1&background=1"
+            className="h-full w-full scale-[1.22] opacity-60 grayscale saturate-0"
+            allow="autoplay; fullscreen; picture-in-picture"
+            loading="lazy"
+            referrerPolicy="strict-origin-when-cross-origin"
+            title="Featured programs background video"
+          />
+        </div>
+        <div className="pointer-events-none absolute inset-0 bg-black/72" />
+        <div className="pointer-events-none absolute inset-0 opacity-[0.08]" style={{ backgroundImage: 'repeating-linear-gradient(0deg, transparent 0px, transparent 2px, rgba(0,0,0,0.5) 2px, rgba(0,0,0,0.5) 4px)' }} />
 
-      <footer className="border-t border-cyan-400/15 bg-[#02050b] px-4 py-10 sm:px-6 sm:py-12">
-        <div className="mx-auto flex max-w-[1200px] flex-col gap-8">
-          <div className="grid grid-cols-1 gap-8 md:grid-cols-[minmax(260px,1.15fr)_minmax(320px,1fr)] md:items-start md:gap-10">
-            <div className="rounded-xl border border-cyan-300/15 bg-slate-950/45 p-4 shadow-[0_0_18px_rgba(34,211,238,0.08)] sm:p-5">
-              <Image
-                src="/Assets/logo.png"
-                alt="Onem logo"
-                width={360}
-                height={120}
-                className="h-20 w-auto object-contain sm:h-24"
-                priority={false}
-              />
-            </div>
-
-            <div className="rounded-xl border border-cyan-300/15 bg-slate-950/40 p-4 sm:p-5">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-cyan-100/80 sm:text-xs">Quick Links</p>
-              <div className="mt-4 flex flex-wrap items-center gap-x-6 gap-y-3 text-sm font-semibold text-cyan-50/90 sm:text-base">
-                <span className="cursor-default transition-colors hover:text-cyan-300">What You Get</span>
-                <span className="cursor-default transition-colors hover:text-cyan-300">Our Methods</span>
-                <span className="cursor-default transition-colors hover:text-cyan-300">Our Courses</span>
-                <span className="cursor-default transition-colors hover:text-cyan-300">Subscribe</span>
-              </div>
-
-              <div className="mt-5 flex items-center gap-3">
-                <button type="button" aria-label="YouTube icon (link coming soon)" className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-cyan-300/30 bg-black/35 text-cyan-200 transition-all hover:border-cyan-200/70 hover:text-cyan-100 hover:shadow-[0_0_14px_rgba(34,211,238,0.26)]">
-                  <svg viewBox="0 0 24 24" className="h-4 w-4 fill-current" aria-hidden>
-                    <path d="M21.8 8.2a3 3 0 0 0-2.1-2.1C17.8 5.5 12 5.5 12 5.5s-5.8 0-7.7.6A3 3 0 0 0 2.2 8.2C1.6 10.1 1.6 12 1.6 12s0 1.9.6 3.8a3 3 0 0 0 2.1 2.1c1.9.6 7.7.6 7.7.6s5.8 0 7.7-.6a3 3 0 0 0 2.1-2.1c.6-1.9.6-3.8.6-3.8s0-1.9-.6-3.8ZM10.1 15.1V8.9l5.3 3.1-5.3 3.1Z" />
-                  </svg>
-                </button>
-                <button type="button" aria-label="X icon (link coming soon)" className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-cyan-300/30 bg-black/35 text-cyan-200 transition-all hover:border-cyan-200/70 hover:text-cyan-100 hover:shadow-[0_0_14px_rgba(34,211,238,0.26)]">
-                  <span className="text-sm font-bold leading-none">X</span>
-                </button>
-                <button type="button" aria-label="Instagram icon (link coming soon)" className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-cyan-300/30 bg-black/35 text-cyan-200 transition-all hover:border-cyan-200/70 hover:text-cyan-100 hover:shadow-[0_0_14px_rgba(34,211,238,0.26)]">
-                  <svg viewBox="0 0 24 24" className="h-4 w-4 fill-current" aria-hidden>
-                    <path d="M7.75 2h8.5A5.75 5.75 0 0 1 22 7.75v8.5A5.75 5.75 0 0 1 16.25 22h-8.5A5.75 5.75 0 0 1 2 16.25v-8.5A5.75 5.75 0 0 1 7.75 2Zm0 1.8A3.95 3.95 0 0 0 3.8 7.75v8.5a3.95 3.95 0 0 0 3.95 3.95h8.5a3.95 3.95 0 0 0 3.95-3.95v-8.5a3.95 3.95 0 0 0-3.95-3.95h-8.5Zm8.95 1.35a1.1 1.1 0 1 1 0 2.2 1.1 1.1 0 0 1 0-2.2ZM12 7a5 5 0 1 1 0 10 5 5 0 0 1 0-10Zm0 1.8A3.2 3.2 0 1 0 12 15.2 3.2 3.2 0 0 0 12 8.8Z" />
-                  </svg>
-                </button>
-                <button type="button" aria-label="Facebook icon (link coming soon)" className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-cyan-300/30 bg-black/35 text-cyan-200 transition-all hover:border-cyan-200/70 hover:text-cyan-100 hover:shadow-[0_0_14px_rgba(34,211,238,0.26)]">
-                  <svg viewBox="0 0 24 24" className="h-4 w-4 fill-current" aria-hidden>
-                    <path d="M13.5 21v-8h2.7l.4-3h-3.1V8.1c0-.9.3-1.6 1.7-1.6h1.5V3.8c-.7-.1-1.4-.2-2.1-.2-2.1 0-3.5 1.3-3.5 3.8V10H8.6v3h2.5v8h2.4Z" />
-                  </svg>
-                </button>
-                <button type="button" aria-label="TikTok icon (link coming soon)" className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-cyan-300/30 bg-black/35 text-cyan-200 transition-all hover:border-cyan-200/70 hover:text-cyan-100 hover:shadow-[0_0_14px_rgba(34,211,238,0.26)]">
-                  <svg viewBox="0 0 24 24" className="h-4 w-4 fill-current" aria-hidden>
-                    <path d="M14.2 3.4v10a3.8 3.8 0 1 1-2.5-3.6V3.4h2.5Zm3.9 2.3a5 5 0 0 0 2.3 1.3v2.5a7.4 7.4 0 0 1-2.3-.8v5.6a6.1 6.1 0 1 1-6.1-6.1c.2 0 .5 0 .7.1v2.6a3.5 3.5 0 1 0 2.9 3.4V3.4h2.5v2.3Z" />
-                  </svg>
-                </button>
-              </div>
-
-              <div className="mt-5 inline-flex items-center rounded-lg border border-cyan-300/20 bg-black/30 px-3 py-2">
-                <span className="text-[11px] font-semibold tracking-[0.08em] text-cyan-100/75 sm:text-xs">
-                  Company No - 15438754
-                </span>
-              </div>
-            </div>
+        <div className="relative z-10 h-full w-full px-0">
+          <h2 className="mb-10 text-center text-2xl font-black uppercase sm:mb-12 sm:text-3xl md:text-4xl lg:text-5xl">
+            <span className="bg-gradient-to-r from-amber-200 via-amber-300 to-amber-500 bg-clip-text text-transparent drop-shadow-[0_0_20px_rgba(251,191,36,0.35)]">
+              Featured PROGRAMS
+            </span>
+          </h2>
+          <div className="h-[calc(100vh-9rem)] min-h-[520px] w-full overflow-hidden rounded-none bg-black/30">
+            <DomeGallery
+              images={FEATURED_PROGRAM_IMAGES}
+              fit={0.5}
+              minRadius={300}
+              segments={18}
+              dragDampening={4.8}
+              grayscale={false}
+              autoRotateSpeedDeg={1.8}
+              tileInsetPx={24}
+            />
           </div>
+        </div>
+      </section>
+      <CertificatesSection />
+      <PricingPage />
+      <FAQSection />
+      <SyndicateReachSection />
 
-          <p className="border-t border-cyan-300/15 pt-5 text-center text-[10px] tracking-[0.13em] text-cyan-100/65 sm:text-xs">
-            All content is made for educational purposes and is up to the individual to apply the knowledge. We do not guarantee any results.
+      <section className="border-b border-fuchsia-300/20 bg-gradient-to-b from-[#0a0514] to-[#02050b] px-4 py-14 sm:px-6 sm:py-16">
+        <div className="mx-auto max-w-5xl text-center">
+          <p className="text-xs uppercase tracking-[0.24em] text-fuchsia-200/80">Our Methods</p>
+          <h2 className="mt-3 text-3xl font-bold text-fuchsia-50 sm:text-4xl md:text-5xl">How we build disciplined operators</h2>
+          <p className="mx-auto mt-4 max-w-3xl text-sm text-fuchsia-100/75 sm:text-base">
+            Every method below is designed to move you from information overload to clear execution and measurable performance.
           </p>
         </div>
-      </footer>
+      </section>
+
+      <section className="px-4 py-12 sm:px-6 sm:py-16">
+        <div className="mx-auto grid max-w-6xl gap-6 md:grid-cols-3">
+          {METHODS.map((method) => (
+            <article
+              key={method.title}
+              className="rounded-xl border border-fuchsia-300/20 bg-fuchsia-950/10 p-6 shadow-[0_0_24px_rgba(217,70,239,0.12)]"
+            >
+              <h2 className="text-lg font-semibold text-fuchsia-100">{method.title}</h2>
+              <p className="mt-3 text-sm leading-relaxed text-fuchsia-100/75">{method.description}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="px-4 pb-16 sm:px-6 sm:pb-20">
+        <div className="mx-auto max-w-5xl rounded-2xl border border-fuchsia-300/20 bg-gradient-to-r from-fuchsia-900/20 via-black to-cyan-900/20 p-6 text-center sm:p-8">
+          <h3 className="text-2xl font-semibold text-fuchsia-50">Execution beats theory</h3>
+          <p className="mx-auto mt-3 max-w-2xl text-sm text-fuchsia-100/75 sm:text-base">
+            We teach methods that fit real-world constraints and reward consistency. You leave with playbooks, not just inspiration.
+          </p>
+        </div>
+      </section>
+
+      <section
+        id="joinNowSection"
+        className="relative overflow-hidden border-y border-amber-300/20 bg-[radial-gradient(circle_at_top,rgba(251,191,36,0.2),rgba(2,6,23,0.95))] px-4 py-16 sm:px-6 sm:py-20"
+      >
+        <div className="mx-auto max-w-4xl text-center">
+          <p className="text-xs uppercase tracking-[0.24em] text-amber-200/80">Join Now</p>
+          <h2 className="mt-3 text-3xl font-bold text-amber-100 sm:text-4xl md:text-5xl">
+            Start your journey with Syndicate
+          </h2>
+          <p className="mx-auto mt-4 max-w-2xl text-sm text-amber-50/80 sm:text-base">
+            Pick the right path for your current level and build real systems for money, power, and freedom.
+          </p>
+          <div className="mt-8 flex flex-wrap justify-center gap-3">
+            <Link
+              href="/programs"
+              className="rounded-md border border-amber-300/60 bg-amber-300/10 px-5 py-2 text-sm font-semibold text-amber-100 transition hover:bg-amber-300/20"
+            >
+              Explore Programs
+            </Link>
+            <Link
+              href="/what-you-get"
+              className="rounded-md border border-cyan-300/50 bg-cyan-300/10 px-5 py-2 text-sm font-semibold text-cyan-100 transition hover:bg-cyan-300/20"
+            >
+              See Benefits
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      <FeaturedLogosStrip logos={FEATURED_LOGOS} speedSeconds={20} />
+      <SiteFooter />
     </div>
   )
 }

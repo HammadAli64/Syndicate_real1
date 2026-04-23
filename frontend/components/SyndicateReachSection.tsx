@@ -15,37 +15,36 @@ export default function SyndicateReachSection() {
         <div className={styles.reachVignette} />
 
         <svg className={styles.reachLines} viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden>
-          <path className={`${styles.line} ${styles.delay1}`} d="M15 33 C 20 30, 25 28, 31 29" />
-          <path className={`${styles.line} ${styles.delay2}`} d="M31 29 C 37 24, 44 22, 52 22" />
-          <path className={`${styles.line} ${styles.delay3}`} d="M52 22 C 58 28, 66 34, 74 36" />
-          <path className={`${styles.line} ${styles.delay4}`} d="M74 36 C 76 36.5, 77.5 37.5, 79 38" />
-          <path className={`${styles.line} ${styles.delay5}`} d="M79 38 C 84 38, 88 35, 92 32" />
-          <path className={`${styles.line} ${styles.delay6}`} d="M79 38 C 86 43, 90 56, 94 72" />
-          <path className={`${styles.line} ${styles.delay2}`} d="M79 38 C 83 41, 86 46, 89 50" />
+          <path className={`${styles.line} ${styles.delay1}`} d="M13 40 C 17 36, 21 34, 27 35" />
+          <path className={`${styles.line} ${styles.delay2}`} d="M27 35 C 35 26, 44 23, 49 28" />
+          <path className={`${styles.line} ${styles.delay3}`} d="M66 42 C 69 41, 70 43, 72 44" />
+          <path className={`${styles.line} ${styles.delay4}`} d="M72 44 C 77 47, 80 50, 82 52" />
+          <path className={`${styles.line} ${styles.delay5}`} d="M72 44 C 77 36, 85 31, 92 34" />
+          <path className={`${styles.line} ${styles.delay6}`} d="M82 52 C 88 56, 91 64, 93 74" />
         </svg>
 
-        <div className={styles.city} style={{ left: '15%', top: '33%' }}>
+        <div className={styles.city} style={{ left: '13%', top: '40%' }}>
           <span className={styles.tag}>Los Angeles</span><span className={styles.dot} />
         </div>
-        <div className={styles.city} style={{ left: '31%', top: '29%' }}>
+        <div className={styles.city} style={{ left: '27%', top: '35%' }}>
           <span className={styles.tag}>New York</span><span className={styles.dot} />
         </div>
-        <div className={styles.city} style={{ left: '52%', top: '22%' }}>
+        <div className={styles.city} style={{ left: '49%', top: '28%' }}>
           <span className={styles.tag}>London</span><span className={styles.dot} />
         </div>
-        <div className={styles.city} style={{ left: '74%', top: '36%' }}>
+        <div className={styles.city} style={{ left: '66%', top: '42%' }}>
           <span className={styles.tag}>Dubai</span><span className={styles.dot} />
         </div>
-        <div className={styles.city} style={{ left: '79%', top: '38%' }}>
+        <div className={styles.city} style={{ left: '72%', top: '44%' }}>
           <span className={styles.tag}>Pakistan</span><span className={styles.dot} />
         </div>
-        <div className={styles.city} style={{ left: '89%', top: '50%' }}>
+        <div className={styles.city} style={{ left: '82%', top: '52%' }}>
           <span className={styles.tag}>Singapore</span><span className={styles.dot} />
         </div>
-        <div className={styles.city} style={{ left: '92%', top: '32%' }}>
+        <div className={styles.city} style={{ left: '92%', top: '34%' }}>
           <span className={styles.tag}>Tokyo</span><span className={styles.dot} />
         </div>
-        <div className={styles.city} style={{ left: '94%', top: '72%' }}>
+        <div className={styles.city} style={{ left: '93%', top: '74%' }}>
           <span className={styles.tag}>Sydney</span><span className={styles.dot} />
         </div>
       </div>
