@@ -98,8 +98,6 @@ export async function patchSyndicateProgress(state: Record<string, string>): Pro
   return parseProgressJson(j);
 }
 
-
-
 export async function postSyndicateStreakRecord(activityDate?: string): Promise<{ ok: boolean; streak_count: number; last_activity_date: string }> {
   if (!getSyndicateAuthToken()) {
     throw new Error("Syndicate login required for streak sync");

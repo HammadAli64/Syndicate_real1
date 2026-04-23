@@ -14,13 +14,13 @@ class StreamPlaylistItemInline(admin.TabularInline):
 
 @admin.register(StreamPlaylist)
 class StreamPlaylistAdmin(admin.ModelAdmin):
-    list_display = ("title", "slug", "is_published", "is_coming_soon", "updated_at")
-    list_filter = ("is_published", "is_coming_soon")
+    list_display = ("title", "category", "price", "rating", "slug", "is_published", "is_coming_soon", "updated_at")
+    list_filter = ("category", "is_published", "is_coming_soon")
     search_fields = ("title", "slug", "description")
     prepopulated_fields = {"slug": ("title",)}
     inlines = [StreamPlaylistItemInline]
     fieldsets = (
-        (None, {"fields": ("title", "slug", "description", "cover_image")}),
+        (None, {"fields": ("title", "slug", "category", "price", "rating", "cover_image")}),
         ("Publishing", {"fields": ("is_published", "is_coming_soon")}),
     )
 

@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState, type ReactNode } from "react";
-import { ChevronLeft } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { ChevronLeft, Star } from "lucide-react";
 import ChromaGrid, { type ChromaItem } from "@/components/ChromaGrid";
 import { CourseVideoPlaylist } from "@/components/programs/CourseVideoPlaylist";
 import { StreamPlaylistProgramPanel } from "@/components/programs/StreamPlaylistProgramPanel";
@@ -27,6 +27,116 @@ const PROGRAM_CARD_BACKGROUNDS: readonly string[] = [
   "from-sky-600/85 via-blue-950/50 to-black",
   "from-fuchsia-600/80 via-pink-950/45 to-black",
 ];
+
+const COURSE_CARD_THEMES = [
+  {
+    ring: "from-cyan-400/95 via-sky-400/95 to-cyan-300/95",
+    glow: "shadow-[0_10px_34px_rgba(0,0,0,0.5),0_0_0_1px_rgba(34,211,238,0.4),0_0_42px_rgba(34,211,238,0.3)]",
+    hoverGlow: "hover:shadow-[0_18px_56px_rgba(0,0,0,0.58),0_0_0_1px_rgba(125,211,252,0.82),0_0_96px_rgba(34,211,238,0.62)]",
+    title: "text-cyan-200",
+    chip: "border-cyan-300/60 bg-cyan-500/15 text-cyan-100",
+    body: "border-cyan-300/45 bg-cyan-950/30",
+  },
+  {
+    ring: "from-lime-400/95 via-emerald-400/95 to-green-300/95",
+    glow: "shadow-[0_10px_34px_rgba(0,0,0,0.5),0_0_0_1px_rgba(74,222,128,0.4),0_0_42px_rgba(74,222,128,0.28)]",
+    hoverGlow: "hover:shadow-[0_18px_56px_rgba(0,0,0,0.58),0_0_0_1px_rgba(134,239,172,0.82),0_0_96px_rgba(74,222,128,0.6)]",
+    title: "text-lime-200",
+    chip: "border-lime-300/60 bg-lime-500/15 text-lime-100",
+    body: "border-lime-300/45 bg-emerald-950/30",
+  },
+  {
+    ring: "from-fuchsia-400/95 via-violet-400/95 to-purple-300/95",
+    glow: "shadow-[0_10px_34px_rgba(0,0,0,0.5),0_0_0_1px_rgba(217,70,239,0.4),0_0_42px_rgba(217,70,239,0.28)]",
+    hoverGlow: "hover:shadow-[0_18px_56px_rgba(0,0,0,0.58),0_0_0_1px_rgba(232,121,249,0.82),0_0_96px_rgba(217,70,239,0.6)]",
+    title: "text-fuchsia-200",
+    chip: "border-fuchsia-300/60 bg-fuchsia-500/15 text-fuchsia-100",
+    body: "border-fuchsia-300/45 bg-fuchsia-950/30",
+  },
+] as const;
+
+const PLAYLIST_CARD_THEMES = [
+  {
+    glow: "shadow-[0_10px_34px_rgba(0,0,0,0.5),0_0_0_1px_rgba(196,181,253,0.4),0_0_44px_rgba(139,92,246,0.32)]",
+    hoverGlow: "hover:shadow-[0_18px_56px_rgba(0,0,0,0.58),0_0_0_1px_rgba(196,181,253,0.85),0_0_100px_rgba(139,92,246,0.65)]",
+    ring: "from-violet-300/95 via-purple-400/95 to-fuchsia-300/95",
+    title: "text-white",
+    panel: "border-violet-300/45 bg-violet-950/30",
+    mediaBorder: "border-fuchsia-300/35",
+    categoryChip: "border-fuchsia-300/35 bg-fuchsia-500/18 text-fuchsia-200",
+    starColor: "text-fuchsia-300",
+    infoPanel: "border-fuchsia-300/35 bg-fuchsia-950/28",
+    priceColor: "text-fuchsia-300",
+    priceGlow: "[text-shadow:0_0_16px_rgba(232,121,249,0.5)]",
+    dominantBorder: "border-fuchsia-300/75",
+  },
+  {
+    glow: "shadow-[0_10px_34px_rgba(0,0,0,0.5),0_0_0_1px_rgba(103,232,249,0.4),0_0_44px_rgba(34,211,238,0.32)]",
+    hoverGlow: "hover:shadow-[0_18px_56px_rgba(0,0,0,0.58),0_0_0_1px_rgba(125,211,252,0.85),0_0_100px_rgba(34,211,238,0.65)]",
+    ring: "from-cyan-300/95 via-sky-400/95 to-blue-300/95",
+    title: "text-white",
+    panel: "border-cyan-300/45 bg-cyan-950/30",
+    mediaBorder: "border-cyan-300/35",
+    categoryChip: "border-cyan-300/35 bg-cyan-500/18 text-cyan-200",
+    starColor: "text-cyan-300",
+    infoPanel: "border-cyan-300/35 bg-cyan-950/28",
+    priceColor: "text-cyan-300",
+    priceGlow: "[text-shadow:0_0_16px_rgba(34,211,238,0.5)]",
+    dominantBorder: "border-cyan-300/75",
+  },
+  {
+    glow: "shadow-[0_10px_34px_rgba(0,0,0,0.5),0_0_0_1px_rgba(110,231,183,0.4),0_0_44px_rgba(52,211,153,0.32)]",
+    hoverGlow: "hover:shadow-[0_18px_56px_rgba(0,0,0,0.58),0_0_0_1px_rgba(110,231,183,0.85),0_0_100px_rgba(16,185,129,0.65)]",
+    ring: "from-emerald-300/95 via-teal-400/95 to-lime-300/95",
+    title: "text-white",
+    panel: "border-emerald-300/45 bg-emerald-950/30",
+    mediaBorder: "border-emerald-300/35",
+    categoryChip: "border-emerald-300/35 bg-emerald-500/18 text-emerald-200",
+    starColor: "text-emerald-300",
+    infoPanel: "border-emerald-300/35 bg-emerald-950/28",
+    priceColor: "text-emerald-300",
+    priceGlow: "[text-shadow:0_0_16px_rgba(52,211,153,0.5)]",
+    dominantBorder: "border-emerald-300/75",
+  },
+  {
+    glow: "shadow-[0_10px_34px_rgba(0,0,0,0.5),0_0_0_1px_rgba(251,191,36,0.4),0_0_44px_rgba(245,158,11,0.32)]",
+    hoverGlow: "hover:shadow-[0_18px_56px_rgba(0,0,0,0.58),0_0_0_1px_rgba(252,211,77,0.85),0_0_100px_rgba(245,158,11,0.65)]",
+    ring: "from-amber-300/95 via-yellow-400/95 to-orange-300/95",
+    title: "text-white",
+    panel: "border-amber-300/45 bg-amber-950/30",
+    mediaBorder: "border-amber-300/35",
+    categoryChip: "border-amber-300/35 bg-amber-500/18 text-amber-200",
+    starColor: "text-amber-300",
+    infoPanel: "border-amber-300/35 bg-amber-950/28",
+    priceColor: "text-amber-300",
+    priceGlow: "[text-shadow:0_0_16px_rgba(245,158,11,0.5)]",
+    dominantBorder: "border-amber-300/75",
+  },
+] as const;
+
+type PlaylistCategory = "all" | "business_model" | "business_psychology";
+
+const DEFAULT_PLAYLIST_CATEGORY: PlaylistCategory = "all";
+
+const PLAYLIST_CATEGORY_LABELS: Record<Exclude<PlaylistCategory, "all">, string> = {
+  business_model: "Business Model",
+  business_psychology: "Business Psychology",
+};
+
+function parsePrice(value: string | number | null | undefined): number {
+  const n = typeof value === "number" ? value : Number.parseFloat(String(value ?? "0"));
+  return Number.isFinite(n) ? n : 0;
+}
+
+function parseRating(value: string | number | null | undefined): number {
+  const n = typeof value === "number" ? value : Number.parseFloat(String(value ?? "0"));
+  if (!Number.isFinite(n)) return 0;
+  return Math.max(0, Math.min(5, n));
+}
+
+function roundedStarCount(rating: number): number {
+  return Math.max(0, Math.min(5, Math.round(rating)));
+}
 
 type Course = {
   id: string;
@@ -72,6 +182,8 @@ export function ProgramsCourseSection({
   const [secureView, setSecureView] = useState<"grid" | "detail">("grid");
   const [detailCourseId, setDetailCourseId] = useState<number | null>(null);
   const [detailPlaylistId, setDetailPlaylistId] = useState<number | null>(null);
+  const [playlistCategoryFilter, setPlaylistCategoryFilter] = useState<PlaylistCategory>(DEFAULT_PLAYLIST_CATEGORY);
+  const [playlistTitleQuery, setPlaylistTitleQuery] = useState("");
 
   const reloadApiCourses = useCallback(async () => {
     const res = await fetchCoursesList();
@@ -162,6 +274,159 @@ export function ProgramsCourseSection({
   const inProgramLessonView = useApiProgramBrowser && secureView === "detail";
   const inPlaylistDetail = detailPlaylistId !== null;
   const inCourseDetail = detailCourseId !== null;
+  const normalizedPlaylistTitleQuery = playlistTitleQuery.trim().toLowerCase();
+  const searchablePlaylists = useMemo(
+    () =>
+      streamPlaylists.filter((playlist) =>
+        normalizedPlaylistTitleQuery.length === 0 ? true : playlist.title.toLowerCase().includes(normalizedPlaylistTitleQuery)
+      ),
+    [streamPlaylists, normalizedPlaylistTitleQuery]
+  );
+  const businessModelPlaylists = useMemo(
+    () => searchablePlaylists.filter((playlist) => playlist.category === "business_model"),
+    [searchablePlaylists]
+  );
+  const businessPsychologyPlaylists = useMemo(
+    () => searchablePlaylists.filter((playlist) => playlist.category !== "business_model"),
+    [searchablePlaylists]
+  );
+  const visibleBusinessModelPlaylists = playlistCategoryFilter === "business_psychology" ? [] : businessModelPlaylists;
+  const visibleBusinessPsychologyPlaylists = playlistCategoryFilter === "business_model" ? [] : businessPsychologyPlaylists;
+  const visibleStreamPlaylistCount = visibleBusinessModelPlaylists.length + visibleBusinessPsychologyPlaylists.length;
+  const showBothPlaylistColumns = visibleBusinessPsychologyPlaylists.length > 0 && visibleBusinessModelPlaylists.length > 0;
+  const interleavedMobilePlaylistRows = useMemo(() => {
+    if (!showBothPlaylistColumns) return [];
+    const maxLen = Math.max(visibleBusinessPsychologyPlaylists.length, visibleBusinessModelPlaylists.length);
+    return Array.from({ length: maxLen }, (_, idx) => ({
+      psychology: visibleBusinessPsychologyPlaylists[idx] ?? null,
+      model: visibleBusinessModelPlaylists[idx] ?? null,
+      idx,
+    }));
+  }, [showBothPlaylistColumns, visibleBusinessPsychologyPlaylists, visibleBusinessModelPlaylists]);
+
+  const renderStreamPlaylistCard = (pl: StreamPlaylistListItem, j: number) => {
+    const i = j;
+    const grad = PROGRAM_CARD_BACKGROUNDS[i % PROGRAM_CARD_BACKGROUNDS.length];
+    const coverSrc = resolveDjangoMediaUrl(pl.cover_image_url);
+    const comingSoon = !!pl.is_coming_soon;
+    const theme = PLAYLIST_CARD_THEMES[j % PLAYLIST_CARD_THEMES.length];
+    const rating = parseRating(pl.rating);
+    const price = parsePrice(pl.price);
+    return (
+      <button
+        key={`playlist-${pl.id}`}
+        type="button"
+        onClick={() => {
+          if (!comingSoon) openStreamPlaylist(pl.id);
+        }}
+        className={cn(
+          "group/card relative flex aspect-[3/5] w-full flex-col overflow-hidden text-left outline-none sm:aspect-[4/5]",
+          "rounded-3xl border-2",
+          theme.dominantBorder,
+          theme.glow,
+          "transition-[transform,box-shadow] duration-300 ease-out",
+          comingSoon
+            ? "opacity-95 cursor-not-allowed"
+            : cn("hover:-translate-y-0.5", theme.hoverGlow),
+          "focus-visible:ring-2 focus-visible:ring-violet-300/80 focus-visible:ring-offset-2 focus-visible:ring-offset-black",
+          "active:translate-y-0"
+        )}
+        aria-disabled={comingSoon}
+      >
+        <span
+          className={cn(
+            "pointer-events-none absolute left-1/2 top-1/2 z-0 aspect-square w-[185%] max-w-none -translate-x-1/2 -translate-y-1/2 will-change-transform animate-[spin_5.5s_linear_infinite] motion-reduce:animate-none bg-gradient-to-r transition duration-300 group-hover/card:opacity-100 group-hover/card:saturate-150",
+            theme.ring
+          )}
+          style={{ animationDuration: `${5.3 + (j % 5) * 0.42}s` }}
+          aria-hidden
+        />
+        <span className="relative z-[1] m-[1px] flex min-h-0 flex-1 flex-col overflow-hidden rounded-[1.45rem] bg-[#04060d] ring-1 ring-black/70">
+          <span className="pointer-events-none absolute inset-0 z-20 overflow-hidden rounded-[1.28rem]" aria-hidden>
+            <span className="absolute -left-[40%] top-0 h-full w-[45%] -skew-x-12 bg-gradient-to-r from-transparent via-white/35 to-transparent opacity-0 mix-blend-overlay transition-[transform,opacity] duration-700 ease-out group-hover/card:translate-x-[280%] group-hover/card:opacity-100" />
+          </span>
+          <span
+            className="pointer-events-none absolute inset-0 z-[2] rounded-[1.28rem] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.06),inset_0_1px_0_rgba(255,255,255,0.12)]"
+            aria-hidden
+          />
+          <div className="relative z-[3] flex h-full min-h-0 flex-col gap-2 p-3 sm:p-3.5">
+            <div className={cn("relative min-h-[9.6rem] overflow-hidden rounded-2xl border-2 sm:min-h-[14.2rem] sm:flex-1", theme.mediaBorder)}>
+              {coverSrc ? (
+                <img
+                  src={coverSrc}
+                  alt=""
+                  loading={j < 2 ? "eager" : "lazy"}
+                  decoding="async"
+                  fetchPriority={j < 1 ? "high" : undefined}
+                  className="h-full w-full object-cover object-center [image-rendering:high-quality] [backface-visibility:hidden]"
+                />
+              ) : (
+                <div className={cn("h-full w-full bg-gradient-to-t opacity-95", grad)} />
+              )}
+              <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-black/45" />
+            </div>
+            <div className="absolute right-3 top-3 z-[4] flex flex-col items-end gap-1 sm:right-3.5 sm:top-3.5">
+              <span className="rounded-full bg-white/95 px-2.5 py-0.5 text-[10px] font-bold tabular-nums text-neutral-900 shadow-[0_2px_10px_rgba(0,0,0,0.45)]">
+                {pl.video_count} videos
+              </span>
+            </div>
+            {comingSoon ? (
+              <>
+                <span className="pointer-events-none absolute inset-0 z-[3] bg-black/35" />
+                <span className="pointer-events-none absolute inset-0 z-[4] flex items-center justify-center px-5 text-center">
+                  <span className="rounded-2xl border border-amber-300/65 bg-black/70 px-5 py-3 text-[20px] font-black uppercase tracking-[0.18em] text-[#f5c814] shadow-[0_0_26px_rgba(245,200,20,0.35)] sm:text-[24px]">
+                    Coming Soon
+                  </span>
+                </span>
+              </>
+            ) : null}
+            <div
+              className={cn(
+                "flex flex-col overflow-hidden rounded-2xl border-2 px-2.5 py-2 sm:px-3.5 sm:py-3",
+                theme.infoPanel,
+                "bg-black/60 shadow-[0_10px_30px_rgba(0,0,0,0.62),inset_0_1px_0_rgba(255,255,255,0.12)]",
+                "backdrop-blur-md transition duration-300 group-hover/card:brightness-125 group-hover/card:saturate-125"
+              )}
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div
+                  className={cn(
+                    "line-clamp-2 text-left text-[11px] font-extrabold uppercase leading-snug tracking-[0.05em] antialiased [text-shadow:0_1px_2px_rgba(0,0,0,0.95),0_2px_14px_rgba(0,0,0,0.75)] sm:text-[17px] sm:tracking-[0.07em]",
+                    theme.title
+                  )}
+                >
+                  {pl.title}
+                </div>
+              </div>
+              <div className="mt-1.5 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-1.5">
+                <span className="inline-flex min-w-0 items-center gap-0.5 overflow-hidden rounded-full border border-white/25 bg-black/45 px-1.5 py-0.5 font-sans text-[9px] font-semibold tracking-[0.01em] text-white/95 [text-shadow:none] sm:px-2 sm:py-1 sm:text-[11px]">
+                  {Array.from({ length: 5 }).map((_, idx) => (
+                    <Star
+                      key={`${pl.id}-star-${idx}`}
+                      className={cn(
+                        "h-2.5 w-2.5 sm:h-3 sm:w-3",
+                        idx < roundedStarCount(rating) ? "fill-amber-300 text-amber-300" : "fill-transparent text-white/35"
+                      )}
+                    />
+                  ))}
+                  <span className="ml-1 hidden tabular-nums sm:inline">{rating.toFixed(1)}</span>
+                </span>
+                <span
+                  className={cn(
+                    "inline-flex shrink-0 items-center rounded-full border border-white/20 bg-black/40 px-1.5 py-0.5 font-sans text-[10px] font-black tracking-tight sm:px-2.5 sm:text-[20px]",
+                    theme.priceColor,
+                    theme.priceGlow
+                  )}
+                >
+                  {`£${price.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`}
+                </span>
+              </div>
+            </div>
+          </div>
+        </span>
+      </button>
+    );
+  };
 
   return (
     <>
@@ -212,103 +477,160 @@ export function ProgramsCourseSection({
           ) : null}
 
           {hasCatalogItems && secureView === "grid" ? (
-            <div className="mx-auto grid max-w-[1600px] grid-cols-1 gap-4 sm:gap-5 md:grid-cols-2 md:gap-6 lg:grid-cols-3">
-              {streamPlaylists.map((pl, j) => {
-                const i = j;
-                const grad = PROGRAM_CARD_BACKGROUNDS[i % PROGRAM_CARD_BACKGROUNDS.length];
-                const coverSrc = resolveDjangoMediaUrl(pl.cover_image_url);
-                const comingSoon = !!pl.is_coming_soon;
-                return (
-                  <button
-                    key={`playlist-${pl.id}`}
-                    type="button"
-                    onClick={() => {
-                      if (!comingSoon) openStreamPlaylist(pl.id);
-                    }}
-                    className={cn(
-                      "group/card relative flex aspect-[4/5] w-full flex-col overflow-hidden text-left outline-none",
-                      "rounded-3xl",
-                      "shadow-[0_6px_32px_rgba(0,0,0,0.55),0_0_0_1px_rgba(167,139,250,0.22),0_0_40px_rgba(139,92,246,0.14)]",
-                      "transition-[transform,box-shadow] duration-300 ease-out",
-                      comingSoon
-                        ? "opacity-95 cursor-not-allowed"
-                        : "hover:-translate-y-0.5 hover:shadow-[0_14px_48px_rgba(0,0,0,0.5),0_0_0_1px_rgba(196,181,253,0.35),0_0_64px_rgba(139,92,246,0.22)]",
-                      "focus-visible:ring-2 focus-visible:ring-violet-300/80 focus-visible:ring-offset-2 focus-visible:ring-offset-black",
-                      "active:translate-y-0"
-                    )}
-                    aria-disabled={comingSoon}
-                  >
-                    <span
-                      className="pointer-events-none absolute left-1/2 top-1/2 z-0 aspect-square w-[185%] max-w-none -translate-x-1/2 -translate-y-1/2 will-change-transform bg-[conic-gradient(from_0deg_at_50%_50%,#f5f3ff,#c4b5fd,#a78bfa,#8b5cf6,#7c3aed,#ddd6fe,#ede9fe,#f5f3ff)] animate-[spin_5.5s_linear_infinite] motion-reduce:animate-none"
-                      style={{ animationDuration: `${5.3 + (j % 5) * 0.42}s` }}
+            <div className="space-y-6">
+              {streamPlaylists.length > 0 ? (
+                <div className="space-y-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setPlaylistCategoryFilter("business_psychology")}
+                      className={cn(
+                        "rounded-full border px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.14em] transition",
+                        playlistCategoryFilter === "business_psychology"
+                          ? "border-fuchsia-300 bg-fuchsia-500/35 text-fuchsia-50 shadow-[0_0_16px_rgba(232,121,249,0.55)]"
+                          : "border-white/20 bg-black/35 text-white/75 hover:border-fuchsia-300/55 hover:bg-fuchsia-500/15 hover:text-fuchsia-100"
+                      )}
+                    >
+                      Business Psychology
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPlaylistCategoryFilter("business_model")}
+                      className={cn(
+                        "rounded-full border px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.14em] transition",
+                        playlistCategoryFilter === "business_model"
+                          ? "border-cyan-300 bg-cyan-500/35 text-cyan-50 shadow-[0_0_16px_rgba(103,232,249,0.55)]"
+                          : "border-white/20 bg-black/35 text-white/75 hover:border-cyan-300/55 hover:bg-cyan-500/15 hover:text-cyan-100"
+                      )}
+                    >
+                      Business Model
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPlaylistCategoryFilter("all")}
+                      className={cn(
+                        "rounded-full border px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.14em] transition",
+                        playlistCategoryFilter === "all"
+                          ? "border-amber-300 bg-amber-500/35 text-amber-50 shadow-[0_0_16px_rgba(251,191,36,0.55)]"
+                          : "border-white/20 bg-black/35 text-white/75 hover:border-amber-300/55 hover:bg-amber-500/15 hover:text-amber-100"
+                      )}
+                    >
+                      All
+                    </button>
+                  </div>
+                  <div className="relative max-w-[440px] md:max-w-[620px] lg:max-w-[860px]">
+                    <div
+                      className="pointer-events-none absolute -inset-1 rounded-2xl bg-amber-400/30 blur-md"
                       aria-hidden
                     />
-                    <span className="relative z-[1] m-[1px] flex min-h-0 flex-1 flex-col overflow-hidden rounded-[1.45rem] bg-neutral-950 ring-1 ring-black/60">
-                      <span className="pointer-events-none absolute inset-0 z-20 overflow-hidden rounded-[1.28rem]" aria-hidden>
-                        <span className="absolute -left-[40%] top-0 h-full w-[45%] -skew-x-12 bg-gradient-to-r from-transparent via-white/35 to-transparent opacity-0 mix-blend-overlay transition-[transform,opacity] duration-700 ease-out group-hover/card:translate-x-[280%] group-hover/card:opacity-100" />
-                      </span>
-                      <span
-                        className="pointer-events-none absolute inset-0 z-[2] rounded-[1.28rem] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.06),inset_0_1px_0_rgba(255,255,255,0.12)]"
-                        aria-hidden
+                    <div className="relative rounded-xl bg-amber-300/90 p-[1px] shadow-[0_0_18px_rgba(251,191,36,0.42)]">
+                      <input
+                        type="text"
+                        value={playlistTitleQuery}
+                        onChange={(e) => setPlaylistTitleQuery(e.target.value)}
+                        placeholder="Search playlist by title..."
+                        className="w-full rounded-[11px] border-0 bg-black/75 px-3 py-2 text-[13px] text-white outline-none transition placeholder:text-white/45 focus:ring-2 focus:ring-amber-300/40 lg:px-4 lg:py-3 lg:text-[14px]"
                       />
-                      {coverSrc ? (
-                        <img
-                          src={coverSrc}
-                          alt=""
-                          loading={j < 2 ? "eager" : "lazy"}
-                          decoding="async"
-                          fetchPriority={j < 1 ? "high" : undefined}
-                          className="absolute inset-0 z-0 h-full w-full object-cover object-center [image-rendering:high-quality] [backface-visibility:hidden]"
-                        />
-                      ) : (
-                        <div className={cn("absolute inset-0 z-0 bg-gradient-to-t opacity-95", grad)} />
-                      )}
-                      {coverSrc ? (
-                        <>
-                          <div className="pointer-events-none absolute inset-0 z-[1] bg-gradient-to-b from-black/35 via-transparent to-transparent to-[45%]" />
-                          <div className="pointer-events-none absolute inset-0 z-[1] bg-gradient-to-t from-black from-0% via-black/85 via-[32%] to-transparent to-[62%]" />
-                        </>
-                      ) : (
-                        <div className="pointer-events-none absolute inset-0 z-[1] bg-[radial-gradient(ellipse_at_top,rgba(255,255,255,0.1),transparent_50%)]" />
-                      )}
-                      <div className="relative z-[3] flex h-full flex-col justify-end p-3 pt-10 sm:p-3.5 sm:pt-12">
-                        <span className="absolute right-3 top-3 z-[4] rounded-full bg-white/95 px-2.5 py-0.5 text-[10px] font-bold tabular-nums text-neutral-900 shadow-[0_2px_10px_rgba(0,0,0,0.45)] sm:right-3.5 sm:top-3.5">
-                          {pl.video_count} videos
-                        </span>
-                        {comingSoon ? (
-                          <>
-                            <span className="pointer-events-none absolute inset-0 z-[3] bg-black/35" />
-                            <span className="pointer-events-none absolute inset-0 z-[4] flex items-center justify-center px-5 text-center">
-                              <span className="rounded-2xl border border-amber-300/65 bg-black/70 px-5 py-3 text-[20px] font-black uppercase tracking-[0.18em] text-[#f5c814] shadow-[0_0_26px_rgba(245,200,20,0.35)] sm:text-[24px]">
-                                Coming Soon
-                              </span>
-                            </span>
-                          </>
-                        ) : null}
-                        <div
-                          className={cn(
-                            "rounded-xl border px-3 py-2.5 sm:px-3.5 sm:py-3",
-                            "border-violet-400/40 bg-black/60 shadow-[0_8px_28px_rgba(0,0,0,0.55),inset_0_1px_0_rgba(255,255,255,0.12),0_0_24px_rgba(139,92,246,0.1)]",
-                            "backdrop-blur-md transition duration-300 group-hover/card:border-violet-300/55"
-                          )}
-                        >
-                          <div className="line-clamp-3 text-left text-[16px] font-extrabold uppercase leading-snug tracking-[0.06em] text-[#f5c814] antialiased [text-shadow:0_1px_2px_rgba(0,0,0,0.95),0_2px_14px_rgba(0,0,0,0.75)] sm:text-[17px] sm:tracking-[0.07em]">
-                            {pl.title}
-                          </div>
-                          {pl.description ? (
-                            <p className="mt-1.5 line-clamp-4 font-sans text-left text-[13px] font-medium leading-5 tracking-normal text-white/95 antialiased [text-shadow:0_1px_2px_rgba(0,0,0,0.8)]">
-                              {pl.description.replace(/\s+/g, " ").trim()}
-                            </p>
-                          ) : null}
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+              {visibleStreamPlaylistCount === 0 && streamPlaylists.length > 0 ? (
+                <div className="rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-[13px] text-white/70">
+                  No playlists found in this category yet.
+                </div>
+              ) : null}
+              {visibleBusinessPsychologyPlaylists.length > 0 || visibleBusinessModelPlaylists.length > 0 ? (
+                <div className="mx-auto max-w-[1700px]">
+                  {showBothPlaylistColumns ? (
+                    <div className="space-y-3 xl:hidden">
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="text-[11px] font-black uppercase tracking-[0.16em] text-fuchsia-200 [text-shadow:0_0_12px_rgba(232,121,249,0.35)]">
+                          {PLAYLIST_CATEGORY_LABELS.business_psychology}
+                        </div>
+                        <div className="text-right text-[11px] font-black uppercase tracking-[0.16em] text-cyan-200 [text-shadow:0_0_12px_rgba(103,232,249,0.35)]">
+                          {PLAYLIST_CATEGORY_LABELS.business_model}
                         </div>
                       </div>
-                    </span>
-                  </button>
-                );
-              })}
+                      <div className="space-y-4">
+                        {interleavedMobilePlaylistRows.map((row) => (
+                          <div key={`mobile-row-${row.idx}`} className="relative">
+                            {row.psychology && row.model ? (
+                              <>
+                                <div className="pointer-events-none absolute inset-y-0 left-1/2 z-[4] w-3 -translate-x-1/2 bg-gradient-to-b from-transparent via-[color:var(--gold)]/22 to-transparent blur-[1px]" />
+                                <div className="pointer-events-none absolute inset-y-0 left-1/2 z-[5] w-[3px] -translate-x-1/2 rounded-full bg-gradient-to-b from-transparent via-[color:var(--gold)] to-transparent shadow-[0_0_16px_rgba(245,200,20,0.95),0_0_38px_rgba(245,200,20,0.75)]" />
+                              </>
+                            ) : null}
+                            <div className="grid grid-cols-2 gap-4">
+                              <div>{row.psychology ? renderStreamPlaylistCard(row.psychology, row.idx * 2) : null}</div>
+                              <div>{row.model ? renderStreamPlaylistCard(row.model, row.idx * 2 + 1) : null}</div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
+                  <div
+                    className={cn(
+                      "grid grid-cols-1 gap-8",
+                      showBothPlaylistColumns
+                        ? "hidden xl:grid xl:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] xl:items-stretch"
+                        : "xl:grid-cols-1"
+                    )}
+                  >
+                    {visibleBusinessPsychologyPlaylists.length > 0 ? (
+                      <div className="space-y-3">
+                        <div className="text-[12px] font-black uppercase tracking-[0.18em] text-fuchsia-200 [text-shadow:0_0_14px_rgba(232,121,249,0.4)]">
+                          {PLAYLIST_CATEGORY_LABELS.business_psychology}
+                        </div>
+                        <div className="h-px w-full bg-gradient-to-r from-transparent via-fuchsia-300/90 to-transparent shadow-[0_0_14px_rgba(232,121,249,0.55)]" />
+                        <div
+                          className={cn(
+                            "grid gap-4 sm:gap-5 md:gap-6",
+                            showBothPlaylistColumns ? "grid-cols-2" : "grid-cols-1 md:grid-cols-2 xl:grid-cols-3"
+                          )}
+                        >
+                          {visibleBusinessPsychologyPlaylists.map((pl, j) => renderStreamPlaylistCard(pl, j))}
+                        </div>
+                      </div>
+                    ) : null}
+
+                    {showBothPlaylistColumns ? (
+                      <div className="relative h-5 w-full xl:h-auto xl:w-4" aria-hidden>
+                        <div className="absolute left-0 top-1/2 h-[2px] w-full -translate-y-1/2 bg-gradient-to-r from-transparent via-[#f5c814] to-transparent shadow-[0_0_14px_rgba(245,200,20,0.9),0_0_34px_rgba(245,200,20,0.65)] xl:hidden" />
+                        <div className="absolute left-1/2 top-0 hidden h-full w-[2px] -translate-x-1/2 bg-gradient-to-b from-transparent via-[#f5c814] to-transparent shadow-[0_0_16px_rgba(245,200,20,0.95),0_0_40px_rgba(245,200,20,0.7)] xl:block" />
+                      </div>
+                    ) : null}
+
+                    {visibleBusinessModelPlaylists.length > 0 ? (
+                      <div className="space-y-3">
+                        <div className="text-[12px] font-black uppercase tracking-[0.18em] text-cyan-200 [text-shadow:0_0_14px_rgba(103,232,249,0.4)]">
+                          {PLAYLIST_CATEGORY_LABELS.business_model}
+                        </div>
+                        <div className="h-px w-full bg-gradient-to-r from-transparent via-cyan-300/90 to-transparent shadow-[0_0_14px_rgba(103,232,249,0.55)]" />
+                        <div
+                          className={cn(
+                            "grid gap-4 sm:gap-5 md:gap-6",
+                            showBothPlaylistColumns ? "grid-cols-2" : "grid-cols-1 md:grid-cols-2 xl:grid-cols-3"
+                          )}
+                        >
+                          {visibleBusinessModelPlaylists.map((pl, j) =>
+                            renderStreamPlaylistCard(pl, j + visibleBusinessPsychologyPlaylists.length)
+                          )}
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
+              ) : null}
+              {apiCourses.length > 0 ? (
+                <div className="space-y-3">
+                  <div className="text-[12px] font-black uppercase tracking-[0.18em] text-cyan-100/80">Courses</div>
+                  <div className="mx-auto grid max-w-[1600px] grid-cols-1 gap-4 sm:gap-5 md:grid-cols-2 md:gap-6 lg:grid-cols-3">
               {apiCourses.map((c, i) => {
                 const grad = PROGRAM_CARD_BACKGROUNDS[(streamPlaylists.length + i) % PROGRAM_CARD_BACKGROUNDS.length];
                 const coverSrc = resolveDjangoMediaUrl(c.cover_image_url);
+                const theme = COURSE_CARD_THEMES[i % COURSE_CARD_THEMES.length];
                 return (
                   <button
                     key={`course-${c.id}`}
@@ -317,16 +639,20 @@ export function ProgramsCourseSection({
                     className={cn(
                       "group/card relative flex aspect-[4/5] w-full flex-col overflow-hidden text-left outline-none",
                       "rounded-3xl",
-                      "shadow-[0_6px_32px_rgba(0,0,0,0.55),0_0_0_1px_rgba(250,204,21,0.14),0_0_40px_rgba(250,204,21,0.2)]",
+                      theme.glow,
                       "transition-[transform,box-shadow] duration-300 ease-out",
-                      "hover:-translate-y-0.5 hover:shadow-[0_14px_48px_rgba(0,0,0,0.5),0_0_0_1px_rgba(250,204,21,0.28),0_0_64px_rgba(250,204,21,0.38)]",
-                      "focus-visible:ring-2 focus-visible:ring-amber-300/80 focus-visible:ring-offset-2 focus-visible:ring-offset-black",
+                      "hover:-translate-y-0.5",
+                      theme.hoverGlow,
+                      "focus-visible:ring-2 focus-visible:ring-cyan-300/80 focus-visible:ring-offset-2 focus-visible:ring-offset-black",
                       "active:translate-y-0"
                     )}
                   >
                     {/* Rotating conic gradient — visible only in the ~2px ring around the inner panel */}
                     <span
-                      className="pointer-events-none absolute left-1/2 top-1/2 z-0 aspect-square w-[185%] max-w-none -translate-x-1/2 -translate-y-1/2 will-change-transform bg-[conic-gradient(from_0deg_at_50%_50%,#fffdf5,#fde68a,#fbbf24,#f59e0b,#d97706,#fcd34d,#fef08a,#fde047,#fffdf5)] animate-[spin_5.5s_linear_infinite] motion-reduce:animate-none"
+                      className={cn(
+                        "pointer-events-none absolute left-1/2 top-1/2 z-0 aspect-square w-[185%] max-w-none -translate-x-1/2 -translate-y-1/2 will-change-transform animate-[spin_5.5s_linear_infinite] motion-reduce:animate-none",
+                        `bg-gradient-to-r ${theme.ring}`
+                      )}
                       style={{ animationDuration: `${5.2 + ((streamPlaylists.length + i) % 5) * 0.45}s` }}
                       aria-hidden
                     />
@@ -367,16 +693,25 @@ export function ProgramsCourseSection({
                         <div
                           className={cn(
                             "rounded-xl border px-3 py-2.5 sm:px-3.5 sm:py-3",
-                            "border-amber-400/35 bg-black/60 shadow-[0_8px_28px_rgba(0,0,0,0.55),inset_0_1px_0_rgba(255,255,255,0.12),0_0_24px_rgba(250,204,21,0.08)]",
-                            "backdrop-blur-md transition duration-300 group-hover/card:border-amber-300/55 group-hover/card:shadow-[0_10px_32px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.16),0_0_32px_rgba(250,204,21,0.14)]"
+                            theme.body,
+                            "shadow-[0_8px_28px_rgba(0,0,0,0.55),inset_0_1px_0_rgba(255,255,255,0.12)]",
+                            "backdrop-blur-md transition duration-300 group-hover/card:brightness-125 group-hover/card:saturate-125"
                           )}
                         >
                           <div
-                            className="line-clamp-3 text-left text-[16px] font-extrabold uppercase leading-snug tracking-[0.06em] text-[color:var(--gold)] antialiased [text-shadow:0_1px_2px_rgba(0,0,0,0.95),0_2px_14px_rgba(0,0,0,0.75)] sm:text-[17px] sm:tracking-[0.07em]"
+                            className={cn(
+                              "line-clamp-3 text-left text-[16px] font-extrabold uppercase leading-snug tracking-[0.06em] antialiased [text-shadow:0_1px_2px_rgba(0,0,0,0.95),0_2px_14px_rgba(0,0,0,0.75)] sm:text-[17px] sm:tracking-[0.07em]",
+                              theme.title
+                            )}
                           >
                             {c.title}
                           </div>
-                          <div className="mt-1.5 text-left text-[10px] font-bold uppercase tracking-[0.14em] text-cyan-200/80">
+                          <div
+                            className={cn(
+                              "mt-1.5 inline-flex w-fit rounded-full border px-2 py-0.5 text-left text-[10px] font-bold uppercase tracking-[0.14em]",
+                              theme.chip
+                            )}
+                          >
                             Course · playlist
                           </div>
                           {c.description ? (
@@ -390,6 +725,9 @@ export function ProgramsCourseSection({
                   </button>
                 );
               })}
+                  </div>
+                </div>
+              ) : null}
             </div>
           ) : null}
 

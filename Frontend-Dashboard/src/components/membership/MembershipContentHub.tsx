@@ -415,14 +415,6 @@ export function MembershipContentHub() {
         </div>
       ) : (
         <div className="space-y-5">
-          <div className="relative overflow-hidden rounded-xl border border-cyan-300/35 border-t-red-500/30 bg-[radial-gradient(circle_at_20%_0%,rgba(0,255,255,0.12),rgba(0,0,0,0.1)_55%),linear-gradient(180deg,rgba(8,14,16,0.95),rgba(3,5,8,0.98))] p-5 shadow-[inset_0_1px_0_rgba(248,113,113,0.15)]">
-            <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(transparent_92%,rgba(34,211,238,0.15)_100%)] bg-[length:100%_7px] opacity-35" />
-            <p className="relative text-[12px] font-black uppercase tracking-[0.18em] text-cyan-200">Video arcade // hazard feed</p>
-            <p className="relative mt-2 text-[15px] leading-relaxed text-neutral-300 sm:text-[16px]">
-              Full-screen playback. Neural thumbnails. Mixed portrait and landscape grid — filter by date on the archive panel below.
-            </p>
-          </div>
-
           <MembershipVideoGallery videos={videosToRender} loading={videosLoading} error={error} onPlay={setActiveVideo} />
         </div>
       )}

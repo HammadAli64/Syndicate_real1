@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Play } from "lucide-react";
+import { Play, Star } from "lucide-react";
 import HlsVideoPlayer from "@/components/streaming/HlsVideoPlayer";
 import {
   fetchStreamPlaylistDetail,
@@ -18,6 +18,11 @@ type Props = {
 };
 
 const playerShell = "overflow-hidden rounded-xl border border-white/10 bg-black/50";
+
+function parsePlaylistNumber(value: string | number | null | undefined): number {
+  const n = typeof value === "number" ? value : Number.parseFloat(String(value ?? "0"));
+  return Number.isFinite(n) ? n : 0;
+}
 
 export function StreamPlaylistProgramPanel({ playlistId }: Props) {
   const [playlist, setPlaylist] = useState<StreamPlaylistDetail | null>(null);
@@ -106,6 +111,8 @@ export function StreamPlaylistProgramPanel({ playlistId }: Props) {
 
   const hlsUrl = playback?.hls_url ?? null;
   const ready = playback?.status === "ready" && !!hlsUrl;
+  const playlistPrice = parsePlaylistNumber(playlist.price);
+  const playlistRating = Math.max(0, Math.min(5, parsePlaylistNumber(playlist.rating)));
 
   return (
     <div className="flex flex-col gap-8 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(340px,420px)] lg:items-start lg:gap-10">
@@ -141,6 +148,13 @@ export function StreamPlaylistProgramPanel({ playlistId }: Props) {
             <h2 className="text-[clamp(1.15rem,2.2vw+0.5rem,1.65rem)] font-black leading-tight tracking-tight text-[#f5c814]">
               {activeVideo?.title ?? "Episode"}
             </h2>
+            <span className="inline-flex items-center gap-1 rounded-full border border-amber-300/45 bg-black/45 px-2.5 py-1 text-[11px] font-bold text-amber-100">
+              <Star className="h-3.5 w-3.5 fill-current text-amber-300" />
+              {playlistRating.toFixed(1)}
+            </span>
+            <span className="rounded-full border border-emerald-300/45 bg-emerald-500/12 px-2.5 py-1 text-[11px] font-black text-emerald-200">
+              {`£${playlistPrice.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`}
+            </span>
           </div>
           {(activeVideo?.description || "").trim() ? (
             <div className="mt-3 max-w-4xl rounded-xl border border-white/12 bg-black/35 px-4 py-3">
@@ -157,7 +171,18 @@ export function StreamPlaylistProgramPanel({ playlistId }: Props) {
         aria-label="Playlist"
         className="flex min-h-0 flex-col rounded-xl border border-white/12 bg-black/40 p-3 lg:sticky lg:top-24 lg:max-h-[calc(100vh-8rem)]"
       >
-        <div className="border-b border-white/10 px-1 pb-3 text-[13px] font-bold text-[#f5c814]">{playlist.title}</div>
+        <div className="border-b border-white/10 px-1 pb-3">
+          <div className="text-[13px] font-bold text-[#f5c814]">{playlist.title}</div>
+          <div className="mt-2 flex items-center gap-2 text-[11px]">
+            <span className="inline-flex items-center gap-1 rounded-full border border-amber-300/45 bg-black/45 px-2 py-0.5 font-bold text-amber-100">
+              <Star className="h-3 w-3 fill-current text-amber-300" />
+              {playlistRating.toFixed(1)}
+            </span>
+            <span className="rounded-full border border-emerald-300/45 bg-emerald-500/12 px-2 py-0.5 font-sans font-extrabold tracking-normal text-emerald-200">
+              {`£${playlistPrice.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`}
+            </span>
+          </div>
+        </div>
         <ul className="mt-3 flex max-h-[min(52vh,560px)] flex-col gap-2 overflow-y-auto pr-1 lg:max-h-none lg:flex-1">
           {items.map((row, i) => {
             const v = row.stream_video;

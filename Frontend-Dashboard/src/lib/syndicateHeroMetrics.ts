@@ -93,6 +93,8 @@ export function computeSyndicateRankFromPoints(pointsTotal: number) {
 
 export type MissionBoardStats = {
   activeMissionCount: number;
+  completedMissionsCount: number;
+  pendingMissionsCount: number;
   activeMissionsPct: number;
   missedChallengesPct: number;
 };
@@ -111,6 +113,8 @@ export function computeMissionBoardStats(rows: ChallengeRow[], nowMs: number): M
 
   return {
     activeMissionCount: activeLive,
+    completedMissionsCount: completedOnBoard,
+    pendingMissionsCount: activeLive,
     activeMissionsPct,
     missedChallengesPct
   };

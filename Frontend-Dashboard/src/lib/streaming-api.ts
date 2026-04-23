@@ -30,7 +30,10 @@ export type StreamPlaylistListItem = {
   id: number;
   title: string;
   slug: string;
+  category: "business_model" | "business_psychology";
   description: string;
+  price: string;
+  rating: string;
   cover_image_url: string | null;
   video_count: number;
   is_published: boolean;

@@ -68,9 +68,9 @@ export function ArticleCard({ article, featured, index = 0, onOpenPdf, onOpenWeb
       transition={{ duration: 0.35, delay: Math.min(index * 0.05, 0.35) }}
       className={cx(
         "group relative flex h-full min-h-[310px] flex-col overflow-hidden rounded-2xl border bg-black/70 text-left transition duration-300",
-        "border-cyan-300/24 shadow-[0_0_0_1px_rgba(0,0,0,0.45),0_16px_40px_rgba(0,0,0,0.45)] before:absolute before:inset-0 before:bg-[radial-gradient(120%_90%_at_0%_0%,rgba(34,211,238,0.11),transparent_48%),radial-gradient(120%_90%_at_100%_100%,rgba(34,211,238,0.07),transparent_52%)] before:content-['']",
-        "hover:-translate-y-1 hover:border-cyan-200/58 hover:shadow-[0_0_38px_rgba(34,211,238,0.16),0_16px_45px_rgba(0,0,0,0.55)]",
-        featured && "md:min-h-[350px] md:border-cyan-200/45 md:shadow-[0_0_46px_rgba(34,211,238,0.18)]"
+        "border-cyan-300/34 shadow-[0_0_0_1px_rgba(0,0,0,0.45),0_0_28px_rgba(34,211,238,0.14),0_18px_42px_rgba(0,0,0,0.5)] before:absolute before:inset-0 before:bg-[radial-gradient(120%_90%_at_0%_0%,rgba(34,211,238,0.2),transparent_48%),radial-gradient(120%_90%_at_100%_100%,rgba(34,211,238,0.14),transparent_52%)] before:content-['']",
+        "hover:-translate-y-1 hover:border-cyan-200/78 hover:shadow-[0_0_58px_rgba(34,211,238,0.32),0_20px_50px_rgba(0,0,0,0.58)]",
+        featured && "md:min-h-[350px] md:border-cyan-200/62 md:shadow-[0_0_64px_rgba(34,211,238,0.3)]"
       )}
     >
       <div className="relative z-[1] h-[3px] w-full bg-cyan-300/75" />

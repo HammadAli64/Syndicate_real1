@@ -51,6 +51,10 @@ export type SyndicateSnapshot = {
   activeMissionTitle?: string;
   /** Incomplete missions still on the 24h board (Syndicate today feed). */
   activeLiveMissionCount?: number;
+  /** Completed missions on the current challenge board. */
+  completedMissionsCount?: number;
+  /** Pending (not completed) missions on the current challenge board. */
+  pendingMissionsCount?: number;
   /** Progress signal for active missions row (0..100). */
   activeMissionsPct: number;
   /** Share of challenges missed / slipped (0..100), dashboard metaphor. */

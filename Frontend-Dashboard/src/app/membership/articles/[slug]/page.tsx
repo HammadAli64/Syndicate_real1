@@ -10,6 +10,25 @@ import type { ArticleDto } from "@/components/membership/ArticleCard";
 import { MembershipArticleReader, type ArticleReaderState } from "@/components/membership/MembershipArticleReader";
 
 const ARTICLES_HREF = "/?section=resources";
+type ArticleDetailResponse = ArticleDto & { detail?: string };
+type ArticleRequestResult = { ok: boolean; status: number; data: ArticleDetailResponse };
+const articleDetailCache = new Map<string, ArticleDto>();
+const articleDetailInFlight = new Map<string, Promise<ArticleRequestResult>>();
+
+function fetchArticleDetail(slug: string): Promise<ArticleRequestResult> {
+  const cached = articleDetailInFlight.get(slug);
+  if (cached) return cached;
+  const path = `/api/portal/membership/articles/${encodeURIComponent(slug)}/`;
+  const req = portalFetch<ArticleDetailResponse>(path).then((res) => ({
+    ok: res.ok,
+    status: res.status,
+    data: res.data,
+  }));
+  articleDetailInFlight.set(slug, req);
+  return req.finally(() => {
+    articleDetailInFlight.delete(slug);
+  });
+}
 
 /** Turn a single very long paragraph into two for readability (sentence boundary near the middle). */
 function splitLongProseForDisplay(text: string, minChars = 520): string[] {
@@ -62,12 +81,19 @@ export default function MembershipArticleDetailPage() {
       setErr("Missing article.");
       return;
     }
+    const cachedArticle = articleDetailCache.get(slug);
+    if (cachedArticle) {
+      setArticle(cachedArticle);
+      setLoading(false);
+      setErr(null);
+      recordMembershipArticleRead(slug);
+      return;
+    }
     let cancelled = false;
     (async () => {
       setLoading(true);
       setErr(null);
-      const path = `/api/portal/membership/articles/${encodeURIComponent(slug)}/`;
-      const { ok, data, status } = await portalFetch<ArticleDto & { detail?: string }>(path);
+      const { ok, data, status } = await fetchArticleDetail(slug);
       if (cancelled) return;
       setLoading(false);
       if (!ok) {
@@ -82,6 +108,7 @@ export default function MembershipArticleDetailPage() {
         return;
       }
       const loaded = data as ArticleDto;
+      articleDetailCache.set(slug, loaded);
       setArticle(loaded);
       recordMembershipArticleRead(slug);
     })();

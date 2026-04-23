@@ -14,7 +14,7 @@ export type MoodChallengeResult = {
   mood: string;
   category: string;
 };
-
+ 
 export type GenerateChallengesResponse = {
   results: MoodChallengeResult[];
   detail?: string;

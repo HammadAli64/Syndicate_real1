@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import LuxuryRedirectOverlay from "@/components/syndicate-otp/LuxuryRedirectOverlay";
+import { persistSimpleAuthSession } from "@/lib/portal-api";
+import { resolvePostOtpAppRedirect } from "@/lib/syndicate-otp-paths";
 import { syndicateOtpSignupHref } from "@/lib/syndicate-otp-paths";
 
 const API_BASE_URL = (process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:8000").replace(/\/$/, "");
@@ -17,6 +19,18 @@ type SuccessPayload = {
   message?: string;
   email?: string;
   error?: string;
+  redirect_url?: string;
+  token?: string;
+  referral_ids?: {
+    complete?: string;
+    single?: string;
+    exclusive?: string;
+  };
+  user?: {
+    id: number;
+    username: string;
+    email: string;
+  };
 };
 
 export default function CheckoutSuccessScreen({
@@ -26,6 +40,7 @@ export default function CheckoutSuccessScreen({
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [luxuryOpen, setLuxuryOpen] = useState(false);
+  const [luxuryHref, setLuxuryHref] = useState(SYNDICATE_URL);
 
   useEffect(() => {
     const canvas = document.getElementById("particles") as HTMLCanvasElement | null;
@@ -136,7 +151,35 @@ export default function CheckoutSuccessScreen({
         }
 
         setMessage(data.message || "Payment confirmed.");
+        const t = typeof data.token === "string" ? data.token.trim() : "";
+        if (t) {
+          const loginEmail = (data.user?.email || data.email || "").trim();
+          const rid = data.referral_ids;
+          const referralIds =
+            rid && typeof rid.complete === "string" && rid.complete.trim()
+              ? {
+                  complete: rid.complete.trim(),
+                  single: rid.single?.trim() || rid.complete.trim(),
+                  exclusive: rid.exclusive?.trim() || rid.complete.trim(),
+                }
+              : undefined;
+          persistSimpleAuthSession(
+            t,
+            loginEmail
+              ? { email: loginEmail, userId: data.user?.id, referralIds }
+              : undefined,
+          );
+        }
+        const nextUrl =
+          typeof window !== "undefined"
+            ? resolvePostOtpAppRedirect(data.redirect_url)
+            : SYNDICATE_URL;
+        setLuxuryHref(nextUrl);
+        window.history.replaceState({}, "", "/");
         window.setTimeout(() => setLuxuryOpen(true), 400);
+        window.setTimeout(() => {
+          if (typeof window !== "undefined") window.location.replace(nextUrl);
+        }, 1200);
       } catch (verificationError) {
         setError(
           verificationError instanceof Error
@@ -153,7 +196,7 @@ export default function CheckoutSuccessScreen({
 
   return (
     <div className="checkout-page-wrap checkout-page-wrap--entered">
-      <LuxuryRedirectOverlay active={luxuryOpen} href={SYNDICATE_URL} />
+      <LuxuryRedirectOverlay active={luxuryOpen} href={luxuryHref} />
 
       <div className="scanline" />
       <div className="noise" />

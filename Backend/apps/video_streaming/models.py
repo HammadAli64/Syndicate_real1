@@ -1,5 +1,6 @@
 import uuid
 
+from django.core.validators import MaxValueValidator
 from django.core.validators import MinValueValidator
 from django.db import models
 from django.utils.text import slugify
@@ -102,9 +103,34 @@ class StreamVideo(models.Model):
 class StreamPlaylist(models.Model):
     """Ordered collection of StreamVideo entries for the Programs dashboard."""
 
+    class Category(models.TextChoices):
+        BUSINESS_MODEL = "business_model", "Business Model"
+        BUSINESS_PSYCHOLOGY = "business_psychology", "Business Psychology"
+
     title = models.CharField(max_length=255)
     slug = models.SlugField(max_length=280, unique=True, db_index=True)
+    category = models.CharField(
+        max_length=32,
+        choices=Category.choices,
+        default=Category.BUSINESS_PSYCHOLOGY,
+        db_index=True,
+        help_text="Programs grouping used by dashboard filters.",
+    )
     description = models.TextField(blank=True)
+    price = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0,
+        validators=[MinValueValidator(0)],
+        help_text="Playlist price shown on Programs cards.",
+    )
+    rating = models.DecimalField(
+        max_digits=3,
+        decimal_places=1,
+        default=0,
+        validators=[MinValueValidator(0), MaxValueValidator(5)],
+        help_text="Public rating out of 5 stars.",
+    )
     cover_image = models.ImageField(
         upload_to=stream_playlist_cover_upload_to,
         blank=True,

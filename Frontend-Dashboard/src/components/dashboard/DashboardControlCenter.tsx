@@ -391,48 +391,48 @@ function HeroStatusPanel({
   const ongoingPrograms = s.programs.length;
   const programsAvgPct =
     s.programs.length > 0 ? Math.round(s.programs.reduce((acc, p) => acc + p.progressPct, 0) / s.programs.length) : 0;
-  const activeMissionCount = s.syndicate.activeLiveMissionCount ?? (s.syndicate.activeMissionTitle ? 1 : 0);
-  const missionsPct = s.syndicate.activeMissionsPct;
-  const missedPct = s.syndicate.missedChallengesPct;
+  const completedMissionCount = s.syndicate.completedMissionsCount ?? 0;
+  const pendingMissionCount = s.syndicate.pendingMissionsCount ?? (s.syndicate.activeLiveMissionCount ?? (s.syndicate.activeMissionTitle ? 1 : 0));
+  const totalMissionPoints = s.syndicate.missionPointsTotal ?? 0;
   return (
     <div
-      className="cut-frame cyber-frame gold-stroke relative w-full max-w-none overflow-hidden border border-[rgba(197,179,88,0.26)] bg-[#060606]/78 p-5 backdrop-blur-[10px] md:p-6 lg:p-7"
-      style={{ borderColor: "rgba(197,179,88,0.28)", boxShadow: `0 0 0 1px rgba(197,179,88,0.08), 0 0 52px ${t.glow}` }}
+      className="cut-frame cyber-frame gold-stroke relative w-full max-w-none overflow-hidden border-2 border-[rgba(255,198,62,0.62)] bg-[#060400]/92 p-5 backdrop-blur-[12px] md:p-6 lg:p-7"
+      style={{ borderColor: "rgba(255,198,62,0.62)", boxShadow: `0 0 0 1px rgba(255,198,62,0.38), 0 0 95px rgba(255,198,62,0.45), 0 0 120px ${t.glow}` }}
     >
-      <div className="absolute inset-0 opacity-[0.88] [background:radial-gradient(920px_560px_at_38%_0%,rgba(197,179,88,0.11),rgba(0,0,0,0)_64%)]" />
-      <div className="absolute inset-0 opacity-35 [background:radial-gradient(800px_320px_at_90%_0%,rgba(196,126,255,0.10),rgba(0,0,0,0)_62%)]" />
+      <div className="absolute inset-0 opacity-[0.96] [background:radial-gradient(980px_580px_at_25%_0%,rgba(255,198,62,0.28),rgba(0,0,0,0)_64%)]" />
+      <div className="absolute inset-0 opacity-55 [background:radial-gradient(900px_380px_at_90%_0%,rgba(255,172,39,0.2),rgba(0,0,0,0)_62%)]" />
 
       <div className="relative flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex items-center gap-3">
           <img
             src={profileAvatar}
             alt="Profile avatar"
-            className="h-14 w-14 rounded-lg border border-white/10 bg-black/30 object-cover p-0.5"
+            className="h-16 w-16 rounded-lg border border-[rgba(255,215,0,0.5)] bg-black/30 object-cover p-0.5 shadow-[0_0_24px_rgba(255,215,0,0.35)]"
           />
           <div className="min-w-0">
-            <div className="font-mono text-[14px] font-black uppercase tracking-[0.12em] text-[color:var(--gold)]/92">
+            <div className="font-mono text-[16px] font-black uppercase tracking-[0.15em] text-[color:var(--gold)] [text-shadow:0_0_18px_rgba(255,215,0,0.62)]">
               {userName}
             </div>
-            <div className="mt-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-white/70">
-              {userRole} • Rank: <span className="text-white/80">{s.syndicate.rankLabel}</span>
+            <div className="mt-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-white/84">
+              {userRole} • Level system: <span className="text-white/80">Level {s.syndicate.level}</span>
             </div>
             <div className="mt-2 flex items-center gap-2">
-              <div className="group relative inline-flex items-center gap-2 rounded-md border border-white/10 bg-black/30 px-2 py-1">
+              <div className="group relative inline-flex items-center gap-2 rounded-md border border-[rgba(255,198,62,0.46)] bg-black/40 px-2 py-1 shadow-[0_0_20px_rgba(255,198,62,0.24)]">
                 <svg viewBox="0 0 24 24" className="h-4 w-4 text-white/22" fill="none" aria-hidden="true">
                   <path d="M12 3.8l6.2 3.6v7.2L12 18.2l-6.2-3.6V7.4L12 3.8Z" stroke="currentColor" strokeWidth="1.6" />
                   <path d="M7.8 9.2h8.4M7.8 12h6.2M7.8 14.8h8.4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" opacity="0.8" />
                 </svg>
-                <span className="font-mono text-[10px] font-black uppercase tracking-[0.16em] text-cyan-200/85">
-                  {s.syndicate.nextRankLabel ?? "—"}
+                <span className="font-mono text-[10px] font-black uppercase tracking-[0.16em] text-amber-200">
+                  Level {s.syndicate.level}
                 </span>
                 <div className="pointer-events-none absolute left-1/2 top-[calc(100%+10px)] z-50 hidden w-[280px] -translate-x-1/2 rounded-md border border-white/10 bg-black/90 p-2 text-[11px] text-white/70 shadow-[0_0_28px_rgba(34,211,238,0.18)] group-hover:block">
-                  <div className="font-mono text-[10px] font-black uppercase tracking-[0.16em] text-cyan-200/85">Syndicate rewards</div>
+                  <div className="font-mono text-[10px] font-black uppercase tracking-[0.16em] text-amber-200">Syndicate rewards</div>
                   <div className="mt-1">
                     {typeof s.syndicate.pointsToNext === "number" && s.syndicate.pointsToNext > 0 ? (
                       <>
                         Earn <span className="font-mono font-black text-white/90">{s.syndicate.pointsToNext}</span> more mission
                         {s.syndicate.pointsToNext === 1 ? " point" : " points"} to reach{" "}
-                        <span className="text-cyan-200/90">{s.syndicate.nextRankLabel}</span> (same ladder as Unlock &amp; redeem).
+                        <span className="text-amber-200">{s.syndicate.nextRankLabel}</span> (same ladder as Unlock &amp; redeem).
                       </>
                     ) : s.syndicate.pointsToNext === 0 ? (
                       <>You have cleared every mission-points tier in the current ladder.</>
@@ -442,12 +442,12 @@ function HeroStatusPanel({
                   </div>
                 </div>
               </div>
-              <div className="font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-white/40">Next rank preview</div>
+              <div className="font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-white/58">Syndicate level</div>
             </div>
             <div className="mt-3">
-              <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-[0.14em] text-white/65">
-                <span>XP toward next rank</span>
-                <span className="text-white/85">{s.syndicate.xpPct}%</span>
+              <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-[0.14em] text-white/78">
+                <span>XP toward next level</span>
+                <span className="text-white">{s.syndicate.xpPct}%</span>
               </div>
               <div className="mt-2">
                 <ProgressBar pct={s.syndicate.xpPct} tone={themeMode === "danger" ? "danger" : themeMode === "cyberpunk" ? "ice" : "gold"} />
@@ -461,19 +461,19 @@ function HeroStatusPanel({
             <button
               type="button"
               onClick={() => onNavigate("programs")}
-              className="rounded-md border bg-black/40 px-3 py-2 text-left hover:bg-black/65"
+              className="rounded-md border-2 border-[rgba(255,198,62,0.58)] bg-[linear-gradient(145deg,rgba(255,198,62,0.16),rgba(0,0,0,0.62))] px-3 py-2.5 text-left transition hover:bg-[linear-gradient(145deg,rgba(255,198,62,0.25),rgba(0,0,0,0.7))]"
               style={{
-                borderColor: accentByKey("programs").border,
-                boxShadow: `0 0 0 1px ${accentByKey("programs").glow}`
+                borderColor: "rgba(255,198,62,0.58)",
+                boxShadow: "0 0 0 1px rgba(255,198,62,0.34), 0 0 30px rgba(255,198,62,0.35)"
               }}
             >
-              <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-white/70">Active programs</div>
+              <div className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-amber-100">Active programs</div>
               <div className="mt-1 space-y-0.5">
-                <div className="font-mono text-[14px] font-black tabular-nums text-white/92">
+                <div className="font-mono text-[18px] font-black tabular-nums text-white [text-shadow:0_0_14px_rgba(255,198,62,0.35)]">
                   {ongoingPrograms}{" "}
-                  <span className="text-[9px] font-bold tracking-[0.12em] text-white/45">ONGOING</span>
+                  <span className="text-[9px] font-bold tracking-[0.12em] text-amber-100/70">ONGOING</span>
                 </div>
-                <div className="font-mono text-[12px] font-black tabular-nums text-white/78">{programsAvgPct}%</div>
+                <div className="font-mono text-[14px] font-black tabular-nums text-amber-100">{programsAvgPct}%</div>
               </div>
               <div className="mt-2">
                 <ProgressBar pct={programsAvgPct} tone="gold" />
@@ -482,48 +482,45 @@ function HeroStatusPanel({
             <button
               type="button"
               onClick={() => onNavigate("monk")}
-              className="rounded-md border bg-black/40 px-3 py-2 text-left hover:bg-black/65"
+              className="rounded-md border-2 border-[rgba(255,198,62,0.58)] bg-[linear-gradient(145deg,rgba(255,198,62,0.16),rgba(0,0,0,0.62))] px-3 py-2.5 text-left transition hover:bg-[linear-gradient(145deg,rgba(255,198,62,0.25),rgba(0,0,0,0.7))]"
               style={{
-                borderColor: accentByKey("monk").border,
-                boxShadow: `0 0 0 1px ${accentByKey("monk").glow}`
+                borderColor: "rgba(255,198,62,0.58)",
+                boxShadow: "0 0 0 1px rgba(255,198,62,0.34), 0 0 30px rgba(255,198,62,0.35)"
               }}
             >
-              <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-white/70">Active missions</div>
+              <div className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-amber-100">Completed missions</div>
               <div className="mt-1 space-y-0.5">
-                <div className="font-mono text-[14px] font-black tabular-nums text-white/92">{missionsPct}%</div>
-                <div className="text-[9px] font-bold uppercase tracking-[0.12em] text-white/45">{activeMissionCount} live</div>
-              </div>
-              <div className="mt-2">
-                <ProgressBar pct={missionsPct} tone="ice" />
+                <div className="font-mono text-[18px] font-black tabular-nums text-white [text-shadow:0_0_14px_rgba(255,198,62,0.35)]">{completedMissionCount}</div>
+                <div className="text-[9px] font-bold uppercase tracking-[0.12em] text-amber-100/70">from challenges</div>
               </div>
             </button>
             <button
               type="button"
               onClick={() => onNavigate("monk")}
-              className="rounded-md border bg-black/40 px-3 py-2 text-left hover:bg-black/65"
+              className="rounded-md border-2 border-[rgba(255,198,62,0.58)] bg-[linear-gradient(145deg,rgba(255,198,62,0.16),rgba(0,0,0,0.62))] px-3 py-2.5 text-left transition hover:bg-[linear-gradient(145deg,rgba(255,198,62,0.25),rgba(0,0,0,0.7))]"
               style={{
-                borderColor: accentByKey("alerts").border,
-                boxShadow: `0 0 0 1px ${accentByKey("alerts").glow}`
+                borderColor: "rgba(255,198,62,0.58)",
+                boxShadow: "0 0 0 1px rgba(255,198,62,0.34), 0 0 30px rgba(255,198,62,0.35)"
               }}
             >
-              <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-white/70">Missed challenges</div>
-              <div className="mt-1 font-mono text-[14px] font-black tabular-nums text-white/92">{missedPct}%</div>
-              <div className="mt-2">
-                <ProgressBar pct={missedPct} tone="danger" />
+              <div className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-amber-100">Pending missions</div>
+              <div className="mt-1 space-y-0.5">
+                <div className="font-mono text-[18px] font-black tabular-nums text-white [text-shadow:0_0_14px_rgba(255,198,62,0.35)]">{pendingMissionCount}</div>
+                <div className="text-[9px] font-bold uppercase tracking-[0.12em] text-amber-100/70">in challenges</div>
               </div>
             </button>
             <button
               type="button"
               onClick={() => onNavigate("monk")}
-              className="rounded-md border bg-black/40 px-3 py-2 text-left hover:bg-black/65"
+              className="rounded-md border-2 border-[rgba(255,198,62,0.58)] bg-[linear-gradient(145deg,rgba(255,198,62,0.16),rgba(0,0,0,0.62))] px-3 py-2.5 text-left transition hover:bg-[linear-gradient(145deg,rgba(255,198,62,0.25),rgba(0,0,0,0.7))]"
               style={{
-                borderColor: accentByKey("affiliate").border,
-                boxShadow: `0 0 0 1px ${accentByKey("affiliate").glow}`
+                borderColor: "rgba(255,198,62,0.58)",
+                boxShadow: "0 0 0 1px rgba(255,198,62,0.34), 0 0 30px rgba(255,198,62,0.35)"
               }}
             >
-              <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-white/70">Mission points</div>
-              <div className="mt-1 font-mono text-[14px] font-black tabular-nums text-white/92">
-                {s.syndicate.missionPointsTotal ?? 0}
+              <div className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-amber-100">Total points</div>
+              <div className="mt-1 font-mono text-[18px] font-black tabular-nums text-white [text-shadow:0_0_14px_rgba(255,198,62,0.35)]">
+                {totalMissionPoints}
               </div>
             </button>
           </div>

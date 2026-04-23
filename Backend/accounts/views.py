@@ -207,35 +207,11 @@ def signup_view(request):
   SignupOTP.objects.filter(email=email).delete()
   LoginOTP.objects.filter(email=email).delete()
 
-  otp_code = _generate_otp()
-  expires_at = timezone.now() + timedelta(
-    minutes=getattr(settings, "OTP_EXPIRES_MINUTES", 10)
-  )
-  SignupOTP.objects.create(
-    email=email,
-    otp_code=otp_code,
-    otp_expires_at=expires_at,
-  )
-
-  try:
-    _send_signup_otp_email(email=email, otp_code=otp_code)
-  except Exception:
-    if settings.DEBUG:
-      print(f"[DEV OTP FALLBACK] signup {email}: {otp_code}")
-      return JsonResponse(
-        {
-          "message": "Verification code generated (email temporarily unavailable in dev).",
-          "email": email,
-          "debug_otp": otp_code,
-        },
-        status=200,
-      )
-    return _json_error("Failed to send signup verification email.", status=500)
-
   return JsonResponse(
     {
-      "message": "Verification code sent to your email.",
+      "message": "Signup started. Continue to checkout.",
       "email": email,
+      "signup_token": str(pending.token),
     },
     status=200,
   )
@@ -454,9 +430,18 @@ def checkout_success_view(request):
     user.save()
     pending_signup.is_paid = True
     pending_signup.save(update_fields=["is_paid", "updated_at"])
+    auth_token, _ = Token.objects.get_or_create(user=user)
+    af_profile = ensure_affiliate_profile_for_existing_user(user)
 
     return JsonResponse(
-      {"message": "Payment successful.", "email": user.email},
+      {
+        "message": "Payment successful.",
+        "email": user.email,
+        "token": auth_token.key,
+        "redirect_url": getattr(settings, "POST_LOGIN_REDIRECT_URL", "http://localhost:3000/"),
+        "user": {"id": user.id, "username": user.username, "email": user.email},
+        "referral_ids": referral_ids_payload(af_profile),
+      },
       status=200,
     )
 
@@ -464,10 +449,20 @@ def checkout_success_view(request):
     stripe_checkout_session_id=session.id,
   ).first()
   if returning is not None:
+    try:
+      user = User.objects.get(email=returning.email)
+    except User.DoesNotExist:
+      return _json_error("No account found for this checkout email.", status=404)
+    auth_token, _ = Token.objects.get_or_create(user=user)
+    af_profile = ensure_affiliate_profile_for_existing_user(user)
     return JsonResponse(
       {
         "message": "Payment successful. Thank you for your purchase.",
         "email": returning.email,
+        "token": auth_token.key,
+        "redirect_url": getattr(settings, "POST_LOGIN_REDIRECT_URL", "http://localhost:3000/"),
+        "user": {"id": user.id, "username": user.username, "email": user.email},
+        "referral_ids": referral_ids_payload(af_profile),
       },
       status=200,
     )

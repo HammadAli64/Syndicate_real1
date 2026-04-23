@@ -136,6 +136,8 @@ export function useDashboardSnapshots({
       category,
       activeMissionTitle: missionTitleFallback(missionId),
       activeLiveMissionCount: mission.activeMissionCount,
+      completedMissionsCount: mission.completedMissionsCount,
+      pendingMissionsCount: mission.pendingMissionsCount,
       activeMissionsPct: mission.activeMissionsPct,
       missedChallengesPct: mission.missedChallengesPct,
       leaderboardPos: (seedNum(userName + "lb") % 87) + 1,
@@ -338,6 +340,9 @@ export function useDashboardSnapshots({
             xpPct: rank.xpPct,
             level: rank.syndicateLevel,
             pointsToNext: rank.pointsToNext,
+            activeLiveMissionCount: mission.activeMissionCount,
+            completedMissionsCount: mission.completedMissionsCount,
+            pendingMissionsCount: mission.pendingMissionsCount,
             activeMissionsPct: mission.activeMissionsPct,
             missedChallengesPct: mission.missedChallengesPct,
             activeMissionTitle:
@@ -351,10 +356,22 @@ export function useDashboardSnapshots({
 
     void pullSyndicateLive();
     const onRefresh = () => void pullSyndicateLive();
+    const onWindowFocus = () => void pullSyndicateLive();
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") void pullSyndicateLive();
+    };
+    const pollId = window.setInterval(() => {
+      if (!cancelled) void pullSyndicateLive();
+    }, 15000);
     window.addEventListener(SYNDICATE_DASHBOARD_REFRESH_EVENT, onRefresh);
+    window.addEventListener("focus", onWindowFocus);
+    document.addEventListener("visibilitychange", onVisibility);
     return () => {
       cancelled = true;
+      window.clearInterval(pollId);
       window.removeEventListener(SYNDICATE_DASHBOARD_REFRESH_EVENT, onRefresh);
+      window.removeEventListener("focus", onWindowFocus);
+      document.removeEventListener("visibilitychange", onVisibility);
     };
   }, [courses, userName]);
 
@@ -370,6 +387,8 @@ export function useDashboardSnapshots({
       activeMissionsPct: 0,
       missedChallengesPct: 0,
       activeLiveMissionCount: 0,
+      completedMissionsCount: 0,
+      pendingMissionsCount: 0,
       nextRankChecklist: [],
       missionPointsTotal: 0,
       nextRankLabel: "Bronze",

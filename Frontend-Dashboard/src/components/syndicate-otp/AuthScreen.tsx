@@ -35,6 +35,9 @@ type ApiPayload = {
   error?: string;
   redirect_url?: string;
   token?: string;
+  signup_token?: string;
+  checkout_url?: string;
+  session_id?: string;
   otp_required?: boolean;
   email?: string;
   code?: string;
@@ -420,8 +423,25 @@ export default function AuthScreen({
         if (!response.ok) {
           throw new Error(data.error || "Request failed");
         }
-        setMessage(data.message || "Check your inbox for the code.");
-        router.replace(syndicateOtpVerifyHref(data.email || email.trim(), "signup"));
+        const directCheckoutUrl = typeof data.checkout_url === "string" ? data.checkout_url.trim() : "";
+        if (directCheckoutUrl) {
+          window.location.assign(directCheckoutUrl);
+          return;
+        }
+        const signupToken = typeof data.signup_token === "string" ? data.signup_token.trim() : "";
+        if (!signupToken) {
+          throw new Error("Signup started, but checkout token is missing.");
+        }
+        setMessage(data.message || "Redirecting to secure checkout...");
+        const checkout = await postJson("/api/auth/checkout/create-session/", { signup_token: signupToken });
+        if (!checkout.response.ok) {
+          throw new Error(checkout.data.error || "Could not create checkout session.");
+        }
+        const checkoutUrl = typeof checkout.data.checkout_url === "string" ? checkout.data.checkout_url.trim() : "";
+        if (!checkoutUrl) {
+          throw new Error("Checkout URL is missing.");
+        }
+        window.location.assign(checkoutUrl);
         return;
       }
 
@@ -626,7 +646,7 @@ export default function AuthScreen({
             ) : null}
             {isSignup && !isOtp ? (
               <p className="form-hint">
-                Enter your email. We will send a one-time verification code.
+                Enter your email to continue directly to secure checkout.
               </p>
             ) : null}
 

@@ -469,6 +469,27 @@ EMAIL_USE_TLS = os.environ.get("EMAIL_USE_TLS", "true").lower() in ("1", "true",
 OTP_EXPIRES_MINUTES = int(os.environ.get("OTP_EXPIRES_MINUTES", "10"))
 POST_LOGIN_REDIRECT_URL = os.environ.get("POST_LOGIN_REDIRECT_URL", "http://localhost:3000/")
 
+# Stripe checkout (signup -> checkout -> dashboard).
+FRONTEND_BASE_URL = (os.environ.get("FRONTEND_BASE_URL") or "http://localhost:3000").strip().rstrip("/")
+STRIPE_SECRET_KEY = (os.environ.get("STRIPE_SECRET_KEY") or "").strip()
+STRIPE_PUBLISHABLE_KEY = (os.environ.get("STRIPE_PUBLISHABLE_KEY") or "").strip()
+# Backward compatibility: older env files used a typo `PCHECKOUT_AMOUNT_PENCE`.
+_checkout_amount_raw = (
+    (os.environ.get("CHECKOUT_AMOUNT_PENCE") or "").strip()
+    or (os.environ.get("PCHECKOUT_AMOUNT_PENCE") or "").strip()
+    or "33300"
+)
+try:
+    CHECKOUT_AMOUNT_PENCE = int(_checkout_amount_raw)
+except ValueError:
+    CHECKOUT_AMOUNT_PENCE = 33300
+if CHECKOUT_AMOUNT_PENCE < 50:
+    CHECKOUT_AMOUNT_PENCE = 50
+_pm_raw = (os.environ.get("STRIPE_CHECKOUT_PAYMENT_METHOD_TYPES") or "card,link,pay_by_bank").strip()
+STRIPE_CHECKOUT_PAYMENT_METHOD_TYPES = tuple(
+    x.strip() for x in _pm_raw.split(",") if x.strip()
+) or ("card", "link", "pay_by_bank")
+
 if not DEBUG:
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
     USE_X_FORWARDED_HOST = True
