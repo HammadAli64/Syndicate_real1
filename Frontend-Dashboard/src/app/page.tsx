@@ -2722,7 +2722,7 @@ export default function Page() {
                   "px-[var(--fluid-section-p)]"
               )}
             >
-              {selectedNavKey !== "monk" ? (
+              {selectedNavKey !== "monk" && selectedNavKey !== "programs" ? (
                 <header className="mb-[clamp(0.65rem,1.5vw+0.2rem,1.1rem)] shrink-0 border-b border-[color:var(--gold-neon-border-mid)] pb-[clamp(0.45rem,1.2vw+0.15rem,0.85rem)] pr-1">
                   <div className="heading-glow fluid-hero-title font-black italic tracking-[0.02em] text-[color:var(--gold-neon)] drop-shadow-[0_0_28px_rgba(250,204,21,0.35)]">
                     THE SYNDICATE

@@ -433,11 +433,11 @@ export function ProgramsCourseSection({
       {showSecureBlock ? (
         <div className="mb-8 space-y-5">
           {!inProgramLessonView ? (
-            <div className="border-b border-[color:var(--gold-neon-border-mid)]/35 pb-3">
-              <div className="text-[13px] font-black uppercase tracking-[0.2em] text-[color:var(--gold)]/90">
+            <div className="border-b border-[color:var(--gold-neon-border-mid)]/35 pb-4 text-left">
+              <div className="text-[18px] font-black uppercase tracking-[0.16em] text-[color:var(--gold)]/95 [text-shadow:0_0_12px_rgba(250,204,21,0.2)] sm:text-[24px]">
                 Programs
               </div>
-              <p className="mt-2 max-w-4xl text-[14px] leading-relaxed text-white/72 sm:text-[15px]">
+              <p className="mt-2 max-w-4xl text-[17px] leading-relaxed text-white/82 sm:text-[24px] sm:leading-[1.35]">
                 {useApiProgramBrowser
                   ? "Open a playlist, or a course for lesson playlists and progress."
                   : "When published programs are available from the API, you can open any course, watch lessons, and track your learning flow from one place."}
@@ -485,10 +485,10 @@ export function ProgramsCourseSection({
                       type="button"
                       onClick={() => setPlaylistCategoryFilter("business_psychology")}
                       className={cn(
-                        "rounded-full border px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.14em] transition",
+                        "rounded-full border px-4 py-2 text-[12px] font-black uppercase tracking-[0.16em] transition sm:px-5 sm:py-2.5 sm:text-[13px]",
                         playlistCategoryFilter === "business_psychology"
-                          ? "border-fuchsia-300 bg-fuchsia-500/35 text-fuchsia-50 shadow-[0_0_16px_rgba(232,121,249,0.55)]"
-                          : "border-white/20 bg-black/35 text-white/75 hover:border-fuchsia-300/55 hover:bg-fuchsia-500/15 hover:text-fuchsia-100"
+                          ? "border-fuchsia-200 bg-[linear-gradient(135deg,rgba(90,16,72,0.98),rgba(42,8,36,0.97))] text-fuchsia-50 shadow-[0_0_26px_rgba(217,70,239,0.9)]"
+                          : "border-fuchsia-400/45 bg-[linear-gradient(135deg,rgba(56,12,47,0.9),rgba(24,6,20,0.9))] text-fuchsia-100/95 shadow-[0_0_14px_rgba(217,70,239,0.45)] hover:border-fuchsia-200/80 hover:bg-[linear-gradient(135deg,rgba(84,18,68,0.95),rgba(34,8,29,0.95))] hover:text-fuchsia-50 hover:shadow-[0_0_24px_rgba(217,70,239,0.72)]"
                       )}
                     >
                       Business Psychology
@@ -497,10 +497,10 @@ export function ProgramsCourseSection({
                       type="button"
                       onClick={() => setPlaylistCategoryFilter("business_model")}
                       className={cn(
-                        "rounded-full border px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.14em] transition",
+                        "rounded-full border px-4 py-2 text-[12px] font-black uppercase tracking-[0.16em] transition sm:px-5 sm:py-2.5 sm:text-[13px]",
                         playlistCategoryFilter === "business_model"
-                          ? "border-cyan-300 bg-cyan-500/35 text-cyan-50 shadow-[0_0_16px_rgba(103,232,249,0.55)]"
-                          : "border-white/20 bg-black/35 text-white/75 hover:border-cyan-300/55 hover:bg-cyan-500/15 hover:text-cyan-100"
+                          ? "border-cyan-200 bg-[linear-gradient(135deg,rgba(8,70,82,0.98),rgba(5,34,40,0.97))] text-cyan-50 shadow-[0_0_26px_rgba(34,211,238,0.9)]"
+                          : "border-cyan-400/45 bg-[linear-gradient(135deg,rgba(8,44,52,0.9),rgba(4,22,26,0.9))] text-cyan-100/95 shadow-[0_0_14px_rgba(34,211,238,0.45)] hover:border-cyan-200/80 hover:bg-[linear-gradient(135deg,rgba(11,66,78,0.95),rgba(5,30,36,0.95))] hover:text-cyan-50 hover:shadow-[0_0_24px_rgba(34,211,238,0.72)]"
                       )}
                     >
                       Business Model
@@ -509,10 +509,10 @@ export function ProgramsCourseSection({
                       type="button"
                       onClick={() => setPlaylistCategoryFilter("all")}
                       className={cn(
-                        "rounded-full border px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.14em] transition",
+                        "rounded-full border px-4 py-2 text-[12px] font-black uppercase tracking-[0.16em] transition sm:px-5 sm:py-2.5 sm:text-[13px]",
                         playlistCategoryFilter === "all"
-                          ? "border-amber-300 bg-amber-500/35 text-amber-50 shadow-[0_0_16px_rgba(251,191,36,0.55)]"
-                          : "border-white/20 bg-black/35 text-white/75 hover:border-amber-300/55 hover:bg-amber-500/15 hover:text-amber-100"
+                          ? "border-amber-200 bg-[linear-gradient(135deg,rgba(112,70,8,0.98),rgba(54,34,4,0.97))] text-amber-50 shadow-[0_0_26px_rgba(251,191,36,0.92)]"
+                          : "border-amber-400/45 bg-[linear-gradient(135deg,rgba(70,44,7,0.9),rgba(34,22,3,0.9))] text-amber-100/95 hover:border-amber-200/80 hover:bg-[linear-gradient(135deg,rgba(102,64,8,0.95),rgba(46,30,3,0.95))] hover:text-amber-50"
                       )}
                     >
                       All
@@ -520,16 +520,16 @@ export function ProgramsCourseSection({
                   </div>
                   <div className="relative max-w-[440px] md:max-w-[620px] lg:max-w-[860px]">
                     <div
-                      className="pointer-events-none absolute -inset-1 rounded-2xl bg-amber-400/30 blur-md"
+                      className="pointer-events-none absolute -inset-1 rounded-2xl bg-amber-400/12 blur-sm"
                       aria-hidden
                     />
-                    <div className="relative rounded-xl bg-amber-300/90 p-[1px] shadow-[0_0_18px_rgba(251,191,36,0.42)]">
+                    <div className="relative rounded-xl bg-amber-300/70 p-[1px] shadow-[0_0_10px_rgba(251,191,36,0.2)]">
                       <input
                         type="text"
                         value={playlistTitleQuery}
                         onChange={(e) => setPlaylistTitleQuery(e.target.value)}
                         placeholder="Search playlist by title..."
-                        className="w-full rounded-[11px] border-0 bg-black/75 px-3 py-2 text-[13px] text-white outline-none transition placeholder:text-white/45 focus:ring-2 focus:ring-amber-300/40 lg:px-4 lg:py-3 lg:text-[14px]"
+                        className="w-full rounded-[11px] border-0 bg-black/75 px-3 py-2 text-[13px] text-white outline-none transition placeholder:text-white/45 focus:ring-2 focus:ring-amber-300/25 lg:px-4 lg:py-3 lg:text-[14px]"
                       />
                     </div>
                   </div>
@@ -545,10 +545,10 @@ export function ProgramsCourseSection({
                   {showBothPlaylistColumns ? (
                     <div className="space-y-3 xl:hidden">
                       <div className="grid grid-cols-2 gap-3">
-                        <div className="text-[11px] font-black uppercase tracking-[0.16em] text-fuchsia-200 [text-shadow:0_0_12px_rgba(232,121,249,0.35)]">
+                        <div className="flex min-h-[2.8rem] items-center justify-center text-center font-mono text-[13px] font-extrabold uppercase leading-tight tracking-[0.18em] text-fuchsia-100 [text-shadow:0_0_10px_rgba(232,121,249,0.7),0_0_24px_rgba(232,121,249,0.8)] sm:min-h-[3rem] sm:text-[14px]">
                           {PLAYLIST_CATEGORY_LABELS.business_psychology}
                         </div>
-                        <div className="text-right text-[11px] font-black uppercase tracking-[0.16em] text-cyan-200 [text-shadow:0_0_12px_rgba(103,232,249,0.35)]">
+                        <div className="flex min-h-[2.8rem] items-center justify-center text-center font-mono text-[13px] font-extrabold uppercase leading-tight tracking-[0.18em] text-cyan-100 [text-shadow:0_0_10px_rgba(103,232,249,0.7),0_0_24px_rgba(103,232,249,0.8)] sm:min-h-[3rem] sm:text-[14px]">
                           {PLAYLIST_CATEGORY_LABELS.business_model}
                         </div>
                       </div>
@@ -580,7 +580,7 @@ export function ProgramsCourseSection({
                   >
                     {visibleBusinessPsychologyPlaylists.length > 0 ? (
                       <div className="space-y-3">
-                        <div className="text-[12px] font-black uppercase tracking-[0.18em] text-fuchsia-200 [text-shadow:0_0_14px_rgba(232,121,249,0.4)]">
+                        <div className="text-center font-mono text-[15px] font-extrabold uppercase tracking-[0.2em] text-fuchsia-100 [text-shadow:0_0_10px_rgba(232,121,249,0.7),0_0_26px_rgba(232,121,249,0.82)] sm:text-[17px]">
                           {PLAYLIST_CATEGORY_LABELS.business_psychology}
                         </div>
                         <div className="h-px w-full bg-gradient-to-r from-transparent via-fuchsia-300/90 to-transparent shadow-[0_0_14px_rgba(232,121,249,0.55)]" />
@@ -604,7 +604,7 @@ export function ProgramsCourseSection({
 
                     {visibleBusinessModelPlaylists.length > 0 ? (
                       <div className="space-y-3">
-                        <div className="text-[12px] font-black uppercase tracking-[0.18em] text-cyan-200 [text-shadow:0_0_14px_rgba(103,232,249,0.4)]">
+                        <div className="text-center font-mono text-[15px] font-extrabold uppercase tracking-[0.2em] text-cyan-100 [text-shadow:0_0_10px_rgba(103,232,249,0.7),0_0_26px_rgba(103,232,249,0.82)] sm:text-[17px]">
                           {PLAYLIST_CATEGORY_LABELS.business_model}
                         </div>
                         <div className="h-px w-full bg-gradient-to-r from-transparent via-cyan-300/90 to-transparent shadow-[0_0_14px_rgba(103,232,249,0.55)]" />
