@@ -235,9 +235,13 @@ def syndicate_streak_restore(request):
     cur = dict(obj.state or {})
     cur.pop("streak_before_break", None)
     cur.pop("streak_break_date", None)
+    # Treat restore as today's activity so the next progress read cannot immediately
+    # normalize the streak back to zero due to an old break-day timestamp.
+    today = timezone.localdate()
     obj.streak_count = n
+    obj.last_activity_date = today
     obj.state = cur
-    obj.save(update_fields=["streak_count", "state", "updated_at"])
+    obj.save(update_fields=["streak_count", "last_activity_date", "state", "updated_at"])
     return Response(
         {
             "ok": True,
@@ -669,12 +673,32 @@ def referral_create(request):
 
 
 @api_view(["POST"])
+@permission_classes([IsAuthenticated])
 def referral_redeem(request):
-    """Friend redeems a code (cannot be your own)."""
+    """Friend redeems a code (cannot be your own, one redeem per account)."""
     code = (request.data.get("code") or "").strip().upper()
     device = _user_device_key(request)
     if not code:
         return Response({"detail": "code required"}, status=status.HTTP_400_BAD_REQUEST)
+    if not device:
+        return Response({"detail": "Login required"}, status=status.HTTP_401_UNAUTHORIZED)
+    # Enforce one lifetime referral redeem per authenticated account.
+    if ReferralRestore.objects.filter(redeemer_device=device, redeemed=True).exists():
+        return Response(
+            {"detail": "This account has already redeemed a referral code"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+    # Only fresh/new accounts can redeem referral restore codes.
+    progress = SyndicateUserProgress.objects.filter(user=request.user).first()
+    if progress and (
+        int(progress.points_total or 0) > 0
+        or int(progress.streak_count or 0) > 0
+        or progress.last_activity_date is not None
+    ):
+        return Response(
+            {"detail": "Only new accounts can redeem referral codes"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
     now = timezone.now()
     try:
         r = ReferralRestore.objects.get(code=code)
