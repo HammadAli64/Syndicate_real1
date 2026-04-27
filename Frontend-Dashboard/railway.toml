@@ -1,8 +1,0 @@
-# Root directory: `Frontend-Dashboard/`. Dockerfile avoids BuildKit .next/cache mount issues.
-# (fixes intermittent "runc ... error mounting ... .next/cache" failures).
-
-[build]
-builder = "DOCKERFILE"
-dockerfilePath = "Dockerfile"
-
-# Start is defined by Dockerfile CMD (node server.js) for standalone output.

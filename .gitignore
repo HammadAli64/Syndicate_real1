@@ -26,8 +26,9 @@ htmlcov/
 *.log
 *.pid
 
-# Django API not tracked in this branch — clone Backend from Syndicate main or run a deployed API
+# Full-stack app folders not tracked on this branch (see Syndicate_real1 main)
 /Backend/
+/Frontend-Dashboard/
 
 # Virtual environments
 .venv/
@@ -36,11 +37,6 @@ env/
 
 # ----- Node / Next.js -----
 node_modules/
-Frontend-Dashboard/.env
-Frontend-Dashboard/.next/
-Frontend-Dashboard/out/
-Frontend-Dashboard/.turbo/
-Frontend-Dashboard/coverage/
 frontend/.env
 frontend/.next/
 frontend/out/
