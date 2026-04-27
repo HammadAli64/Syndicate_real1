@@ -1,4 +1,6 @@
 import Link from 'next/link'
+import { NavApp } from '@/components/NavApp'
+import GlobalBottomSections from '@/components/GlobalBottomSections'
 
 const VALUE_PILLARS = [
   {
@@ -69,6 +71,7 @@ const MONEY_POWER_MASTERY_PARAGRAPHS = [
 export default function WhatYouGetPage() {
   return (
     <div className="min-h-[100dvh] bg-black">
+      <NavApp />
       <section className="relative h-[100dvh] min-h-[100dvh] w-full overflow-hidden border-b border-cyan-300/20 px-4 pb-14 pt-[96px] sm:px-6 sm:pb-16 sm:pt-[110px]">
         <div className="pointer-events-none absolute inset-0">
           <video autoPlay muted loop playsInline preload="metadata" className="h-[100dvh] w-full object-cover opacity-100">
@@ -199,6 +202,7 @@ export default function WhatYouGetPage() {
           </div>
         </div>
       </section>
+      <GlobalBottomSections />
 
     </div>
   )

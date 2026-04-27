@@ -906,21 +906,21 @@ body {
 }
 
 html {
-  font-size: clamp(15px, 0.32rem + 1.05vw, 22px);
+  font-size: clamp(14px, 0.22rem + 0.7vw, 16px);
   /* Prefer dark native controls so <select> popups aren’t forced to light theme (Windows/Chrome). */
   color-scheme: dark;
 }
 
 @media (max-width: 640px) {
   html {
-    font-size: 17px;
+    font-size: 14px;
   }
 }
 
 /* Tablet: between phone and desktop base size */
 @media (min-width: 641px) and (max-width: 1023px) {
   html {
-    font-size: 19px;
+    font-size: 15px;
   }
 }
 

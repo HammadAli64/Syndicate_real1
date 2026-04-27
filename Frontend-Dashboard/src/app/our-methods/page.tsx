@@ -1,5 +1,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
+import { NavApp } from '@/components/NavApp'
+import GlobalBottomSections from '@/components/GlobalBottomSections'
 
 const METHOD_PILLARS = [
   {
@@ -76,6 +78,7 @@ const SAFEGUARDS = [
 export default function OurMethodsPage() {
   return (
     <div className="min-h-[100dvh] w-full bg-black">
+      <NavApp />
       <section className="relative h-[100dvh] min-h-[100dvh] w-full overflow-hidden border-b border-amber-300/20 px-4 pb-14 pt-[96px] sm:px-6 sm:pb-20 sm:pt-[110px]">
         <div className="pointer-events-none absolute inset-0">
           <Image
@@ -326,6 +329,7 @@ export default function OurMethodsPage() {
           </Link>
         </div>
       </section>
+      <GlobalBottomSections />
 
     </div>
   )
