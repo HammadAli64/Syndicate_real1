@@ -46,11 +46,13 @@ const DELIVERY_FLOW = [
   },
 ]
 
-const FOUNDER_SHOWCASE = [
-  { src: '/assets/founder/ceo.jpg', alt: 'Founder portrait one' },
-  { src: '/assets/founder/ceo.webp', alt: 'Founder portrait two' },
-  { src: '/assets/founder/Pic%204.png', alt: 'Founder portrait three' },
-  { src: '/assets/founder/Still%201.jpg', alt: 'Founder portrait four' },
+const CYBER_PANEL_STYLES = [
+  'from-cyan-400 via-blue-500 to-fuchsia-500',
+  'from-fuchsia-400 via-pink-500 to-violet-500',
+  'from-emerald-400 via-cyan-400 to-blue-500',
+  'from-amber-300 via-orange-400 to-rose-500',
+  'from-violet-400 via-indigo-500 to-cyan-400',
+  'from-lime-300 via-emerald-400 to-cyan-400',
 ]
 
 export default function WhatYouGetPage() {
@@ -98,37 +100,40 @@ export default function WhatYouGetPage() {
           <div className="grid gap-6 lg:grid-cols-[1.18fr_0.82fr]">
             <div className="grid auto-rows-fr gap-4 md:grid-cols-2 lg:gap-5">
             {VALUE_PILLARS.map((pillar, index) => (
-              <article
+              <div
                 key={pillar.title}
-                className={`methods-fade-up group relative min-h-[clamp(250px,31vh,340px)] overflow-hidden rounded-2xl border p-6 sm:p-7 shadow-[0_0_30px_rgba(251,191,36,0.24)] transition duration-500 ease-out hover:-translate-y-2 hover:scale-[1.02] hover:rotate-[-0.2deg] ${
-                  index % 2 === 0
-                    ? 'border-amber-300/60 bg-gradient-to-b from-[#170f04]/78 via-[#0a0a0a] to-black hover:border-amber-200/75 hover:shadow-[0_0_48px_rgba(251,191,36,0.44)]'
-                    : 'border-cyan-300/48 bg-gradient-to-b from-[#130b03]/74 via-[#090909] to-black hover:border-cyan-200/70 hover:shadow-[0_0_44px_rgba(34,211,238,0.34)]'
-                }`}
+                className={`cyber-chip-animate methods-fade-up group relative bg-gradient-to-r p-[1px] [clip-path:polygon(12px_0,calc(100%-12px)_0,100%_12px,100%_calc(100%-12px),calc(100%-12px)_100%,12px_100%,0_calc(100%-12px),0_12px)] transition duration-500 hover:-translate-y-2 hover:scale-[1.02] ${CYBER_PANEL_STYLES[index % CYBER_PANEL_STYLES.length]}`}
+                style={{ animationDelay: `${index * 0.16}s` }}
               >
-                <div className="pointer-events-none absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-transparent via-amber-300/80 to-transparent opacity-70 group-hover:opacity-100" />
-                <h3 className="text-2xl font-semibold text-amber-100 sm:text-3xl">{pillar.title}</h3>
-                <p className="mt-3 text-lg leading-relaxed text-zinc-200/88">{pillar.description}</p>
-              </article>
+                <span className="pointer-events-none absolute inset-[-1px] bg-inherit opacity-70 blur-[12px]" />
+                <article className="relative min-h-[clamp(250px,31vh,340px)] overflow-hidden bg-gradient-to-b from-[#120d1d]/82 via-[#080b12]/90 to-[#04060b]/94 p-6 [clip-path:polygon(12px_0,calc(100%-12px)_0,100%_12px,100%_calc(100%-12px),calc(100%-12px)_100%,12px_100%,0_calc(100%-12px),0_12px)] sm:p-7">
+                  <div className="pointer-events-none absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-transparent via-cyan-300/80 to-transparent opacity-80 group-hover:opacity-100" />
+                  <h3 className="text-2xl font-semibold text-amber-100 sm:text-3xl">{pillar.title}</h3>
+                  <p className="mt-3 text-lg leading-relaxed text-zinc-200/88">{pillar.description}</p>
+                </article>
+              </div>
             ))}
             </div>
-            <div className="rounded-2xl border border-amber-300/50 bg-gradient-to-b from-[#120d05]/80 via-black/82 to-[#100b04]/84 p-6 shadow-[0_0_40px_rgba(251,191,36,0.24)] sm:p-7">
-              <p className="text-base uppercase tracking-[0.24em] text-amber-200/85">Delivery Process</p>
-              <div className="mt-4 space-y-3">
-                {DELIVERY_FLOW.map((item, index) => (
-                  <article
-                    key={item.step}
-                    className={`methods-fade-up rounded-xl border p-5 transition duration-300 hover:-translate-y-1 hover:scale-[1.01] ${
-                      index === 1
-                        ? 'border-amber-300/58 bg-[#130e05]/60 shadow-[0_0_30px_rgba(251,191,36,0.3)] hover:shadow-[0_0_40px_rgba(251,191,36,0.45)]'
-                        : 'border-amber-300/48 bg-black/56 shadow-[0_0_26px_rgba(251,191,36,0.22)] hover:shadow-[0_0_34px_rgba(251,191,36,0.34)]'
-                    }`}
-                  >
-                    <p className="text-base font-semibold tracking-[0.2em] text-amber-200/85">{item.step}</p>
-                    <h3 className="mt-1 text-xl font-semibold text-amber-100 sm:text-2xl">{item.title}</h3>
-                    <p className="mt-2 text-base leading-relaxed text-zinc-200/90 sm:text-lg">{item.description}</p>
-                  </article>
-                ))}
+            <div className="cyber-chip-animate group relative bg-gradient-to-r from-violet-400 via-indigo-500 to-cyan-400 p-[1px] [clip-path:polygon(12px_0,calc(100%-12px)_0,100%_12px,100%_calc(100%-12px),calc(100%-12px)_100%,12px_100%,0_calc(100%-12px),0_12px)]">
+              <span className="pointer-events-none absolute inset-[-1px] bg-inherit opacity-70 blur-[12px]" />
+              <div className="relative bg-gradient-to-b from-[#0f1021]/86 via-[#090b16]/92 to-[#04060b]/96 p-6 [clip-path:polygon(12px_0,calc(100%-12px)_0,100%_12px,100%_calc(100%-12px),calc(100%-12px)_100%,12px_100%,0_calc(100%-12px),0_12px)] sm:p-7">
+                <p className="text-base uppercase tracking-[0.24em] text-amber-200/85">Delivery Process</p>
+                <div className="mt-4 space-y-3">
+                  {DELIVERY_FLOW.map((item, index) => (
+                    <div
+                      key={item.step}
+                      className={`cyber-chip-animate methods-fade-up relative bg-gradient-to-r p-[1px] [clip-path:polygon(10px_0,calc(100%-10px)_0,100%_10px,100%_calc(100%-10px),calc(100%-10px)_100%,10px_100%,0_calc(100%-10px),0_10px)] transition duration-300 hover:-translate-y-1 hover:scale-[1.01] ${CYBER_PANEL_STYLES[(index + 2) % CYBER_PANEL_STYLES.length]}`}
+                      style={{ animationDelay: `${index * 0.2}s` }}
+                    >
+                      <span className="pointer-events-none absolute inset-[-1px] bg-inherit opacity-60 blur-[10px]" />
+                      <article className="relative bg-[#060a12]/92 p-5 [clip-path:polygon(10px_0,calc(100%-10px)_0,100%_10px,100%_calc(100%-10px),calc(100%-10px)_100%,10px_100%,0_calc(100%-10px),0_10px)]">
+                        <p className="text-base font-semibold tracking-[0.2em] text-amber-200/85">{item.step}</p>
+                        <h3 className="mt-1 text-xl font-semibold text-amber-100 sm:text-2xl">{item.title}</h3>
+                        <p className="mt-2 text-base leading-relaxed text-zinc-200/90 sm:text-lg">{item.description}</p>
+                      </article>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
@@ -148,8 +153,10 @@ export default function WhatYouGetPage() {
           />
           <div className="absolute inset-0 bg-black/56" />
         </div>
-        <div className="relative z-10 mx-auto grid w-full max-w-[min(1860px,99vw)] gap-10 lg:grid-cols-[1.02fr_0.98fr]">
-          <article className="relative min-h-[clamp(500px,68vh,780px)] overflow-hidden rounded-3xl bg-gradient-to-b from-[#151005]/68 to-black/92 p-8 shadow-[0_0_38px_rgba(251,191,36,0.24)] sm:p-12">
+        <div className="relative z-10 mx-auto w-full max-w-[min(1860px,99vw)]">
+          <div className="cyber-chip-animate group relative bg-gradient-to-r from-cyan-400 via-blue-500 to-fuchsia-500 p-[1px] [clip-path:polygon(14px_0,calc(100%-14px)_0,100%_14px,100%_calc(100%-14px),calc(100%-14px)_100%,14px_100%,0_calc(100%-14px),0_14px)]">
+            <span className="pointer-events-none absolute inset-[-1px] bg-inherit opacity-75 blur-[14px]" />
+            <article className="relative min-h-[clamp(500px,68vh,780px)] overflow-hidden bg-gradient-to-b from-[#151005]/42 to-black/74 p-8 [clip-path:polygon(14px_0,calc(100%-14px)_0,100%_14px,100%_calc(100%-14px),calc(100%-14px)_100%,14px_100%,0_calc(100%-14px),0_14px)] sm:p-12">
             <p className="text-base uppercase tracking-[0.24em] text-amber-200/85">Access to a Powerful Network and Alliance</p>
             <h2 className="mt-3 text-4xl font-bold text-amber-100 sm:text-5xl lg:text-6xl">The path to success is not meant to be walked alone</h2>
             <div className="mt-6 space-y-5 text-lg leading-relaxed text-zinc-200/90 sm:text-xl">
@@ -160,32 +167,7 @@ export default function WhatYouGetPage() {
                 The Syndicate culture is built on integrity, standards, and strategic accountability so strengths are sharpened and weaknesses are transformed.
               </p>
             </div>
-          </article>
-
-          <div className="relative min-h-[clamp(500px,68vh,780px)] rounded-3xl bg-gradient-to-b from-[#120d05]/64 to-black/92 p-8 shadow-[0_0_38px_rgba(251,191,36,0.22)] sm:p-12">
-          <h2 className="text-center text-5xl font-black uppercase tracking-[0.12em] text-amber-100 drop-shadow-[0_0_16px_rgba(251,191,36,0.35)] sm:text-6xl">
-            Founder Vision
-          </h2>
-          <p className="mx-auto mt-4 max-w-5xl text-center text-lg leading-relaxed text-zinc-200/90 sm:text-xl">
-            Built for disciplined operators who execute with intent, structure, and long-term leverage.
-          </p>
-          <div className="mt-8 grid auto-rows-fr gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {FOUNDER_SHOWCASE.map((item) => (
-              <article
-                key={item.src}
-                className="group relative h-[clamp(220px,36vh,320px)] overflow-hidden rounded-2xl border border-amber-300/48 bg-black/45 shadow-[0_0_30px_rgba(251,191,36,0.22)] transition duration-500 ease-out hover:-translate-y-1.5 hover:scale-[1.01] hover:shadow-[0_0_46px_rgba(251,191,36,0.38)]"
-              >
-                <Image
-                  src={item.src}
-                  alt={item.alt}
-                  fill
-                  sizes="(max-width: 1024px) 50vw, 25vw"
-                  className="object-cover object-top transition duration-500 group-hover:scale-105"
-                />
-                <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/70 via-black/15 to-transparent" />
-              </article>
-            ))}
-          </div>
+            </article>
           </div>
         </div>
       </section>

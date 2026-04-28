@@ -4392,8 +4392,33 @@ body {
 
   .neon-badge,
   .neon-caret,
-  .programs-heading-glow {
+  .programs-heading-glow,
+  .cyber-chip-animate {
     animation: none !important;
   }
+}
+
+@keyframes cyberChipFloat {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+@keyframes cyberChipGlow {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 10px rgba(56, 189, 248, 0.26));
+  }
+  50% {
+    filter: drop-shadow(0 0 18px rgba(236, 72, 153, 0.42));
+  }
+}
+
+.cyber-chip-animate {
+  animation: cyberChipFloat 3.4s ease-in-out infinite, cyberChipGlow 2.8s ease-in-out infinite;
 }
 

@@ -90,9 +90,9 @@ function AnimatedCounter({ value, suffix, inView }: { value: number; suffix: str
 }
 
 function FeatureIcon({ icon }: { icon: Feature['icon'] }) {
-  if (icon === 'award') return <Award className="h-7 w-7 text-amber-300" style={{ filter: 'drop-shadow(0 0 6px rgba(251,191,36,0.8))' }} />
-  if (icon === 'shield') return <Shield className="h-7 w-7 text-amber-300" style={{ filter: 'drop-shadow(0 0 6px rgba(251,191,36,0.8))' }} />
-  return <CheckCircle2 className="h-7 w-7 text-amber-300" style={{ filter: 'drop-shadow(0 0 6px rgba(251,191,36,0.8))' }} />
+  if (icon === 'award') return <Award className="h-7 w-7 text-cyan-300" style={{ filter: 'drop-shadow(0 0 7px rgba(34,211,238,0.88))' }} />
+  if (icon === 'shield') return <Shield className="h-7 w-7 text-fuchsia-300" style={{ filter: 'drop-shadow(0 0 7px rgba(232,121,249,0.85))' }} />
+  return <CheckCircle2 className="h-7 w-7 text-violet-300" style={{ filter: 'drop-shadow(0 0 7px rgba(167,139,250,0.85))' }} />
 }
 
 export default function CertificatesSection({
@@ -116,14 +116,14 @@ export default function CertificatesSection({
       <div
         className="pointer-events-none absolute left-1/2 top-1/2 h-[500px] w-[900px] -translate-x-1/2 -translate-y-1/2 blur-[140px] opacity-70"
         style={{
-          background: 'radial-gradient(ellipse 80% 70%, rgba(251,191,36,0.22) 0%, rgba(252,211,77,0.12) 40%, transparent 70%)',
+          background: 'radial-gradient(ellipse 80% 70%, rgba(34,211,238,0.2) 0%, rgba(167,139,250,0.14) 45%, transparent 72%)',
         }}
       />
       <div
         className="absolute inset-0 opacity-[0.12]"
         style={{
           backgroundImage:
-            'linear-gradient(rgba(251,191,36,0.25) 1px, transparent 1px), linear-gradient(90deg, rgba(251,191,36,0.25) 1px, transparent 1px), linear-gradient(rgba(252,211,77,0.18) 1px, transparent 1px), linear-gradient(90deg, rgba(252,211,77,0.18) 1px, transparent 1px)',
+            'linear-gradient(rgba(34,211,238,0.22) 1px, transparent 1px), linear-gradient(90deg, rgba(34,211,238,0.22) 1px, transparent 1px), linear-gradient(rgba(167,139,250,0.16) 1px, transparent 1px), linear-gradient(90deg, rgba(167,139,250,0.16) 1px, transparent 1px)',
           backgroundSize: '80px 80px, 80px 80px, 20px 20px, 20px 20px',
         }}
       />
@@ -137,7 +137,7 @@ export default function CertificatesSection({
         className="pointer-events-none absolute inset-0"
         style={{
           background:
-            'radial-gradient(ellipse 90% 80% at 50% 50%, transparent 50%, rgba(0,0,0,0.7) 100%), linear-gradient(180deg, rgba(251,191,36,0.05) 0%, transparent 20%, transparent 80%, rgba(252,211,77,0.05) 100%)',
+            'radial-gradient(ellipse 90% 80% at 50% 50%, transparent 50%, rgba(0,0,0,0.7) 100%), linear-gradient(180deg, rgba(34,211,238,0.05) 0%, transparent 20%, transparent 80%, rgba(167,139,250,0.06) 100%)',
         }}
       />
 
@@ -152,13 +152,13 @@ export default function CertificatesSection({
           <h2
             className="text-3xl font-bold tracking-wider sm:text-4xl md:text-5xl lg:text-6xl"
             style={{
-              color: '#fef3c7',
-              textShadow: '0 0 30px rgba(251,191,36,0.5), 0 0 60px rgba(251,191,36,0.25), 0 0 4px rgba(251,191,36,0.7), 0 2px 4px rgba(0,0,0,0.5)',
+              color: '#dbeafe',
+              textShadow: '0 0 30px rgba(34,211,238,0.45), 0 0 60px rgba(167,139,250,0.26), 0 0 4px rgba(232,121,249,0.6), 0 2px 4px rgba(0,0,0,0.5)',
             }}
           >
             WE ALSO GIVE CERTIFICATES
           </h2>
-          <p className="mx-auto mt-4 max-w-2xl text-sm text-amber-100/75 sm:text-base" style={{ textShadow: '0 0 12px rgba(251,191,36,0.12)' }}>
+          <p className="mx-auto mt-4 max-w-2xl text-sm text-slate-200/80 sm:text-base" style={{ textShadow: '0 0 12px rgba(34,211,238,0.14)' }}>
             Complete our courses and earn verified credentials that elevate your profile. Join leaders who prove their expertise.
           </p>
         </motion.header>
@@ -174,17 +174,18 @@ export default function CertificatesSection({
           {metrics.map((stat, i) => (
             <div
               key={i}
-              className="rounded-lg border p-6 text-center backdrop-blur-sm transition-transform duration-300 hover:-translate-y-1"
+              className="border p-6 text-center backdrop-blur-sm transition-transform duration-300 hover:-translate-y-1 [clip-path:polygon(12px_0,calc(100%-12px)_0,100%_12px,100%_calc(100%-12px),calc(100%-12px)_100%,12px_100%,0_calc(100%-12px),0_12px)]"
               style={{
-                borderColor: 'rgba(251,191,36,0.35)',
-                background: 'rgba(5,5,15,0.7)',
-                boxShadow: 'inset 0 0 0 1px rgba(251,191,36,0.08), 0 0 40px rgba(251,191,36,0.15), 0 8px 32px rgba(0,0,0,0.5)',
+                borderColor: 'rgba(34,211,238,0.42)',
+                background: 'rgba(5,8,18,0.72)',
+                boxShadow:
+                  'inset 0 0 0 1px rgba(167,139,250,0.16), 0 0 44px rgba(34,211,238,0.28), 0 0 86px rgba(217,70,239,0.2), 0 8px 32px rgba(0,0,0,0.55)',
               }}
             >
-              <div className="text-3xl font-bold sm:text-4xl font-sans tabular-nums" style={{ color: '#fcd34d', textShadow: '0 0 20px rgba(251,191,36,0.6), 0 0 4px rgba(251,191,36,0.8)' }}>
+              <div className="text-3xl font-bold sm:text-4xl font-sans tabular-nums" style={{ color: '#7dd3fc', textShadow: '0 0 20px rgba(34,211,238,0.62), 0 0 4px rgba(167,139,250,0.82)' }}>
                 <AnimatedCounter value={stat.value} suffix={stat.suffix} inView={statsInView} />
               </div>
-              <div className="mt-1 text-sm tracking-wider" style={{ color: 'rgba(254,243,199,0.78)' }}>
+              <div className="mt-1 text-sm tracking-wider" style={{ color: 'rgba(226,232,240,0.8)' }}>
                 {stat.label}
               </div>
             </div>
@@ -200,49 +201,50 @@ export default function CertificatesSection({
             className="lg:col-span-5"
           >
             <div
-              className="rounded-[20px] border p-6 sm:p-8"
+              className="border p-6 sm:p-8 [clip-path:polygon(14px_0,calc(100%-14px)_0,100%_14px,100%_calc(100%-14px),calc(100%-14px)_100%,14px_100%,0_calc(100%-14px),0_14px)]"
               style={{
-                borderColor: 'rgba(251,191,36,0.5)',
-                background: 'linear-gradient(145deg, rgba(10,5,20,0.95) 0%, rgba(2,2,8,0.98) 100%)',
-                boxShadow: 'inset 0 0 0 1px rgba(251,191,36,0.15), 0 0 60px rgba(251,191,36,0.2)',
+                borderColor: 'rgba(34,211,238,0.5)',
+                background: 'linear-gradient(145deg, rgba(8,10,26,0.94) 0%, rgba(4,4,12,0.98) 100%)',
+                boxShadow:
+                  'inset 0 0 0 1px rgba(167,139,250,0.2), 0 0 66px rgba(34,211,238,0.3), 0 0 112px rgba(236,72,153,0.2)',
               }}
             >
               <div
-                className="relative aspect-[4/3] overflow-hidden rounded-lg bg-[#050510]"
-                style={{ border: '1px solid rgba(251,191,36,0.3)', boxShadow: 'inset 0 0 40px rgba(251,191,36,0.08), 0 0 30px rgba(251,191,36,0.1)' }}
+                className="relative aspect-[4/3] overflow-hidden bg-[#050510] [clip-path:polygon(12px_0,calc(100%-12px)_0,100%_12px,100%_calc(100%-12px),calc(100%-12px)_100%,12px_100%,0_calc(100%-12px),0_12px)]"
+                style={{ border: '1px solid rgba(34,211,238,0.35)', boxShadow: 'inset 0 0 40px rgba(167,139,250,0.12), 0 0 30px rgba(34,211,238,0.15)' }}
               >
                 <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center">
                   <div
                     className="mb-4 flex h-16 w-16 items-center justify-center rounded-full border-2"
-                    style={{ borderColor: '#fcd34d', boxShadow: '0 0 30px rgba(251,191,36,0.5), inset 0 0 20px rgba(251,191,36,0.2)' }}
+                    style={{ borderColor: '#22d3ee', boxShadow: '0 0 30px rgba(34,211,238,0.5), inset 0 0 20px rgba(167,139,250,0.2)' }}
                   >
-                    <Award className="h-8 w-8 text-amber-300" style={{ filter: 'drop-shadow(0 0 8px rgba(251,191,36,0.8))' }} />
+                    <Award className="h-8 w-8 text-cyan-300" style={{ filter: 'drop-shadow(0 0 8px rgba(34,211,238,0.88))' }} />
                   </div>
-                  <div className="text-lg font-bold tracking-wider sm:text-xl" style={{ color: '#fef3c7', textShadow: '0 0 20px rgba(251,191,36,0.45), 0 0 4px rgba(251,191,36,0.7)' }}>
+                  <div className="text-lg font-bold tracking-wider sm:text-xl" style={{ color: '#e2e8f0', textShadow: '0 0 20px rgba(34,211,238,0.45), 0 0 4px rgba(167,139,250,0.7)' }}>
                     SYNDICATE CERTIFIED
                   </div>
-                  <div className="mt-2 text-xs tracking-[0.2em]" style={{ color: 'rgba(253,230,138,0.8)' }}>
+                  <div className="mt-2 text-xs tracking-[0.2em]" style={{ color: 'rgba(196,181,253,0.9)' }}>
                     CERTIFICATE OF COMPLETION
                   </div>
-                  <div className="mt-4 h-px w-full max-w-[120px] bg-gradient-to-r from-transparent via-amber-300 to-transparent opacity-70" />
-                  <div className="mt-2 text-[10px]" style={{ color: 'rgba(253,230,138,0.65)' }}>
+                  <div className="mt-4 h-px w-full max-w-[120px] bg-gradient-to-r from-transparent via-cyan-300 to-transparent opacity-70" />
+                  <div className="mt-2 text-[10px]" style={{ color: 'rgba(167,139,250,0.86)' }}>
                     VERIFY: nexus.syndicate/verify
                   </div>
                 </div>
                 <div
                   className="pointer-events-none absolute inset-0 opacity-30"
-                  style={{ background: 'linear-gradient(135deg, rgba(251,191,36,0.12) 0%, transparent 50%, rgba(252,211,77,0.08) 100%)' }}
+                  style={{ background: 'linear-gradient(135deg, rgba(34,211,238,0.12) 0%, transparent 50%, rgba(167,139,250,0.1) 100%)' }}
                 />
               </div>
 
               <button
                 type="button"
                 aria-label="Download sample certificate"
-                className="mt-6 flex w-full items-center justify-center gap-2 rounded-lg border-2 py-3 text-sm tracking-wider text-amber-300 transition-all duration-300 hover:-translate-y-0.5 hover:bg-amber-300/20 hover:text-amber-50"
+                className="mt-6 flex w-full items-center justify-center gap-2 border-2 py-3 text-sm tracking-wider text-cyan-300 transition-all duration-300 hover:-translate-y-0.5 hover:bg-cyan-300/12 hover:text-cyan-100 [clip-path:polygon(10px_0,calc(100%-10px)_0,100%_10px,100%_calc(100%-10px),calc(100%-10px)_100%,10px_100%,0_calc(100%-10px),0_10px)]"
                 style={{
-                  borderColor: 'rgba(251,191,36,0.55)',
-                  textShadow: '0 0 12px rgba(251,191,36,0.5)',
-                  boxShadow: '0 0 24px rgba(251,191,36,0.2)',
+                  borderColor: 'rgba(34,211,238,0.58)',
+                  textShadow: '0 0 12px rgba(34,211,238,0.52)',
+                  boxShadow: '0 0 30px rgba(34,211,238,0.34), 0 0 56px rgba(167,139,250,0.24)',
                 }}
               >
                 <Download className="h-4 w-4" />
@@ -260,27 +262,27 @@ export default function CertificatesSection({
                 viewport={{ once: true }}
                 transition={{ duration: 0.35, delay: i * 0.1 }}
                 whileHover={{ y: -4, scale: 1.01 }}
-                className="relative overflow-hidden rounded-2xl px-[1px] py-[1px]"
+                className="relative overflow-hidden px-[1px] py-[1px] [clip-path:polygon(12px_0,calc(100%-12px)_0,100%_12px,100%_calc(100%-12px),calc(100%-12px)_100%,12px_100%,0_calc(100%-12px),0_12px)]"
                 style={{
-                  background: 'linear-gradient(135deg, rgba(251,191,36,0.9), rgba(252,211,77,0.7), rgba(251,191,36,0.9))',
-                  boxShadow: '0 0 26px rgba(251,191,36,0.35), 0 0 40px rgba(252,211,77,0.2)',
+                  background: 'linear-gradient(135deg, rgba(34,211,238,0.92), rgba(167,139,250,0.78), rgba(236,72,153,0.84))',
+                  boxShadow: '0 0 34px rgba(34,211,238,0.42), 0 0 62px rgba(167,139,250,0.3), 0 0 98px rgba(236,72,153,0.2)',
                 }}
               >
                 <div
-                  className="relative flex items-start gap-4 rounded-2xl bg-gradient-to-br from-black/90 via-[#050314]/95 to-black/90 p-6 sm:gap-6 sm:p-8"
+                  className="relative flex items-start gap-4 bg-gradient-to-br from-black/90 via-[#050314]/95 to-black/90 p-6 [clip-path:polygon(12px_0,calc(100%-12px)_0,100%_12px,100%_calc(100%-12px),calc(100%-12px)_100%,12px_100%,0_calc(100%-12px),0_12px)] sm:gap-6 sm:p-8"
                   style={{ boxShadow: 'inset 0 0 0 1px rgba(10,10,30,0.9), 0 12px 30px rgba(0,0,0,0.9)' }}
                 >
                   <div
-                    className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl border-2 sm:h-14 sm:w-14"
-                    style={{ borderColor: 'rgba(251,191,36,0.6)', boxShadow: '0 0 24px rgba(251,191,36,0.35), inset 0 0 12px rgba(251,191,36,0.12)' }}
+                    className="flex h-12 w-12 flex-shrink-0 items-center justify-center border-2 sm:h-14 sm:w-14 [clip-path:polygon(9px_0,calc(100%-9px)_0,100%_9px,100%_calc(100%-9px),calc(100%-9px)_100%,9px_100%,0_calc(100%-9px),0_9px)]"
+                    style={{ borderColor: 'rgba(34,211,238,0.7)', boxShadow: '0 0 24px rgba(167,139,250,0.42), inset 0 0 12px rgba(34,211,238,0.16)' }}
                   >
                     <FeatureIcon icon={feature.icon} />
                   </div>
                   <div>
-                    <h3 className="mb-2 text-lg font-semibold tracking-wider text-amber-100 sm:text-xl" style={{ textShadow: '0 0 14px rgba(251,191,36,0.35), 0 0 4px rgba(0,0,0,0.9)' }}>
+                    <h3 className="mb-2 text-lg font-semibold tracking-wider text-slate-100 sm:text-xl" style={{ textShadow: '0 0 14px rgba(34,211,238,0.34), 0 0 4px rgba(0,0,0,0.9)' }}>
                       {feature.title}
                     </h3>
-                    <p className="text-sm leading-relaxed text-amber-50/80 sm:text-base">
+                    <p className="text-sm leading-relaxed text-slate-200/80 sm:text-base">
                       {feature.description}
                     </p>
                   </div>
@@ -297,7 +299,7 @@ export default function CertificatesSection({
           transition={{ duration: 0.5 }}
           className="mt-16"
         >
-          <h3 className="mb-6 text-center text-sm font-semibold uppercase tracking-[0.25em]" style={{ color: 'rgba(253,230,138,0.85)', textShadow: '0 0 16px rgba(251,191,36,0.3)' }}>
+          <h3 className="mb-6 text-center text-sm font-semibold uppercase tracking-[0.25em]" style={{ color: 'rgba(196,181,253,0.92)', textShadow: '0 0 16px rgba(34,211,238,0.3)' }}>
             {'> CERTIFICATE TIERS'}
           </h3>
           <div className="flex flex-col justify-center gap-4 sm:flex-row sm:gap-6">
@@ -309,14 +311,14 @@ export default function CertificatesSection({
                 viewport={{ once: true }}
                 transition={{ duration: 0.35, delay: i * 0.08 }}
                 whileHover={{ y: -4, scale: 1.02 }}
-                className="relative overflow-hidden rounded-2xl px-[1px] py-[1px]"
+                className="relative overflow-hidden px-[1px] py-[1px] [clip-path:polygon(10px_0,calc(100%-10px)_0,100%_10px,100%_calc(100%-10px),calc(100%-10px)_100%,10px_100%,0_calc(100%-10px),0_10px)]"
                 style={{
-                  background: 'linear-gradient(135deg, rgba(251,191,36,0.9), rgba(252,211,77,0.7), rgba(251,191,36,0.9))',
-                  boxShadow: '0 0 26px rgba(251,191,36,0.35), 0 0 40px rgba(252,211,77,0.2)',
+                  background: 'linear-gradient(135deg, rgba(34,211,238,0.92), rgba(167,139,250,0.76), rgba(236,72,153,0.84))',
+                  boxShadow: '0 0 34px rgba(34,211,238,0.42), 0 0 62px rgba(167,139,250,0.3), 0 0 98px rgba(236,72,153,0.2)',
                 }}
               >
                 <div
-                  className="relative flex items-center gap-4 rounded-2xl bg-gradient-to-br from-black/90 via-[#050314]/95 to-black/90 p-4"
+                  className="relative flex items-center gap-4 bg-gradient-to-br from-black/90 via-[#050314]/95 to-black/90 p-4 [clip-path:polygon(10px_0,calc(100%-10px)_0,100%_10px,100%_calc(100%-10px),calc(100%-10px)_100%,10px_100%,0_calc(100%-10px),0_10px)]"
                   style={{ boxShadow: 'inset 0 0 0 1px rgba(10,10,30,0.9), 0 12px 30px rgba(0,0,0,0.9)' }}
                 >
                   <div
@@ -331,10 +333,10 @@ export default function CertificatesSection({
                     {tier.name[0]}
                   </div>
                   <div>
-                    <div className="font-semibold tracking-wider text-amber-100" style={{ textShadow: '0 0 14px rgba(251,191,36,0.35), 0 0 4px rgba(0,0,0,0.9)' }}>
+                    <div className="font-semibold tracking-wider text-slate-100" style={{ textShadow: '0 0 14px rgba(34,211,238,0.35), 0 0 4px rgba(0,0,0,0.9)' }}>
                       {tier.name}
                     </div>
-                    <div className="text-xs" style={{ color: 'rgba(253,230,138,0.82)' }}>
+                    <div className="text-xs" style={{ color: 'rgba(196,181,253,0.88)' }}>
                       {tier.desc}
                     </div>
                   </div>

@@ -200,7 +200,7 @@ export default async function Home() {
               Featured PROGRAMS
             </span>
           </h2>
-          <div className="h-[calc(100dvh-9rem)] min-h-[520px] w-full min-w-0 overflow-hidden rounded-none bg-black/30">
+          <div className="h-[calc(100dvh-9rem)] min-h-[520px] w-full min-w-0 overflow-hidden rounded-none bg-transparent">
             <DomeGallery
               images={FEATURED_PROGRAM_IMAGES}
               fit={0.5}
@@ -224,12 +224,12 @@ export default async function Home() {
             loop
             playsInline
             preload="metadata"
-            className="h-full w-full object-cover opacity-40"
+            className="h-full w-full object-cover opacity-24"
           >
             <source src="/assets/video.mp4" type="video/mp4" />
           </video>
         </div>
-        <div className="pointer-events-none absolute inset-0 bg-black/55" />
+        <div className="pointer-events-none absolute inset-0 bg-black/68" />
         <div className="relative z-10 mx-auto flex h-full w-full max-w-[1700px] flex-col justify-center px-4 py-12 sm:px-6 md:px-8">
           {founderImages.length > 0 ? (
             <div className="space-y-4 sm:space-y-5">

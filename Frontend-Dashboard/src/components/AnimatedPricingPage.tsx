@@ -18,6 +18,7 @@ interface PricingTier {
   accent: 'gold'
   icon: ReactNode
   cta: string
+  billingMode?: 'lifetime' | 'recurring'
 }
 
 function cn(...classes: Array<string | false | null | undefined>) {
@@ -26,28 +27,31 @@ function cn(...classes: Array<string | false | null | undefined>) {
 
 const pricingData: Record<PlanKey, PricingTier> = {
   bundle: {
-    price: { monthly: '£499', yearly: '£4,999' },
-    oldPrice: { monthly: '£699', yearly: '£6,999' },
+    price: { monthly: '£333', yearly: '£3,330' },
+    oldPrice: { monthly: '£555', yearly: '£5,550' },
     badge: 'ALL PROGRAMS BUNDLE',
     title: 'All Programs Bundle',
     description:
-      'Complete access to every current and upcoming program. Built for serious operators who want total coverage.',
+      'You will access everything with full lifetime coverage across the complete Syndicate ecosystem.',
     features: [
-      'Access to all active programs',
-      'All future program updates included',
-      'Premium downloadable resources',
-      'Priority content releases',
-      'Completion certificates',
+      'You will access everything',
+      'All programs lifetime',
+      'Syndicate Challenges Mode',
+      'Exclusive Membership Section',
+      'Complete Access of Dashboard',
+      'Quick Access to all social apps',
+      'Goals & Milestone section',
     ],
     accent: 'gold',
     icon: <Shield className="h-4 w-4" />,
     cta: 'Get Full Bundle',
+    billingMode: 'lifetime',
   },
   pawn: {
     price: { monthly: '£19.19', yearly: '£191.90' },
     oldPrice: { monthly: '£29.99', yearly: '£299.90' },
-    badge: 'THE PAWN',
-    title: 'The Pawn',
+    badge: 'THE PAWN · BASIC',
+    title: 'The Pawn Basic',
     description:
       'Enter the world of The Syndicate. Ideal for newcomers building momentum with structured direction.',
     features: [
@@ -60,7 +64,8 @@ const pricingData: Record<PlanKey, PricingTier> = {
     ],
     accent: 'gold',
     icon: <Star className="h-4 w-4" />,
-    cta: 'Join The Pawn',
+    cta: 'Join The Pawn Basic',
+    billingMode: 'recurring',
   },
   knight: {
     price: { monthly: '£33.33', yearly: '£333.30' },
@@ -80,12 +85,13 @@ const pricingData: Record<PlanKey, PricingTier> = {
     accent: 'gold',
     icon: <Swords className="h-4 w-4" />,
     cta: 'Join The Knight',
+    billingMode: 'recurring',
   },
   king: {
     price: { monthly: '£77.77', yearly: '£777.70' },
     oldPrice: { monthly: '£99.99', yearly: '£999.90' },
-    badge: 'THE KING',
-    title: 'The King',
+    badge: 'THE KING · PREMIUM',
+    title: 'The King Premium',
     description:
       'Master your mind, money and power with highest-level resources, insider material, and elite support priority.',
     features: [
@@ -98,20 +104,9 @@ const pricingData: Record<PlanKey, PricingTier> = {
     ],
     accent: 'gold',
     icon: <Crown className="h-4 w-4" />,
-    cta: 'Join The King',
+    cta: 'Join The King Premium',
+    billingMode: 'recurring',
   },
-}
-
-function AccentGlow({ accent: _accent }: { accent: PricingTier['accent'] }) {
-  return (
-    <div
-      aria-hidden
-      className={cn(
-        'pointer-events-none absolute inset-0 rounded-3xl bg-gradient-to-br blur-2xl opacity-70',
-        'from-amber-300/30 via-amber-500/8 to-transparent',
-      )}
-    />
-  )
 }
 
 function TierCard({
@@ -125,32 +120,42 @@ function TierCard({
   billing: BillingKey
   highlighted?: boolean
 }) {
-  const accentBorder = 'border-amber-300/35 hover:border-amber-300/75'
+  const isLifetime = tier.billingMode === 'lifetime'
+  const activeBilling: BillingKey = isLifetime ? 'monthly' : billing
+  const isBundle = planKey === 'bundle'
+  const accentBorder = 'border-white/35 hover:border-white/70'
   const accentText = 'text-amber-300'
+  const gradientShellByPlan: Record<PlanKey, string> = {
+    bundle: 'from-cyan-400 via-violet-500 to-fuchsia-500',
+    pawn: 'from-lime-300 via-emerald-400 to-cyan-400',
+    knight: 'from-cyan-400 via-blue-500 to-violet-500',
+    king: 'from-amber-300 via-orange-400 to-rose-500',
+  }
   const accentShadow =
-    'shadow-[0_0_0_1px_rgba(251,191,36,0.36),0_0_5px_rgba(251,191,36,0.42),0_0_30px_rgba(251,191,36,0.16)] hover:shadow-[0_0_0_1px_rgba(251,191,36,0.5),0_0_5px_rgba(251,191,36,0.62),0_0_90px_rgba(251,191,36,0.34)] hover:brightness-110'
+    'shadow-[0_0_0_2px_rgba(255,255,255,0.3),0_0_42px_rgba(34,211,238,0.45),0_0_92px_rgba(217,70,239,0.3)] hover:shadow-[0_0_0_2px_rgba(255,255,255,0.46),0_0_64px_rgba(34,211,238,0.6),0_0_130px_rgba(217,70,239,0.45)] hover:brightness-125'
 
   return (
     <div
       className={cn(
-        'relative h-full overflow-hidden rounded-3xl border bg-[var(--glass-bg)] backdrop-blur-xl transition-all duration-300 will-change-transform hover:scale-[1.03]',
-        accentBorder,
+        'relative rounded-3xl bg-gradient-to-r p-[5px] [clip-path:polygon(14px_0,calc(100%-14px)_0,100%_14px,100%_calc(100%-14px),calc(100%-14px)_100%,14px_100%,0_calc(100%-14px),0_14px)]',
+        gradientShellByPlan[planKey],
         accentShadow,
-        highlighted && 'ring-1 ring-white/10',
       )}
     >
-      <AccentGlow accent={tier.accent} />
-
+      <span className="pointer-events-none absolute inset-[-2px] bg-inherit opacity-100 blur-[18px]" />
       <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 opacity-[0.08]"
-        style={{
-          backgroundImage:
-            'repeating-linear-gradient(to bottom, rgba(255,255,255,0.06) 0px, rgba(255,255,255,0.06) 1px, transparent 2px, transparent 6px)',
-        }}
-      />
+        className={cn(
+          'relative h-full overflow-hidden rounded-3xl border border-white/25 transition-all duration-300 will-change-transform hover:scale-[1.02] [clip-path:polygon(14px_0,calc(100%-14px)_0,100%_14px,100%_calc(100%-14px),calc(100%-14px)_100%,14px_100%,0_calc(100%-14px),0_14px)]',
+          isBundle
+            ? 'bg-[radial-gradient(circle_at_20%_14%,rgba(34,211,238,0.22),transparent_42%),radial-gradient(circle_at_82%_24%,rgba(217,70,239,0.2),transparent_44%),linear-gradient(165deg,rgba(10,20,34,0.92),rgba(20,10,30,0.9))]'
+            : 'bg-[#05060a]/92',
+          accentBorder,
+          highlighted && 'ring-1 ring-white/10',
+        )}
+      >
+        <span className="pointer-events-none absolute inset-x-5 top-0 h-[2px] bg-gradient-to-r from-transparent via-white/90 to-transparent opacity-95" />
 
-      <div className="relative p-5 sm:p-6">
+        <div className="relative p-5 sm:p-6">
         <div className="flex items-center justify-between gap-4">
           <div
             className={cn(
@@ -178,12 +183,12 @@ function TierCard({
             transition={{ duration: 0.22 }}
           >
             <div className="flex items-center gap-3">
-              {tier.oldPrice?.[billing] && (
+              {tier.oldPrice?.[activeBilling] && (
                 <div
                   className="text-lg font-semibold text-white/40 line-through sm:text-xl"
                   style={{ fontFamily: 'Inter, Segoe UI, Roboto, Arial, sans-serif' }}
                 >
-                  {tier.oldPrice[billing]}
+                  {tier.oldPrice[activeBilling]}
                 </div>
               )}
             </div>
@@ -193,10 +198,10 @@ function TierCard({
                 className="text-4xl font-black text-white sm:text-5xl"
                 style={{ fontFamily: 'Inter, Segoe UI, Roboto, Arial, sans-serif' }}
               >
-                {tier.price[billing]}
+                {tier.price[activeBilling]}
               </div>
               <div className="text-sm text-white/60">
-                /{billing === 'monthly' ? 'mo' : 'yr'}
+                /{isLifetime ? 'lifetime' : billing === 'monthly' ? 'mo' : 'yr'}
               </div>
             </div>
 
@@ -211,7 +216,10 @@ function TierCard({
           {tier.features.map((f) => (
             <div
               key={f}
-              className="flex items-start gap-2.5 rounded-xl border border-white/10 bg-white/5 px-3.5 py-2.5"
+              className={cn(
+                'flex items-start gap-2.5 rounded-xl border px-3.5 py-2.5',
+                isBundle ? 'border-cyan-200/25 bg-cyan-300/5' : 'border-white/15 bg-transparent',
+              )}
             >
               <Check className={cn('mt-0.5 h-4 w-4 shrink-0', accentText)} />
               <span className="text-[13px] leading-snug text-white/80">{f}</span>
@@ -219,15 +227,18 @@ function TierCard({
           ))}
         </div>
 
-        <button
-          type="button"
-          className={cn(
-            'hamburger-attract mt-5 w-full rounded-2xl border border-amber-300/70 bg-black/75 px-5 py-2.5 text-sm font-semibold tracking-wide text-amber-100 shadow-[0_0_16px_rgba(251,191,36,0.3)] transition-all hover:scale-[1.02] hover:bg-black/90 hover:shadow-[0_0_24px_rgba(251,191,36,0.5)] active:scale-[0.99]',
-            planKey === 'bundle' && 'border-amber-200/75 text-amber-50',
-          )}
-        >
-          {tier.cta}
-        </button>
+          <button
+            type="button"
+            className={cn(
+              'hamburger-attract mt-5 w-full rounded-2xl border border-white/35 px-5 py-2.5 text-sm font-semibold tracking-wide text-zinc-100 shadow-[0_0_20px_rgba(34,211,238,0.2)] transition-all hover:scale-[1.02] hover:shadow-[0_0_34px_rgba(236,72,153,0.24)] active:scale-[0.99]',
+              isBundle
+                ? 'bg-gradient-to-r from-cyan-500/20 via-violet-500/24 to-fuchsia-500/20 text-amber-50'
+                : 'bg-transparent',
+            )}
+          >
+            {tier.cta}
+          </button>
+        </div>
       </div>
     </div>
   )
@@ -246,7 +257,6 @@ export function PricingPage({
     () => [
       { key: 'bundle' as const, tier: pricingData.bundle },
       { key: 'pawn' as const, tier: pricingData.pawn },
-      { key: 'knight' as const, tier: pricingData.knight },
       { key: 'king' as const, tier: pricingData.king },
     ],
     [],
@@ -261,19 +271,19 @@ export function PricingPage({
       )}
     >
       <div className="pointer-events-none absolute inset-0">
-        <Image src="/assets/g.gif" alt="" aria-hidden fill sizes="100vw" className="object-cover opacity-30" unoptimized />
-        <div className="absolute inset-0 bg-black/55" />
+        <Image src="/assets/g.gif" alt="" aria-hidden fill sizes="100vw" className="object-cover opacity-18" unoptimized />
+        <div className="absolute inset-0 bg-black/70" />
       </div>
-      <div className="relative mx-auto flex w-[min(92vw,1900px)] flex-col items-center">
-        <header className="mb-12 rounded-2xl border border-amber-300/45 bg-black/20 px-6 py-10 text-center shadow-[0_0_0_1px_rgba(251,191,36,0.35),0_0_5px_rgba(251,191,36,0.45),0_0_30px_rgba(251,191,36,0.14)] md:mb-16 md:px-10 md:py-12">
-          <h2 className="mt-2 font-display text-4xl font-black uppercase tracking-[0.12em] text-white md:text-5xl">
+      <div className="relative mx-auto flex w-full max-w-none flex-col items-center">
+        <header className="mb-12 px-6 py-8 text-center md:mb-16 md:px-10 md:py-10">
+          <h2 className="mt-2 font-display text-5xl font-black uppercase tracking-[0.14em] text-white md:text-6xl">
             Syndicate Offers
           </h2>
-          <p className="mx-auto mt-4 max-w-2xl font-mono text-base tracking-[0.1em] text-zinc-400 md:text-lg">
-            Choose your access tier: full bundle coverage or The Pawn, The Knight, and The King membership paths.
+          <p className="mx-auto mt-4 max-w-3xl font-mono text-lg tracking-[0.1em] text-zinc-300 md:text-xl">
+            Choose your access tier: full bundle lifetime coverage or The Pawn and The King membership paths.
           </p>
 
-          <div className="mt-8 flex items-center justify-center gap-4 rounded-xl border border-amber-300/40 bg-black/30 px-6 py-4 text-sm font-mono tracking-[0.2em] uppercase shadow-[0_0_0_1px_rgba(251,191,36,0.25),0_0_5px_rgba(251,191,36,0.35)]">
+          <div className="mt-8 inline-flex items-center justify-center gap-4 rounded-xl bg-black/10 px-6 py-4 text-sm font-mono tracking-[0.2em] uppercase shadow-[0_0_18px_rgba(251,191,36,0.2)]">
             <span className={billing === 'monthly' ? 'text-amber-300' : 'text-zinc-500'}>
               Monthly
             </span>
@@ -299,7 +309,7 @@ export function PricingPage({
           </div>
         </header>
 
-        <div className="grid w-full grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-4 md:gap-6 xl:gap-5">
+        <div className="grid w-full grid-cols-1 gap-5 px-[2vw] md:grid-cols-2 md:gap-6 xl:grid-cols-3 xl:gap-6">
           {tiers.map(({ key, tier }) => (
             <div key={key} onClick={() => onSelectPlan?.(key)} className="cursor-default">
               <TierCard
