@@ -321,9 +321,9 @@ export default function OurMethodsPage() {
       <section className="relative w-full px-4 py-14 sm:px-6 sm:py-18">
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_22%_28%,rgba(255,70,70,0.10),transparent_38%),radial-gradient(circle_at_78%_38%,rgba(56,236,255,0.10),transparent_42%),radial-gradient(circle_at_58%_88%,rgba(120,255,90,0.10),transparent_44%)]" />
         <div className="relative z-10 mx-auto grid max-w-[96rem] gap-8 lg:grid-cols-[1.08fr_0.92fr]">
-          <div className="rounded-2xl border border-zinc-700/40 bg-black/35 p-6 shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_0_66px_rgba(193,120,255,0.12)] sm:p-8">
-            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-zinc-200/70">The framework</p>
-            <h3 className="mt-3 text-4xl font-semibold text-zinc-100 sm:text-5xl">The Syndicate Greatness Framework</h3>
+          <div className="rounded-2xl border border-zinc-700/40 bg-black/35 p-6 shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_0_66px_rgba(193,120,255,0.12),0_0_120px_rgba(56,236,255,0.08)] sm:p-8">
+            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-zinc-200/70 drop-shadow-[0_0_8px_rgba(217,70,239,0.35)]">The framework</p>
+            <h3 className="mt-3 text-4xl font-semibold text-zinc-100 drop-shadow-[0_0_18px_rgba(56,236,255,0.28)] sm:text-5xl">The Syndicate Greatness Framework</h3>
             <div className="mt-6 space-y-5 text-lg leading-relaxed text-zinc-200/88 sm:text-xl">
               <p>
                 The Syndicate brings clarity to the complicated dynamics of wealth and influence. You learn what matters, what doesn’t, and how to execute under
@@ -336,7 +336,7 @@ export default function OurMethodsPage() {
                 The edge is ethics: power without restraint destroys the operator. We build disciplined control so results compound instead of collapse.
               </p>
             </div>
-            <p className="mt-8 text-lg font-semibold uppercase tracking-[0.16em] text-zinc-100">
+            <p className="mt-8 text-lg font-semibold uppercase tracking-[0.16em] text-zinc-100 drop-shadow-[0_0_14px_rgba(255,198,64,0.35)]">
               Objective: controlled power.
             </p>
             <div id="register-interest" className="mt-8">
@@ -462,13 +462,13 @@ export default function OurMethodsPage() {
               character together, this is your invitation.
             </p>
           </div>
-          <div className="rounded-2xl border border-zinc-700/40 bg-black/35 p-5 shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_0_52px_rgba(120,255,90,0.08)]">
-            <p className="text-lg font-semibold uppercase tracking-[0.18em] text-zinc-200/75">What you unlock</p>
+          <div className="rounded-2xl border border-zinc-700/40 bg-black/35 p-5 shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_0_52px_rgba(120,255,90,0.08),0_0_100px_rgba(255,198,64,0.08)]">
+            <p className="text-lg font-semibold uppercase tracking-[0.18em] text-zinc-200/75 drop-shadow-[0_0_10px_rgba(120,255,90,0.3)]">What you unlock</p>
             <ul className="mt-4 space-y-3 text-lg text-zinc-200/88">
-              <li>Practical frameworks for money, influence, and strategic decision-making.</li>
-              <li>Execution systems designed for immediate implementation.</li>
-              <li>Ethical mastery principles to sustain success long term.</li>
-              <li>A network culture built around standards, accountability, and purpose.</li>
+              <li className="drop-shadow-[0_0_8px_rgba(255,255,255,0.15)]">Practical frameworks for money, influence, and strategic decision-making.</li>
+              <li className="drop-shadow-[0_0_8px_rgba(255,255,255,0.15)]">Execution systems designed for immediate implementation.</li>
+              <li className="drop-shadow-[0_0_8px_rgba(255,255,255,0.15)]">Ethical mastery principles to sustain success long term.</li>
+              <li className="drop-shadow-[0_0_8px_rgba(255,255,255,0.15)]">A network culture built around standards, accountability, and purpose.</li>
             </ul>
           </div>
         </div>
