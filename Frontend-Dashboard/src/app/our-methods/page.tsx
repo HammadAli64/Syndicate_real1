@@ -64,7 +64,6 @@ const OUTCOME_METRICS = [
   { label: 'Practical Lessons', value: '100%' },
   { label: 'Immediate Application', value: 'Day 1' },
   { label: 'Systems Thinking Focus', value: 'High' },
-  { label: 'Ethics & Integrity Layer', value: 'Core' },
 ]
 
 const SAFEGUARDS = [
@@ -169,7 +168,7 @@ export default function OurMethodsPage() {
   return (
     <div className="min-h-[100dvh] w-full bg-black">
       <NavApp />
-      <section className="relative h-[100dvh] min-h-[100dvh] w-[100vw] overflow-hidden px-[clamp(0.75rem,2vw,1.75rem)] pb-4 pt-[74px] sm:pb-6 sm:pt-[86px]">
+      <section className="relative w-full overflow-hidden px-[clamp(1rem,3vw,2.5rem)] pb-4 pt-[74px] sm:pb-6 sm:pt-[86px]">
         <div className="pointer-events-none absolute inset-0">
           <video autoPlay muted loop playsInline preload="metadata" className="absolute inset-0 h-full w-full object-cover opacity-64 saturate-125 contrast-110">
             <source src="/assets/video.mp4" type="video/mp4" />
@@ -180,9 +179,9 @@ export default function OurMethodsPage() {
           <div className="absolute inset-0 opacity-[0.07] [background-image:repeating-linear-gradient(0deg,transparent_0px,transparent_2px,rgba(255,255,255,0.12)_2px,rgba(255,255,255,0.12)_3px)]" />
         </div>
 
-        <div className="relative z-10 mx-auto flex h-[calc(100dvh-92px)] w-full max-w-none items-stretch">
-          <div className="grid h-full w-full items-stretch gap-4 lg:grid-cols-[1.05fr_0.95fr] lg:gap-6">
-            <div className="methods-fade-up methods-panel-pulse h-full overflow-hidden rounded-2xl border border-zinc-700/45 bg-black/30 p-5 shadow-[0_0_0_1px_rgba(255,255,255,0.08),0_0_72px_rgba(56,236,255,0.12)] sm:p-6">
+        <div className="relative z-10 mx-auto flex min-h-[calc(100dvh-92px)] w-full max-w-[96rem] items-stretch">
+          <div className="grid w-full items-stretch gap-4 lg:grid-cols-[1.05fr_0.95fr] lg:gap-6">
+            <div className="methods-fade-up methods-panel-pulse overflow-hidden rounded-2xl border border-zinc-700/45 bg-black/30 p-5 shadow-[0_0_0_1px_rgba(255,255,255,0.08),0_0_72px_rgba(56,236,255,0.12)] sm:p-6">
               <div className="mb-5 flex flex-wrap gap-2">
                 <span className="inline-flex items-center rounded-md border border-cyan-300/60 bg-cyan-300/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-cyan-100">
                   Live Ops
@@ -256,7 +255,7 @@ export default function OurMethodsPage() {
             </div>
 
             <div className="methods-float">
-              <div className="methods-panel-pulse h-full overflow-y-auto rounded-2xl border border-cyan-300/40 bg-black/45 p-5 shadow-[0_0_0_1px_rgba(255,255,255,0.08),0_0_66px_rgba(56,236,255,0.18)] sm:p-6">
+              <div className="methods-panel-pulse overflow-y-auto rounded-2xl border border-cyan-300/40 bg-black/45 p-5 shadow-[0_0_0_1px_rgba(255,255,255,0.08),0_0_66px_rgba(56,236,255,0.18)] sm:p-6">
                 <p className="text-sm font-semibold uppercase tracking-[0.2em] text-zinc-200/80">Command Console</p>
                 <h2 className="mt-3 text-[clamp(2rem,3.6vw,3.3rem)] font-semibold text-cyan-100">Win The Loop.</h2>
                 <p className="mt-3 text-[clamp(1rem,1.3vw,1.25rem)] leading-relaxed text-zinc-200/88">
