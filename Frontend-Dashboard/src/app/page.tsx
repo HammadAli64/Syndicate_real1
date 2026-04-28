@@ -1,6 +1,7 @@
 import { readdir } from 'node:fs/promises'
 import path from 'node:path'
 import Image from 'next/image'
+import Link from 'next/link'
 import { PricingPage } from '@/components/AnimatedPricingPage'
 import CertificatesSection from '@/components/CertificatesSection'
 import DomeGallery from '@/components/DomeGallery'
@@ -45,6 +46,44 @@ const FEATURED_PROGRAM_IMAGES = [
   { src: courseImage('make_best_thumbnails_or_cover_image_of_program_python_programming__dystopian_cyber__pds64wpqtzleuu2ucwkp_0.png'), alt: 'Python Programming' },
   { src: courseImage('new-project (12).png'), alt: 'Building Apps using React JS' },
 ]
+
+const SOCIAL_CARD_BORDER_THEMES = [
+  {
+    frame: "border-[4px] border-red-700 hover:border-red-500",
+    glow: "shadow-[0_0_0_1px_rgba(127,29,29,1),0_0_56px_rgba(127,29,29,0.55),0_0_118px_rgba(127,29,29,0.35),0_18px_42px_rgba(0,0,0,0.72)] hover:shadow-[0_0_0_1px_rgba(185,28,28,1),0_0_86px_rgba(185,28,28,0.62),0_0_156px_rgba(185,28,28,0.42),0_26px_58px_rgba(0,0,0,0.78)]",
+    inner: "border-red-500/75",
+    chip: "border-red-500 bg-red-900/75 shadow-[0_0_18px_rgba(127,29,29,0.95)]",
+    bgGlow: "bg-[radial-gradient(74%_74%_at_50%_50%,rgba(127,29,29,0.55),rgba(127,29,29,0.18)_44%,rgba(12,4,4,0.72)_72%,transparent_86%)]",
+  },
+  {
+    frame: "border-[4px] border-cyan-700 hover:border-cyan-500",
+    glow: "shadow-[0_0_0_1px_rgba(14,116,144,1),0_0_56px_rgba(14,116,144,0.55),0_0_118px_rgba(14,116,144,0.35),0_18px_42px_rgba(0,0,0,0.72)] hover:shadow-[0_0_0_1px_rgba(8,145,178,1),0_0_86px_rgba(8,145,178,0.62),0_0_156px_rgba(8,145,178,0.42),0_26px_58px_rgba(0,0,0,0.78)]",
+    inner: "border-cyan-500/75",
+    chip: "border-cyan-500 bg-cyan-900/75 shadow-[0_0_18px_rgba(14,116,144,0.95)]",
+    bgGlow: "bg-[radial-gradient(74%_74%_at_50%_50%,rgba(14,116,144,0.55),rgba(14,116,144,0.18)_44%,rgba(3,14,18,0.72)_72%,transparent_86%)]",
+  },
+  {
+    frame: "border-[4px] border-violet-700 hover:border-violet-500",
+    glow: "shadow-[0_0_0_1px_rgba(91,33,182,1),0_0_56px_rgba(91,33,182,0.55),0_0_118px_rgba(91,33,182,0.35),0_18px_42px_rgba(0,0,0,0.72)] hover:shadow-[0_0_0_1px_rgba(124,58,237,1),0_0_86px_rgba(124,58,237,0.62),0_0_156px_rgba(124,58,237,0.42),0_26px_58px_rgba(0,0,0,0.78)]",
+    inner: "border-violet-500/75",
+    chip: "border-violet-500 bg-violet-900/75 shadow-[0_0_18px_rgba(91,33,182,0.95)]",
+    bgGlow: "bg-[radial-gradient(74%_74%_at_50%_50%,rgba(91,33,182,0.55),rgba(91,33,182,0.18)_44%,rgba(10,5,18,0.72)_72%,transparent_86%)]",
+  },
+  {
+    frame: "border-[4px] border-amber-700 hover:border-amber-500",
+    glow: "shadow-[0_0_0_1px_rgba(146,64,14,1),0_0_56px_rgba(146,64,14,0.55),0_0_118px_rgba(146,64,14,0.35),0_18px_42px_rgba(0,0,0,0.72)] hover:shadow-[0_0_0_1px_rgba(180,83,9,1),0_0_86px_rgba(180,83,9,0.62),0_0_156px_rgba(180,83,9,0.42),0_26px_58px_rgba(0,0,0,0.78)]",
+    inner: "border-amber-500/75",
+    chip: "border-amber-500 bg-amber-900/75 shadow-[0_0_18px_rgba(146,64,14,0.95)]",
+    bgGlow: "bg-[radial-gradient(74%_74%_at_50%_50%,rgba(146,64,14,0.55),rgba(146,64,14,0.18)_44%,rgba(18,10,4,0.72)_72%,transparent_86%)]",
+  },
+  {
+    frame: "border-[4px] border-lime-700 hover:border-lime-500",
+    glow: "shadow-[0_0_0_1px_rgba(63,98,18,1),0_0_56px_rgba(63,98,18,0.55),0_0_118px_rgba(63,98,18,0.35),0_18px_42px_rgba(0,0,0,0.72)] hover:shadow-[0_0_0_1px_rgba(77,124,15,1),0_0_86px_rgba(77,124,15,0.62),0_0_156px_rgba(77,124,15,0.42),0_26px_58px_rgba(0,0,0,0.78)]",
+    inner: "border-lime-500/75",
+    chip: "border-lime-500 bg-lime-900/75 shadow-[0_0_18px_rgba(63,98,18,0.95)]",
+    bgGlow: "bg-[radial-gradient(74%_74%_at_50%_50%,rgba(63,98,18,0.55),rgba(63,98,18,0.18)_44%,rgba(8,14,3,0.72)_72%,transparent_86%)]",
+  },
+] as const
 
 const FOUNDER_DIRS = ['assets/founder'] as const
 const IMAGE_EXTENSIONS = new Set(['.png', '.jpg', '.jpeg', '.webp', '.gif', '.avif'])
@@ -140,6 +179,16 @@ export default async function Home() {
         <div className="absolute bottom-4 left-1/2 z-20 w-full max-w-[1180px] -translate-x-1/2 px-3 sm:bottom-6 sm:px-4">
           <FeaturedLogosStrip logos={FEATURED_LOGOS} speedSeconds={34} compact />
         </div>
+        <div className="absolute right-4 top-[clamp(76px,11vw,98px)] z-20 sm:right-6">
+          <Link
+            href="/our-methods"
+            className="group inline-flex min-h-[44px] items-center gap-2 rounded-md border border-cyan-200/70 bg-cyan-300/10 px-4 py-2 text-[11px] font-extrabold uppercase tracking-[0.18em] text-cyan-100 shadow-[0_0_18px_rgba(56,236,255,0.3)] transition duration-300 hover:-translate-y-0.5 hover:bg-cyan-300/20 hover:shadow-[0_0_30px_rgba(56,236,255,0.45)]"
+          >
+            <span className="h-2 w-2 animate-pulse rounded-full bg-cyan-200 shadow-[0_0_12px_rgba(56,236,255,0.95)]" />
+            Our Methods
+            <span className="text-cyan-100/90 transition-transform duration-300 group-hover:translate-x-0.5">→</span>
+          </Link>
+        </div>
         <div className="relative z-10 h-[100dvh] min-h-[100dvh] w-full min-w-0" aria-hidden />
       </section>
       <section className="relative flex h-[100dvh] min-h-[100dvh] w-full min-w-0 items-center overflow-hidden bg-[#050508] px-0 py-0">
@@ -195,7 +244,7 @@ export default async function Home() {
         <div className="relative z-10 mx-auto flex h-full w-full max-w-[1700px] flex-col justify-center px-4 py-12 sm:px-6 md:px-8">
           {founderImages.length > 0 ? (
             <div className="space-y-4 sm:space-y-5">
-              <h3 className="mb-3 px-1 text-2xl font-black uppercase tracking-[0.16em] text-amber-100 drop-shadow-[0_0_14px_rgba(251,191,36,0.35)] sm:mb-4 sm:text-3xl md:text-4xl">
+              <h3 className="mb-3 px-1 text-center text-2xl font-black uppercase tracking-[0.16em] text-amber-100 drop-shadow-[0_0_14px_rgba(251,191,36,0.35)] sm:mb-4 sm:text-3xl md:text-4xl">
                 MOST VIEWED
               </h3>
               <div className="relative w-full overflow-hidden">
@@ -205,29 +254,36 @@ export default async function Home() {
                   className="animate-marquee flex w-max items-center gap-3 sm:gap-4"
                   style={{ ['--duration' as string]: '48s', ['--gap' as string]: '1rem' }}
                 >
-                  {topRowTrack.map((image, index) => (
+                  {topRowTrack.map((image, index) => {
+                    const theme = SOCIAL_CARD_BORDER_THEMES[index % SOCIAL_CARD_BORDER_THEMES.length]
+                    return (
                     <a
                       key={`top-${image.src}-${index}`}
                       href={INSTAGRAM_URL}
                       target="_blank"
                       rel="noreferrer"
                       aria-label={`Open Instagram: ${image.alt}`}
-                      className="group relative block h-[240px] w-[180px] overflow-hidden rounded-xl border border-amber-300/35 bg-black/35 sm:h-[290px] sm:w-[220px] md:h-[330px] md:w-[250px]"
+                      className={`group relative block h-[240px] w-[180px] overflow-hidden rounded-xl border bg-transparent [clip-path:polygon(0%_8%,8%_0%,100%_0%,100%_92%,92%_100%,0%_100%)] transition-all duration-300 hover:-translate-y-1 sm:h-[290px] sm:w-[220px] md:h-[330px] md:w-[250px] ${theme.frame} ${theme.glow}`}
                     >
+                      <span className={`pointer-events-none absolute -inset-7 z-0 blur-3xl opacity-85 transition-opacity duration-300 group-hover:opacity-100 ${theme.bgGlow}`} />
+                      <span className="pointer-events-none absolute inset-0 z-[1] bg-[linear-gradient(180deg,rgba(10,12,22,0.2),rgba(2,4,12,0.62))]" />
+                      <span className={`pointer-events-none absolute inset-[2px] z-[3] rounded-[10px] border opacity-80 transition-opacity duration-300 group-hover:opacity-100 ${theme.inner}`} />
+                      <span className={`pointer-events-none absolute left-2 top-2 z-[4] h-3 w-3 rounded-sm border ${theme.chip}`} />
+                      <span className={`pointer-events-none absolute bottom-2 right-2 z-[4] h-3 w-3 rounded-sm border ${theme.chip}`} />
                       <Image
                         src={image.src}
                         alt={image.alt}
                         fill
                         sizes="(max-width: 640px) 180px, (max-width: 768px) 220px, 250px"
-                        className="object-cover object-top transition-transform duration-500 ease-out group-hover:scale-105"
+                        className="relative z-[2] object-cover object-top transition-transform duration-500 ease-out group-hover:scale-105"
                       />
-                      <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/60 via-black/15 to-transparent" />
                     </a>
-                  ))}
+                    )
+                  })}
                 </div>
               </div>
 
-              <h3 className="mb-3 mt-6 px-1 text-2xl font-black uppercase tracking-[0.16em] text-amber-100 drop-shadow-[0_0_14px_rgba(251,191,36,0.35)] sm:mb-4 sm:mt-8 sm:text-3xl md:text-4xl">
+              <h3 className="mb-3 mt-6 px-1 text-center text-2xl font-black uppercase tracking-[0.16em] text-amber-100 drop-shadow-[0_0_14px_rgba(251,191,36,0.35)] sm:mb-4 sm:mt-8 sm:text-3xl md:text-4xl">
                 MOST INFORMATIVE
               </h3>
               <div className="relative w-full overflow-hidden">
@@ -237,25 +293,32 @@ export default async function Home() {
                   className="animate-marquee-reverse flex w-max items-center gap-3 sm:gap-4"
                   style={{ ['--duration' as string]: '52s', ['--gap' as string]: '1rem' }}
                 >
-                  {bottomRowTrack.map((image, index) => (
+                  {bottomRowTrack.map((image, index) => {
+                    const theme = SOCIAL_CARD_BORDER_THEMES[index % SOCIAL_CARD_BORDER_THEMES.length]
+                    return (
                     <a
                       key={`bottom-${image.src}-${index}`}
                       href={TIKTOK_URL}
                       target="_blank"
                       rel="noreferrer"
                       aria-label={`Open TikTok: ${image.alt}`}
-                      className="group relative block h-[240px] w-[180px] overflow-hidden rounded-xl border border-amber-300/35 bg-black/35 sm:h-[290px] sm:w-[220px] md:h-[330px] md:w-[250px]"
+                      className={`group relative block h-[240px] w-[180px] overflow-hidden rounded-xl border bg-transparent [clip-path:polygon(0%_8%,8%_0%,100%_0%,100%_92%,92%_100%,0%_100%)] transition-all duration-300 hover:-translate-y-1 sm:h-[290px] sm:w-[220px] md:h-[330px] md:w-[250px] ${theme.frame} ${theme.glow}`}
                     >
+                      <span className={`pointer-events-none absolute -inset-7 z-0 blur-3xl opacity-85 transition-opacity duration-300 group-hover:opacity-100 ${theme.bgGlow}`} />
+                      <span className="pointer-events-none absolute inset-0 z-[1] bg-[linear-gradient(180deg,rgba(10,12,22,0.2),rgba(2,4,12,0.62))]" />
+                      <span className={`pointer-events-none absolute inset-[2px] z-[3] rounded-[10px] border opacity-80 transition-opacity duration-300 group-hover:opacity-100 ${theme.inner}`} />
+                      <span className={`pointer-events-none absolute left-2 top-2 z-[4] h-3 w-3 rounded-sm border ${theme.chip}`} />
+                      <span className={`pointer-events-none absolute bottom-2 right-2 z-[4] h-3 w-3 rounded-sm border ${theme.chip}`} />
                       <Image
                         src={image.src}
                         alt={image.alt}
                         fill
                         sizes="(max-width: 640px) 180px, (max-width: 768px) 220px, 250px"
-                        className="object-cover object-top transition-transform duration-500 ease-out group-hover:scale-105"
+                        className="relative z-[2] object-cover object-top transition-transform duration-500 ease-out group-hover:scale-105"
                       />
-                      <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/60 via-black/15 to-transparent" />
                     </a>
-                  ))}
+                    )
+                  })}
                 </div>
               </div>
             </div>

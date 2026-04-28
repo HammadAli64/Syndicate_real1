@@ -4303,6 +4303,22 @@ body {
   animation: methods-float 5.5s ease-in-out infinite;
 }
 
+.methods-hero-title {
+  animation: syndicateFlicker 7s linear infinite;
+}
+
+.methods-panel-pulse {
+  animation: dashboardNeonPulse 3.8s ease-in-out infinite;
+}
+
+.methods-node-rise {
+  animation: methods-node-rise 0.68s ease-out both;
+}
+
+.node-ring-pulse {
+  animation: node-ring-pulse 2.1s ease-in-out infinite;
+}
+
 @keyframes methods-fade-up {
   0% {
     opacity: 0;
@@ -4324,6 +4340,29 @@ body {
   }
 }
 
+@keyframes methods-node-rise {
+  0% {
+    opacity: 0;
+    transform: translateY(14px) scale(0.96);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes node-ring-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.18), 0 0 0 0 rgba(56, 236, 255, 0.18);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(255, 255, 255, 0), 0 0 0 18px rgba(56, 236, 255, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(255, 255, 255, 0), 0 0 0 0 rgba(56, 236, 255, 0);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
@@ -4340,7 +4379,11 @@ body {
   .animate-marquee,
   .animate-marquee-reverse,
   .methods-fade-up,
-  .methods-float {
+  .methods-float,
+  .methods-hero-title,
+  .methods-panel-pulse,
+  .methods-node-rise,
+  .node-ring-pulse {
     animation: none !important;
     transition: none !important;
     opacity: 1;
