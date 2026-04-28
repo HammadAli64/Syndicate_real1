@@ -206,8 +206,8 @@ export default function OurMethodsPage() {
                   <p className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-300/90">Live Pipeline</p>
                 </div>
                 <div className="relative h-[6px] overflow-hidden rounded-full bg-zinc-800/80">
-                  <div className="absolute inset-y-0 left-0 w-[68%] rounded-full bg-gradient-to-r from-red-300 via-cyan-300 to-lime-300" />
-                  <div className="absolute inset-y-0 left-0 w-[36%] rounded-full bg-white/40 blur-sm animate-[electric-flow_2.4s_linear_infinite]" />
+                  <div className="absolute inset-y-0 left-0 w-[68%] rounded-full bg-gradient-to-r from-[#fdd02f] via-[#56e5ff] to-[#9b8cff]" />
+                  <div className="absolute inset-y-0 left-0 w-[36%] rounded-full bg-[#fdd02f]/45 blur-sm animate-[electric-flow_2.4s_linear_infinite]" />
                 </div>
                 <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
                   {MISSION_PHASES.map((phase, index) => (
