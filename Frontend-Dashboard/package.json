@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.1.0",
   "scripts": {
-    "dev": "set NEXT_DISABLE_DEVTOOLS=1&& next dev --webpack",
+    "dev": "set NEXT_DISABLE_DEVTOOLS=1&& next dev",
     "build": "next build",
     "start": "next start --hostname 0.0.0.0"
   },

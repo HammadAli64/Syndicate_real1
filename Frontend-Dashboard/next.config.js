@@ -8,6 +8,9 @@ const backendOrigin = (
 const nextConfig = {
   output: "standalone",
   reactStrictMode: true,
+  experimental: {
+    optimizePackageImports: ["lucide-react", "framer-motion", "recharts"]
+  },
   devIndicators: {
     buildActivity: false
   },

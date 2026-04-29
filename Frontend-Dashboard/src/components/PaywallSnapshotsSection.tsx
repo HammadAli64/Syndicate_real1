@@ -10,6 +10,7 @@ type SnapshotItem = {
   description: string
   frame: string
   tone: string
+  aura: string
 }
 
 const SNAPSHOTS: SnapshotItem[] = [
@@ -18,32 +19,36 @@ const SNAPSHOTS: SnapshotItem[] = [
     title: 'PROGRAM EXECUTION HUB',
     description:
       'Access structured programs, actionable lessons, and progress systems from a personalized dashboard.',
-    frame: 'border-cyan-300 border-[10px] shadow-[0_0_0_1px_rgba(34,211,238,0.9),0_0_22px_rgba(34,211,238,0.86),0_0_56px_rgba(34,211,238,0.72),0_0_108px_rgba(34,211,238,0.56),inset_0_0_20px_rgba(34,211,238,0.27)]',
-    tone: 'from-cyan-400/18 via-sky-500/12 to-violet-500/18',
+    frame: 'border-sky-300/95 border-[8px] shadow-[0_0_0_1px_rgba(56,189,248,0.95),0_0_24px_rgba(56,189,248,0.72),0_0_58px_rgba(56,189,248,0.5),0_0_110px_rgba(56,189,248,0.34),inset_0_0_20px_rgba(56,189,248,0.28)]',
+    tone: 'from-sky-500/24 via-cyan-500/16 to-indigo-600/22',
+    aura: 'from-cyan-400/45 via-sky-500/28 to-transparent',
   },
   {
     src: '/assets/paywall/syndicate-mode-snapshot.png',
     title: 'SYNDICATE MODE DASHBOARD',
     description:
       'Use curated pathways to pick skills that align with your style, goals, and execution level.',
-    frame: 'border-lime-300 border-[10px] shadow-[0_0_0_1px_rgba(163,230,53,0.9),0_0_22px_rgba(163,230,53,0.86),0_0_56px_rgba(163,230,53,0.72),0_0_108px_rgba(163,230,53,0.56),inset_0_0_20px_rgba(163,230,53,0.27)]',
-    tone: 'from-lime-300/18 via-emerald-500/12 to-amber-500/18',
+    frame: 'border-lime-300/95 border-[8px] shadow-[0_0_0_1px_rgba(163,230,53,0.95),0_0_24px_rgba(163,230,53,0.72),0_0_58px_rgba(163,230,53,0.5),0_0_110px_rgba(163,230,53,0.34),inset_0_0_20px_rgba(163,230,53,0.28)]',
+    tone: 'from-lime-400/24 via-emerald-500/16 to-amber-500/22',
+    aura: 'from-lime-300/42 via-emerald-500/28 to-transparent',
   },
   {
     src: '/assets/paywall/dashboard-snapshot.png',
     title: 'MEMBER WORKSPACE OVERVIEW',
     description:
       'Stay ahead with trend-driven modules that help you identify opportunities before they saturate.',
-    frame: 'border-fuchsia-400 border-[10px] shadow-[0_0_0_1px_rgba(232,121,249,0.9),0_0_22px_rgba(232,121,249,0.86),0_0_56px_rgba(232,121,249,0.72),0_0_108px_rgba(232,121,249,0.56),inset_0_0_20px_rgba(232,121,249,0.27)]',
-    tone: 'from-fuchsia-400/18 via-violet-500/12 to-cyan-500/18',
+    frame: 'border-fuchsia-300/95 border-[8px] shadow-[0_0_0_1px_rgba(244,114,182,0.95),0_0_24px_rgba(244,114,182,0.72),0_0_58px_rgba(244,114,182,0.5),0_0_110px_rgba(244,114,182,0.34),inset_0_0_20px_rgba(244,114,182,0.28)]',
+    tone: 'from-fuchsia-500/24 via-violet-500/16 to-blue-600/22',
+    aura: 'from-fuchsia-400/42 via-violet-500/28 to-transparent',
   },
   {
     src: '/assets/paywall/methods-reference.png',
     title: 'LIVE CONTENT UPDATES',
     description:
       'Content, resources, and frameworks evolve continuously so your private workspace keeps compounding.',
-    frame: 'border-red-400 border-[10px] shadow-[0_0_0_1px_rgba(248,113,113,0.9),0_0_22px_rgba(248,113,113,0.86),0_0_56px_rgba(248,113,113,0.72),0_0_108px_rgba(248,113,113,0.56),inset_0_0_20px_rgba(248,113,113,0.27)]',
-    tone: 'from-rose-400/18 via-red-500/12 to-orange-500/18',
+    frame: 'border-rose-300/95 border-[8px] shadow-[0_0_0_1px_rgba(251,113,133,0.95),0_0_24px_rgba(251,113,133,0.72),0_0_58px_rgba(251,113,133,0.5),0_0_110px_rgba(251,113,133,0.34),inset_0_0_20px_rgba(251,113,133,0.28)]',
+    tone: 'from-rose-500/24 via-red-500/16 to-orange-600/22',
+    aura: 'from-rose-400/42 via-orange-500/28 to-transparent',
   },
 ]
 
@@ -76,9 +81,10 @@ export default function PaywallSnapshotsSection() {
           {SNAPSHOTS.map((snapshot) => (
             <div
               key={snapshot.title}
-              className={`group relative overflow-hidden bg-transparent p-[1px] transition duration-300 ${snapshot.frame}`}
+              className={`group relative overflow-hidden bg-transparent p-[1px] transition duration-300 [clip-path:polygon(24px_0,calc(100%-24px)_0,100%_24px,100%_calc(100%-28px),calc(100%-28px)_100%,28px_100%,0_calc(100%-24px),0_24px)] ${snapshot.frame}`}
             >
-              <article className="relative flex h-full min-h-[clamp(360px,44vh,420px)] flex-col border border-zinc-100/30 bg-[#05070d]/85 p-5 [clip-path:polygon(20px_0,calc(100%-20px)_0,100%_20px,100%_calc(100%-24px),calc(100%-24px)_100%,24px_100%,0_calc(100%-20px),0_20px)]">
+              <span className={`pointer-events-none absolute -inset-8 -z-10 bg-gradient-to-br ${snapshot.aura} blur-[44px]`} />
+              <article className="relative flex h-full min-h-[clamp(360px,44vh,420px)] flex-col border border-zinc-100/35 bg-[#03050b]/94 p-5 [clip-path:polygon(26px_0,calc(100%-26px)_0,100%_26px,100%_calc(100%-30px),calc(100%-30px)_100%,30px_100%,0_calc(100%-26px),0_26px)]">
                 <span className={`pointer-events-none absolute inset-0 bg-gradient-to-br ${snapshot.tone}`} />
                 <span className="pointer-events-none absolute inset-0 opacity-[0.08] [background-image:linear-gradient(rgba(255,255,255,0.18)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.14)_1px,transparent_1px)] [background-size:34px_34px]" />
                 <span className="pointer-events-none absolute inset-0 opacity-[0.09] [background-image:repeating-linear-gradient(0deg,transparent_0px,transparent_2px,rgba(255,255,255,0.15)_2px,rgba(255,255,255,0.15)_3px)]" />
@@ -86,10 +92,12 @@ export default function PaywallSnapshotsSection() {
                 <span className="pointer-events-none absolute right-0 top-[22%] h-12 w-[2px] bg-zinc-100/65" />
                 <span className="pointer-events-none absolute bottom-[22%] left-0 h-12 w-[2px] bg-zinc-100/65" />
                 <span className="pointer-events-none absolute bottom-[22%] right-0 h-12 w-[2px] bg-zinc-100/65" />
-                <span className="pointer-events-none absolute left-3 top-3 h-6 w-6 border-l-2 border-t-2 border-zinc-100/90 [clip-path:polygon(0_0,100%_0,100%_34%,34%_34%,34%_100%,0_100%)]" />
-                <span className="pointer-events-none absolute right-3 top-3 h-6 w-6 border-r-2 border-t-2 border-zinc-100/90 [clip-path:polygon(0_0,100%_0,100%_100%,66%_100%,66%_34%,0_34%)]" />
-                <span className="pointer-events-none absolute bottom-3 left-3 h-6 w-6 border-b-2 border-l-2 border-zinc-100/90 [clip-path:polygon(0_0,34%_0,34%_66%,100%_66%,100%_100%,0_100%)]" />
-                <span className="pointer-events-none absolute bottom-3 right-3 h-6 w-6 border-b-2 border-r-2 border-zinc-100/90 [clip-path:polygon(66%_0,100%_0,100%_100%,0_100%,0_66%,66%_66%)]" />
+                <span className="pointer-events-none absolute left-3 top-3 h-7 w-7 border-l-2 border-t-2 border-zinc-100/90 [clip-path:polygon(0_0,100%_0,100%_28%,28%_28%,28%_100%,0_100%)]" />
+                <span className="pointer-events-none absolute right-3 top-3 h-7 w-7 border-r-2 border-t-2 border-zinc-100/90 [clip-path:polygon(0_0,100%_0,100%_100%,72%_100%,72%_28%,0_28%)]" />
+                <span className="pointer-events-none absolute bottom-3 left-3 h-7 w-7 border-b-2 border-l-2 border-zinc-100/90 [clip-path:polygon(0_0,28%_0,28%_72%,100%_72%,100%_100%,0_100%)]" />
+                <span className="pointer-events-none absolute bottom-3 right-3 h-7 w-7 border-b-2 border-r-2 border-zinc-100/90 [clip-path:polygon(72%_0,100%_0,100%_100%,0_100%,0_72%,72%_72%)]" />
+                <span className="pointer-events-none absolute left-[22px] top-0 h-[2px] w-14 bg-zinc-100/70" />
+                <span className="pointer-events-none absolute right-[22px] bottom-0 h-[2px] w-14 bg-zinc-100/70" />
                 <span className="pointer-events-none absolute left-1/2 top-2 h-[2px] w-16 -translate-x-1/2 bg-gradient-to-r from-transparent via-zinc-100/90 to-transparent [clip-path:polygon(8%_0,92%_0,100%_100%,0_100%)]" />
                 <span className="pointer-events-none absolute bottom-2 left-1/2 h-[2px] w-16 -translate-x-1/2 bg-gradient-to-r from-transparent via-zinc-100/90 to-transparent [clip-path:polygon(0_0,100%_0,92%_100%,8%_100%)]" />
                 <div className="relative rounded-md border border-zinc-100/25 bg-black/45 px-4 py-3 backdrop-blur-[1px] [clip-path:polygon(12px_0,calc(100%-12px)_0,100%_12px,100%_calc(100%-12px),calc(100%-12px)_100%,12px_100%,0_calc(100%-12px),0_12px)]">
@@ -102,7 +110,7 @@ export default function PaywallSnapshotsSection() {
                     {snapshot.description}
                   </p>
                 </div>
-                <div className="relative mt-4 flex-1 overflow-hidden border border-zinc-100/30 bg-transparent shadow-[0_0_12px_rgba(255,255,255,0.3)] [clip-path:polygon(16px_0,calc(100%-16px)_0,100%_16px,100%_calc(100%-20px),calc(100%-20px)_100%,20px_100%,0_calc(100%-16px),0_16px)]">
+                <div className="relative mt-4 flex-1 overflow-hidden border border-zinc-100/30 bg-transparent shadow-[0_0_12px_rgba(255,255,255,0.3)] [clip-path:polygon(22px_0,calc(100%-22px)_0,100%_22px,100%_calc(100%-24px),calc(100%-24px)_100%,24px_100%,0_calc(100%-22px),0_22px)]">
                   <span className="pointer-events-none absolute inset-0 z-[3] bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(0,0,0,0.24))]" />
                   <span className="pointer-events-none absolute left-1/2 top-2 z-[3] h-[1px] w-20 -translate-x-1/2 bg-gradient-to-r from-transparent via-zinc-100/55 to-transparent" />
                   <span className="pointer-events-none absolute bottom-2 right-3 z-[3] h-2 w-2 border-r border-b border-zinc-100/65" />

@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { JetBrains_Mono } from "next/font/google";
 import { Providers } from "./providers";
+import RouteWarmup from "@/components/RouteWarmup";
 import "./globals.css";
 import "./syndicate-otp/syndicate-otp.css";
 
@@ -28,7 +29,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         className={`${jetbrainsMono.variable} min-h-screen min-w-0 overflow-x-hidden bg-black text-white antialiased`}
         suppressHydrationWarning
       >
-        <Providers>{children}</Providers>
+        <Providers>
+          <RouteWarmup />
+          {children}
+        </Providers>
       </body>
     </html>
   );

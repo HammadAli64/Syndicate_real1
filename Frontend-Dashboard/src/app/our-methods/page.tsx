@@ -95,6 +95,8 @@ const CYBER_THEMES = [
     name: 'red',
     frame: 'border-red-300/95',
     glow: 'shadow-[0_0_0_1px_rgba(255,70,70,0.85),0_0_42px_rgba(255,70,70,0.55),0_0_110px_rgba(255,70,70,0.24)]',
+    tone: 'from-rose-500/26 via-red-500/14 to-orange-600/20',
+    aura: 'from-red-400/42 via-rose-500/24 to-transparent',
     chip: 'border-red-50 bg-red-200/75 shadow-[0_0_18px_rgba(255,70,70,1)]',
     text: 'text-red-100',
   },
@@ -102,6 +104,8 @@ const CYBER_THEMES = [
     name: 'purple',
     frame: 'border-violet-300/95',
     glow: 'shadow-[0_0_0_1px_rgba(193,120,255,0.85),0_0_42px_rgba(193,120,255,0.55),0_0_110px_rgba(193,120,255,0.24)]',
+    tone: 'from-violet-500/26 via-fuchsia-500/14 to-indigo-600/20',
+    aura: 'from-violet-400/42 via-fuchsia-500/24 to-transparent',
     chip: 'border-violet-50 bg-violet-200/75 shadow-[0_0_18px_rgba(193,120,255,1)]',
     text: 'text-violet-100',
   },
@@ -109,6 +113,8 @@ const CYBER_THEMES = [
     name: 'yellow',
     frame: 'border-amber-300/95',
     glow: 'shadow-[0_0_0_1px_rgba(255,198,64,0.85),0_0_42px_rgba(255,198,64,0.55),0_0_110px_rgba(255,198,64,0.24)]',
+    tone: 'from-amber-500/26 via-orange-500/14 to-yellow-600/20',
+    aura: 'from-amber-400/42 via-orange-500/24 to-transparent',
     chip: 'border-amber-50 bg-amber-200/75 shadow-[0_0_18px_rgba(255,198,64,1)]',
     text: 'text-amber-100',
   },
@@ -116,6 +122,8 @@ const CYBER_THEMES = [
     name: 'green',
     frame: 'border-lime-300/95',
     glow: 'shadow-[0_0_0_1px_rgba(120,255,90,0.85),0_0_42px_rgba(120,255,90,0.55),0_0_110px_rgba(120,255,90,0.24)]',
+    tone: 'from-lime-500/26 via-emerald-500/14 to-teal-600/20',
+    aura: 'from-lime-400/42 via-emerald-500/24 to-transparent',
     chip: 'border-lime-50 bg-lime-200/75 shadow-[0_0_18px_rgba(120,255,90,1)]',
     text: 'text-lime-100',
   },
@@ -123,6 +131,8 @@ const CYBER_THEMES = [
     name: 'cyan',
     frame: 'border-cyan-300/95',
     glow: 'shadow-[0_0_0_1px_rgba(56,236,255,0.85),0_0_42px_rgba(56,236,255,0.55),0_0_110px_rgba(56,236,255,0.24)]',
+    tone: 'from-cyan-500/26 via-sky-500/14 to-indigo-600/20',
+    aura: 'from-cyan-400/42 via-sky-500/24 to-transparent',
     chip: 'border-cyan-50 bg-cyan-200/75 shadow-[0_0_18px_rgba(56,236,255,1)]',
     text: 'text-cyan-100',
   },
@@ -144,10 +154,14 @@ function HudPanel({
   const theme = CYBER_THEMES[toneIndex % CYBER_THEMES.length]
   return (
     <article
-      className={`relative overflow-hidden rounded-2xl border bg-black/40 p-6 sm:p-7 backdrop-blur-0 ${theme.frame} ${theme.glow}`}
+      className={`relative overflow-hidden border bg-black/40 p-6 sm:p-7 backdrop-blur-0 [clip-path:polygon(22px_0,calc(100%-22px)_0,100%_22px,100%_calc(100%-24px),calc(100%-24px)_100%,24px_100%,0_calc(100%-22px),0_22px)] ${theme.frame} ${theme.glow}`}
     >
+      <span className={`pointer-events-none absolute -inset-6 -z-10 bg-gradient-to-br ${theme.aura} blur-[38px]`} />
+      <span className={`pointer-events-none absolute inset-0 bg-gradient-to-br ${theme.tone}`} />
       <div className="pointer-events-none absolute inset-0 opacity-[0.18] [background-image:repeating-linear-gradient(0deg,transparent_0px,transparent_2px,rgba(255,255,255,0.12)_2px,rgba(255,255,255,0.12)_3px)]" />
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(70%_55%_at_50%_0%,rgba(255,255,255,0.16),transparent_70%)] opacity-70" />
+      <span className="pointer-events-none absolute left-3 top-3 h-6 w-6 border-l-2 border-t-2 border-zinc-100/90 [clip-path:polygon(0_0,100%_0,100%_28%,28%_28%,28%_100%,0_100%)]" />
+      <span className="pointer-events-none absolute right-3 bottom-3 h-6 w-6 border-r-2 border-b-2 border-zinc-100/90 [clip-path:polygon(72%_0,100%_0,100%_100%,0_100%,0_72%,72%_72%)]" />
       <div className="relative z-10">
         <div className="flex items-start justify-between gap-3">
           <p className="text-sm font-semibold uppercase tracking-[0.2em] text-zinc-200/80">{eyebrow}</p>
