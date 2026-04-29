@@ -176,19 +176,6 @@ export default function CertificatesSection({
           <p className="mx-auto mt-4 max-w-2xl text-sm text-slate-200/80 sm:text-base" style={{ textShadow: '0 0 12px rgba(34,211,238,0.14)' }}>
             Complete our courses and earn verified credentials that elevate your profile. Join leaders who prove their expertise.
           </p>
-          <div className="mt-6 flex justify-center">
-            <div className="relative">
-              <div className="pointer-events-none absolute inset-0 rounded-xl bg-[radial-gradient(circle_at_center,rgba(253,208,47,0.35)_0%,rgba(253,208,47,0.15)_40%,transparent_75%)] blur-[16px]" />
-              <Image
-                src="/assets/footer-tagline.png"
-                alt="The Syndicate money power honour freedom"
-                width={980}
-                height={120}
-                className="relative z-[1] h-auto w-[min(92vw,760px)] object-contain"
-                priority={false}
-              />
-            </div>
-          </div>
         </motion.header>
 
         <motion.div
