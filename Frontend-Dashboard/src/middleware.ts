@@ -53,6 +53,10 @@ export function middleware(request: NextRequest) {
   const protectedRootSectionPath = pathname === "/" && dashboardSections.has(section);
   const authFreePath =
     publicMarketingPath ||
+    pathname === "/affiliate" ||
+    pathname.startsWith("/affiliate/") ||
+    pathname === "/r" ||
+    pathname.startsWith("/r/") ||
     pathname === "/login" ||
     pathname.startsWith("/login/") ||
     pathname === "/signup" ||

@@ -33,6 +33,12 @@ function formatAgo(iso: string | null): string {
   return `${day}d ago`;
 }
 
+function formatEarnings(value: string | number | null | undefined): string {
+  const num = Number(value ?? 0);
+  if (!Number.isFinite(num)) return "0.000";
+  return num.toFixed(3);
+}
+
 type ReferralIds = {
   complete: string;
   single: string;
@@ -59,8 +65,12 @@ export default function AffiliatePortal({ displayName, referralIds, onLogout, em
   const [funnelHover, setFunnelHover] = useState<{ stage: string; value: number } | null>(null);
   const funnelHoverLeaveTimer = useRef<number | null>(null);
   const [recentReferrals, setRecentReferrals] = useState<Array<{ visitor_id: string; email?: string | null; status: "joined" | "purchased"; at: string | null }>>([]);
+  const [recentPage, setRecentPage] = useState(1);
+  const [visitorsPage, setVisitorsPage] = useState(1);
   const [activeReferralLink, setActiveReferralLink] = useState("");
   const [copiedLink, setCopiedLink] = useState<string | null>(null);
+  const RECENT_PAGE_SIZE = 4;
+  const VISITORS_PAGE_SIZE = 6;
 
   const showFunnelValue = useCallback((row: { stage: string; value: number }) => {
     if (funnelHoverLeaveTimer.current) {
@@ -117,6 +127,7 @@ export default function AffiliatePortal({ displayName, referralIds, onLogout, em
     return { label: "Cold Start", tone: "bad" as const };
   }, [overallStats]);
   const earningsValue = Number(overallStats?.earnings_total ?? "0") || 0;
+  const earningsDisplay = formatEarnings(overallStats?.earnings_total ?? "0");
   const earningsCardToneClass =
     earningsValue <= 0
       ? "border-violet-300/85 bg-[linear-gradient(180deg,rgba(193,120,255,0.14),rgba(0,0,0,0.3))] shadow-[0_0_0_1px_rgba(193,120,255,0.9),0_0_22px_rgba(193,120,255,0.86),0_0_56px_rgba(193,120,255,0.72),0_0_108px_rgba(193,120,255,0.56),inset_0_0_20px_rgba(193,120,255,0.27)]"
@@ -190,6 +201,8 @@ export default function AffiliatePortal({ displayName, referralIds, onLogout, em
       setVisitors(visitorsResult.visitors);
       setFunnel(funnelResult.stages);
       setRecentReferrals(recentResult.items);
+      setRecentPage(1);
+      setVisitorsPage(1);
       if (!silent) showToast("Data loaded.", "good");
     } catch (e) {
       const message = e instanceof Error ? e.message : "Could not fetch affiliate data.";
@@ -229,6 +242,20 @@ export default function AffiliatePortal({ displayName, referralIds, onLogout, em
     showToast("Logging out...", "warn");
     window.setTimeout(() => onLogout?.(), 320);
   }
+
+  const pagedRecentReferrals = useMemo(() => {
+    const start = (recentPage - 1) * RECENT_PAGE_SIZE;
+    return recentReferrals.slice(start, start + RECENT_PAGE_SIZE);
+  }, [recentReferrals, recentPage]);
+
+  const totalRecentPages = Math.max(1, Math.ceil(recentReferrals.length / RECENT_PAGE_SIZE));
+
+  const pagedVisitors = useMemo(() => {
+    const start = (visitorsPage - 1) * VISITORS_PAGE_SIZE;
+    return visitors.slice(start, start + VISITORS_PAGE_SIZE);
+  }, [visitors, visitorsPage]);
+
+  const totalVisitorPages = Math.max(1, Math.ceil(visitors.length / VISITORS_PAGE_SIZE));
 
   return (
     <div
@@ -281,7 +308,7 @@ export default function AffiliatePortal({ displayName, referralIds, onLogout, em
         <div className="min-h-0 flex-1 overflow-auto pr-1 pb-16 no-scrollbar">
           {error ? null : null}
 
-          <div className="cut-frame-sm border border-amber-300/75 bg-black/70 p-4 shadow-[0_0_0_1px_rgba(252,211,77,0.9),0_0_24px_rgba(193,120,255,0.62),0_0_62px_rgba(56,236,255,0.32),inset_0_0_24px_rgba(252,211,77,0.22)]">
+          <div className="cut-frame-sm border border-amber-300/75 bg-black/70 py-4 pl-4 pr-0 shadow-[0_0_0_1px_rgba(252,211,77,0.9),0_0_24px_rgba(193,120,255,0.62),0_0_62px_rgba(56,236,255,0.32),inset_0_0_24px_rgba(252,211,77,0.22)]">
             <div className="mx-auto w-full max-w-[1720px] cut-frame-sm border border-cyan-300/70 bg-black/80 p-3 shadow-[0_0_0_1px_rgba(56,236,255,0.9),0_0_26px_rgba(193,120,255,0.52),0_0_64px_rgba(56,236,255,0.3),inset_0_0_24px_rgba(56,236,255,0.2)]">
               <div className="flex flex-col items-center gap-3 md:flex-row md:items-end md:justify-center">
                 <div className="w-full md:max-w-[700px]">
@@ -319,7 +346,7 @@ export default function AffiliatePortal({ displayName, referralIds, onLogout, em
             </div>
           </div>
 
-          <div className="mt-4 cut-frame-sm border border-violet-300/75 bg-black/45 p-3 shadow-[0_0_0_1px_rgba(193,120,255,0.9),0_0_22px_rgba(193,120,255,0.86),0_0_56px_rgba(193,120,255,0.72),0_0_108px_rgba(193,120,255,0.56),inset_0_0_20px_rgba(193,120,255,0.27)] sm:p-4">
+          <div className="mt-4 cut-frame-sm border border-violet-300/75 bg-black/45 py-4 pl-4 pr-0 shadow-[0_0_0_1px_rgba(193,120,255,0.9),0_0_22px_rgba(193,120,255,0.86),0_0_56px_rgba(193,120,255,0.72),0_0_108px_rgba(193,120,255,0.56),inset_0_0_20px_rgba(193,120,255,0.27)]">
             <div className="mb-3 flex items-center justify-between gap-2">
               <div className="text-sm font-black uppercase tracking-[0.2em] text-white/80 drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]">Performance Snapshot</div>
             </div>
@@ -329,7 +356,7 @@ export default function AffiliatePortal({ displayName, referralIds, onLogout, em
                 { label: "Leads", value: overallStats?.lead_count ?? "-", tone: "border-violet-300/75 bg-[linear-gradient(180deg,rgba(193,120,255,0.12),rgba(0,0,0,0.3))] shadow-[0_0_0_1px_rgba(193,120,255,0.9),0_0_22px_rgba(193,120,255,0.86),0_0_56px_rgba(193,120,255,0.72),0_0_108px_rgba(193,120,255,0.56),inset_0_0_20px_rgba(193,120,255,0.27)]" },
                 { label: "Sales", value: overallStats?.sale_count ?? 0, tone: "border-cyan-300/75 bg-[linear-gradient(180deg,rgba(56,236,255,0.12),rgba(0,0,0,0.3))] shadow-[0_0_0_1px_rgba(56,236,255,0.9),0_0_22px_rgba(56,236,255,0.86),0_0_56px_rgba(56,236,255,0.72),0_0_108px_rgba(56,236,255,0.56),inset_0_0_20px_rgba(56,236,255,0.27)]" },
                 { label: "Rate", value: `${conversionRing}%`, tone: "border-amber-300/75 bg-[linear-gradient(180deg,rgba(255,198,64,0.14),rgba(0,0,0,0.3))] shadow-[0_0_0_1px_rgba(252,211,77,0.9),0_0_22px_rgba(252,211,77,0.86),0_0_56px_rgba(252,211,77,0.72),0_0_108px_rgba(252,211,77,0.56),inset_0_0_20px_rgba(252,211,77,0.27)]" },
-                { label: "Earnings", value: `£${overallStats?.earnings_total ?? "0.00"}`, tone: earningsCardToneClass },
+                { label: "Earnings", value: `£${earningsDisplay}`, tone: earningsCardToneClass },
               ].map((item) => (
                 <div
                   key={item.label}
@@ -397,20 +424,20 @@ export default function AffiliatePortal({ displayName, referralIds, onLogout, em
             </div>
           </div>
 
-          <div className="mt-5 cut-frame-sm border border-fuchsia-300/75 bg-black/45 p-4 shadow-[0_0_0_1px_rgba(232,121,249,0.88),0_0_22px_rgba(232,121,249,0.72),0_0_56px_rgba(232,121,249,0.5),0_0_108px_rgba(193,120,255,0.34),inset_0_0_20px_rgba(232,121,249,0.22)]">
+          <div className="mt-5 cut-frame-sm border border-fuchsia-300/75 bg-black/45 py-4 pl-4 pr-4 shadow-[0_0_0_1px_rgba(232,121,249,0.88),0_0_22px_rgba(232,121,249,0.72),0_0_56px_rgba(232,121,249,0.5),0_0_108px_rgba(193,120,255,0.34),inset_0_0_20px_rgba(232,121,249,0.22)]">
             <div className="mb-3 flex items-center justify-between gap-2">
               <div className="text-sm font-black uppercase tracking-[0.2em] text-white/80 drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]">Recent Referrals</div>
             </div>
             <div className="space-y-3">
               {recentReferrals.length ? (
-                recentReferrals.map((r, idx) => (
+                pagedRecentReferrals.map((r, idx) => (
                   <div
                     key={`${r.visitor_id}-${idx}`}
                     className="cut-frame-sm hud-hover-glow flex items-center justify-between gap-3 border border-cyan-300/28 bg-black/40 px-3 py-3"
                   >
                     <div className="flex min-w-0 items-center gap-3">
                       <div className="grid h-11 w-11 shrink-0 place-items-center rounded border border-[rgba(0,191,255,0.35)] bg-black/55 text-base font-black text-[#bfefff]">
-                        {idx + 1}
+                        {(recentPage - 1) * RECENT_PAGE_SIZE + idx + 1}
                       </div>
                       <div className="min-w-0">
                         <div className="truncate text-base font-bold text-white/90">{r.email || "No email captured yet"}</div>
@@ -426,11 +453,34 @@ export default function AffiliatePortal({ displayName, referralIds, onLogout, em
                 <div className="text-base text-white/65">No referral activity yet.</div>
               )}
             </div>
+            {recentReferrals.length > RECENT_PAGE_SIZE ? (
+              <div className="mt-5 flex items-center justify-center gap-4">
+                <button
+                  type="button"
+                  onClick={() => setRecentPage((p) => Math.max(1, p - 1))}
+                  disabled={recentPage <= 1}
+                  className="cut-frame-sm min-h-[44px] min-w-[112px] border border-fuchsia-300/90 bg-[linear-gradient(180deg,rgba(232,121,249,0.28),rgba(28,6,42,0.62))] px-6 py-2 text-sm font-black uppercase tracking-[0.16em] text-fuchsia-100 shadow-[0_0_0_1px_rgba(232,121,249,0.9),0_0_24px_rgba(232,121,249,0.44),0_0_52px_rgba(232,121,249,0.24)] disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  Prev
+                </button>
+                <div className="min-w-[122px] text-center text-sm font-black uppercase tracking-[0.16em] text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.35)]">
+                  Page {recentPage} / {totalRecentPages}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setRecentPage((p) => Math.min(totalRecentPages, p + 1))}
+                  disabled={recentPage >= totalRecentPages}
+                  className="cut-frame-sm min-h-[44px] min-w-[112px] border border-cyan-300/90 bg-[linear-gradient(180deg,rgba(56,236,255,0.28),rgba(4,24,32,0.62))] px-6 py-2 text-sm font-black uppercase tracking-[0.16em] text-cyan-100 shadow-[0_0_0_1px_rgba(56,236,255,0.9),0_0_24px_rgba(56,236,255,0.44),0_0_52px_rgba(56,236,255,0.24)] disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  Next
+                </button>
+              </div>
+            ) : null}
           </div>
 
-          <div className="mt-5 cut-frame-sm border border-amber-300/75 bg-black/45 p-4 shadow-[0_0_0_1px_rgba(252,211,77,0.86),0_0_22px_rgba(252,211,77,0.72),0_0_56px_rgba(56,236,255,0.32),0_0_108px_rgba(193,120,255,0.22),inset_0_0_20px_rgba(252,211,77,0.2)]">
+          <div className="mt-5 cut-frame-sm border border-amber-300/75 bg-black/45 py-4 pl-4 pr-4 shadow-[0_0_0_1px_rgba(252,211,77,0.86),0_0_22px_rgba(252,211,77,0.72),0_0_56px_rgba(56,236,255,0.32),0_0_108px_rgba(193,120,255,0.22),inset_0_0_20px_rgba(252,211,77,0.2)]">
             <h3 className="text-sm font-black uppercase tracking-[0.2em] text-white/80 drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]">Affiliate Visitors</h3>
-            <div className="mt-3 overflow-auto no-scrollbar">
+            <div className="mt-3 max-w-[1400px] overflow-auto no-scrollbar">
               <table className="w-full min-w-[700px] text-left text-base">
                 <thead className="text-xs uppercase tracking-[0.14em] text-white/70">
                   <tr className="border-b border-[rgba(255,215,0,0.2)]">
@@ -442,7 +492,7 @@ export default function AffiliatePortal({ displayName, referralIds, onLogout, em
                 </thead>
                 <tbody>
                   {visitors.length > 0 ? (
-                    visitors.map((v) => (
+                    pagedVisitors.map((v) => (
                       <tr key={v.visitor_id} className="border-b border-white/10 text-white/85">
                         <td className="px-2 py-2 font-semibold">{v.visitor_id}</td>
                         <td className="px-2 py-2">{formatWhen(v.clicked_at)}</td>
@@ -460,6 +510,29 @@ export default function AffiliatePortal({ displayName, referralIds, onLogout, em
                 </tbody>
               </table>
             </div>
+            {visitors.length > VISITORS_PAGE_SIZE ? (
+              <div className="mt-5 flex items-center justify-center gap-4">
+                <button
+                  type="button"
+                  onClick={() => setVisitorsPage((p) => Math.max(1, p - 1))}
+                  disabled={visitorsPage <= 1}
+                  className="cut-frame-sm min-h-[44px] min-w-[112px] border border-fuchsia-300/90 bg-[linear-gradient(180deg,rgba(232,121,249,0.28),rgba(28,6,42,0.62))] px-6 py-2 text-sm font-black uppercase tracking-[0.16em] text-fuchsia-100 shadow-[0_0_0_1px_rgba(232,121,249,0.9),0_0_24px_rgba(232,121,249,0.44),0_0_52px_rgba(232,121,249,0.24)] disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  Prev
+                </button>
+                <div className="min-w-[122px] text-center text-sm font-black uppercase tracking-[0.16em] text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.35)]">
+                  Page {visitorsPage} / {totalVisitorPages}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setVisitorsPage((p) => Math.min(totalVisitorPages, p + 1))}
+                  disabled={visitorsPage >= totalVisitorPages}
+                  className="cut-frame-sm min-h-[44px] min-w-[112px] border border-cyan-300/90 bg-[linear-gradient(180deg,rgba(56,236,255,0.28),rgba(4,24,32,0.62))] px-6 py-2 text-sm font-black uppercase tracking-[0.16em] text-cyan-100 shadow-[0_0_0_1px_rgba(56,236,255,0.9),0_0_24px_rgba(56,236,255,0.44),0_0_52px_rgba(56,236,255,0.24)] disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  Next
+                </button>
+              </div>
+            ) : null}
           </div>
         </div>
       </main>

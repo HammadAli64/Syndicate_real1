@@ -8,7 +8,7 @@ import { resolveClientApiUrl } from "@/lib/portal-api";
 import { resolvePostOtpAppRedirect } from "@/lib/syndicate-otp-paths";
 import { syndicateOtpSignupHref } from "@/lib/syndicate-otp-paths";
 import { clearAffiliateAttribution, getAffiliateAttribution } from "@/lib/affiliateAttribution";
-import { trackSale } from "@/lib/affiliateApi";
+import { trackLead, trackSale } from "@/lib/affiliateApi";
 
 const SYNDICATE_URL =
   process.env.NEXT_PUBLIC_POST_LOGIN_REDIRECT_URL ?? "https://the-syndicate.com/";
@@ -240,15 +240,16 @@ export default function CheckoutSuccessScreen({
         const payloadAffiliateId = (data.affiliate_attribution?.affiliate_id || "").trim();
         const payloadVisitorId = (data.affiliate_attribution?.visitor_id || "").trim();
         const effectiveAttribution =
-          attribution ??
           (payloadAffiliateId && payloadVisitorId
             ? {
                 affiliateId: payloadAffiliateId,
                 visitorId: payloadVisitorId,
-                offer: "affiliate-offer",
+                offer: attribution?.offer || "affiliate-offer",
+                tier: attribution?.tier,
+                program: attribution?.program,
                 createdAt: Date.now(),
               }
-            : null);
+            : null) ?? attribution;
         if (process.env.NODE_ENV !== "production" && effectiveAttribution) {
           setTrackingDebug(
             `debug tracking -> affiliate_id=${effectiveAttribution.affiliateId} | visitor_id=${effectiveAttribution.visitorId}`

@@ -45,7 +45,7 @@ export function clearAffiliateAttribution() {
 }
 
 export function resolveAffiliateDestination(offer: string): string {
-  if (offer === "singleprogram" || offer === "single-program") return "/programs";
-  return "/#pricing";
+  if (offer === "singleprogram" || offer === "single-program") return "/";
+  return "/";
 }
 
